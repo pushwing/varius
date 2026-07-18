@@ -27,14 +27,15 @@
 - coturn credential은 `use-auth-secret` + HMAC 방식, 수십 초~수 분 TTL로 재사용 방지
 - 리눅스 데몬의 room 접근은 서버 측에서 강제 (클라이언트 임의 지정 금지)
 
-## 5. AWS 배포 가이드
-- coturn, LiveKit: EC2 또는 ECS + **NLB**(UDP 트래픽 처리 위해 ALB 아닌 NLB 사용)
-- CI4 API: 기존 ECS/EKS 구성 유지, 룸 토큰 발급 엔드포인트만 추가
-- 초기 단일 리전 → 사용자 지역 확대 시 TURN/SFU 리전별 다중화 고려 (지연 민감)
+## 5. 온프레미스 배포 가이드
+- coturn, LiveKit, CI4 API 모두 **자택 서버에 온프레미스로 설치**한다(클라우드 미사용).
+- 공유기/방화벽에서 필요한 포트를 개방·포트포워딩한다: coturn UDP 3478(+ TLS fallback 443), LiveKit 시그널링/미디어 포트, CI4 API HTTPS 포트.
+- 외부 도메인 연결이 필요하면 DDNS(고정 IP가 아닐 경우) + Let's Encrypt 등으로 TLS 인증서를 구성한다.
+- 리전 다중화는 해당 없음(단일 자택 서버 구성).
 
 ## 6. 리눅스 수신 데몬 요구사항
 - 네트워크 끊김 시 자동 재접속 (지수 백오프)
-- SFU 연결 상태 헬스체크 노출 (CloudWatch/Prometheus 연동)
+- SFU 연결 상태 헬스체크 노출 (자체 구축 Prometheus/Grafana 연동)
 - 오디오 출력 실패 시 자동 재시작: `systemd` `Restart=on-failure`
 
 ## 7. 개발 순서 제안 (Claude Code 작업 단위)
@@ -43,7 +44,7 @@
 3. [ ] LiveKit 셀프호스팅 배포 (docker-compose/k8s), CI4와 토큰 검증 연동
 4. [ ] 리눅스 수신 데몬: GStreamer webrtcbin 파이프라인으로 프로토타입 작성
 5. [ ] 데몬 systemd 서비스화 (자동 재시작, 헬스체크 엔드포인트)
-6. [ ] AWS 인프라: NLB + coturn/LiveKit EC2 구성, 보안그룹(UDP 3478 등) 설정
+6. [ ] 온프레미스 인프라: 자택 서버에 coturn/LiveKit/CI4 API 배치, 공유기 포트포워딩·방화벽(UDP 3478 등) 설정
 7. [ ] 통합 테스트: 공중망 환경(모바일 데이터 등)에서 NAT 통과 시나리오 검증
 8. [ ] 외부용 앱: 로그인 화면 + CI4 인증 연동
 9. [ ] 외부용 앱: 목소리 전송(마이크 캡처 → LiveKit 퍼블리시) UI
@@ -55,10 +56,10 @@
 - SFU: LiveKit (Go)
 - TURN: coturn
 - 리눅스 데몬: GStreamer (webrtcbin), systemd
-- 인프라: AWS (EC2/ECS, NLB), GitHub Actions CI/CD
+- 인프라: 온프레미스 자택 서버(우분투), CI/CD 없이 로컬 검증(저장소 공통 규칙)
 
 ## 9. 리눅스 서버 물리 배치
-- 위치: 자택 내부(온프레미스). coturn/LiveKit/CI4 API는 AWS에 두되, 수신 데몬만 자택 우분투 서버에서 SFU에 참가자로 접속하는 구조(5절 처리 흐름과 동일).
+- 위치: 자택 내부(온프레미스). coturn/LiveKit/CI4 API·리눅스 수신 데몬 **모두 자택 서버에 온프레미스로 설치**한다(AWS 등 클라우드 미사용, 5절 참고).
 - 스피커: 연결 완료 — 1차 목표(클라이언트 → 자택 스피커, 단방향)의 출력 장치.
 - 마이크: 미연결, **추후 연결 예정**. 연결되면 양방향 인터콤(자택 마이크 → 클라이언트)으로 확장 — 10절 참고.
 
