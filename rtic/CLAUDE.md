@@ -1,0 +1,37 @@
+# rtic (Realtime Intercom) 프로젝트 가이드
+
+> 저장소 공통 규칙은 [`../CLAUDE.md`](../CLAUDE.md)에서 상속된다(PR 없이 직접 머지, CI/CD 없음·로컬 검증).
+> 이 파일은 `rtic/` 프로젝트 고유의 스택·아키텍처·규칙만 다룬다.
+
+## 프로젝트 개요
+
+외부 공중 인터넷의 클라이언트(웹/앱) 음성을 리눅스 서버의 물리 스피커로 실시간(200~300ms 이내) 전달하는
+WebRTC 기반 인터콤 시스템. 상세 아키텍처는 [`ARCHITECTURE.md`](ARCHITECTURE.md) 참고.
+
+## 기술 스택
+
+- **API**: CodeIgniter 4 (PHP 8.2+) — 인증, 룸 토큰(JWT) 발급, 디바이스/이력 관리
+- **SFU/시그널링**: LiveKit (셀프호스팅)
+- **TURN**: coturn (`use-auth-secret` + HMAC)
+- **리눅스 수신 데몬**: GStreamer(webrtcbin) → ALSA/PulseAudio, systemd 상주
+- **인프라**: AWS (EC2/ECS + NLB)
+
+이 프로젝트 내 PHP(CodeIgniter 4) 코드는 부모 저장소들의 전역 PHP 규칙
+([`~/.claude/rules/code-style.md`](~/.claude/rules/code-style.md),
+[`~/.claude/rules/security.md`](~/.claude/rules/security.md),
+[`~/.claude/rules/testing.md`](~/.claude/rules/testing.md),
+[`~/.claude/rules/api-design.md`](~/.claude/rules/api-design.md))을 그대로 따른다.
+GStreamer 데몬 등 PHP가 아닌 컴포넌트는 해당 언어의 관례를 따른다.
+
+## 로컬 검증
+
+- CI/CD가 없으므로 머지 전 아래를 **로컬에서** 직접 실행해 확인한다.
+  - PHP(CI4) 파트: `composer check` (CS Fixer → PHPStan → PHPUnit)
+  - 리눅스 데몬: 유닛 테스트 + 실제 GStreamer 파이프라인 구동 확인
+- 런타임 표면(API 엔드포인트, 데몬 프로세스)이 있는 변경은 테스트만으로 끝내지 않고 실제 구동까지 확인한다.
+
+## 보안 유의사항
+
+- 룸 토큰(JWT)은 짧은 TTL, coturn credential은 HMAC 기반 단기 TTL.
+- 리눅스 데몬의 room 접근은 서버 측에서 강제 — 클라이언트가 임의 room을 지정할 수 없게 한다.
+- 상세는 [`ARCHITECTURE.md`](ARCHITECTURE.md) 4절 참고.
