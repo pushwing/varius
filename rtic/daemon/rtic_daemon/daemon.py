@@ -56,7 +56,8 @@ def run(config: DaemonConfig, source_description: str | None = None) -> int:
             state["exit_code"] = 1
             loop.quit()
         elif message.type == Gst.MessageType.STATE_CHANGED and message.src == pipeline:
-            _old, new, _pending = message.parse_state_changed()
+            old, new, _pending = message.parse_state_changed()
+            logger.info("파이프라인 상태 전환: %s -> %s", old, new)
             health.set_pipeline_state(int(new))
             if new == Gst.State.PLAYING and not state["playing_reported"]:
                 state["playing_reported"] = True
@@ -67,7 +68,20 @@ def run(config: DaemonConfig, source_description: str | None = None) -> int:
     bus.add_signal_watch()
     bus.connect("message", _on_bus_message)
 
-    pipeline.set_state(Gst.State.PLAYING)
+    src = pipeline.get_by_name("src")
+    if src is not None:
+
+        def _on_pad_added(_element: Gst.Element, pad: Gst.Pad) -> None:
+            logger.info(
+                "원격 트랙 수신 시작: pad=%s caps=%s",
+                pad.get_name(),
+                pad.query_caps(None).to_string(),
+            )
+
+        src.connect("pad-added", _on_pad_added)
+
+    change = pipeline.set_state(Gst.State.PLAYING)
+    logger.info("파이프라인을 PLAYING으로 전환 요청 — 결과: %s", change)
     try:
         loop.run()
     finally:
