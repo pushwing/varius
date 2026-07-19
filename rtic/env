@@ -1,0 +1,66 @@
+#--------------------------------------------------------------------
+# Example Environment Configuration file
+#
+# This file can be used as a starting point for your own
+# custom .env files, and contains most of the possible settings
+# available in a default install.
+#
+# By default, all of the settings are commented out. If you want
+# to override the setting, you must un-comment it by removing the '#'
+# at the beginning of the line.
+#--------------------------------------------------------------------
+
+#--------------------------------------------------------------------
+# ENVIRONMENT
+#--------------------------------------------------------------------
+
+# CI_ENVIRONMENT = production
+
+#--------------------------------------------------------------------
+# APP
+#--------------------------------------------------------------------
+
+# app.baseURL = ''
+# If you have trouble with `.`, you could also use `_`.
+# app_baseURL = ''
+# app.forceGlobalSecureRequests = false
+# app.CSPEnabled = false
+
+#--------------------------------------------------------------------
+# DATABASE
+#--------------------------------------------------------------------
+
+# 온프레미스 단일 서버, 소수 사용자 규모라 별도 DB 서버 없이 SQLite3 파일을 사용한다.
+# 슬래시 없는 파일명이면 CI4가 자동으로 WRITEPATH를 붙인다(writable/database.db).
+database.default.database = database.db
+database.default.DBDriver = SQLite3
+
+database.tests.database = :memory:
+database.tests.DBDriver = SQLite3
+
+#--------------------------------------------------------------------
+# ENCRYPTION
+#--------------------------------------------------------------------
+
+# encryption.key =
+
+#--------------------------------------------------------------------
+# SESSION
+#--------------------------------------------------------------------
+
+# session.driver = 'CodeIgniter\Session\Handlers\FileHandler'
+# session.savePath = null
+
+#--------------------------------------------------------------------
+# LOGGER
+#--------------------------------------------------------------------
+
+# logger.threshold = 4
+
+#--------------------------------------------------------------------
+# JWT (room 입장 토큰)
+#--------------------------------------------------------------------
+
+# jwt.secret = your-secret-key-change-this-in-production
+# jwt.roomEntryTtl = 300
+# jwt.roomName = rtic-home
