@@ -1,0 +1,81 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+#app {
+  width: 100%;
+  max-width: 26rem;
+}
+
+h1 {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+
+input {
+  padding: 0.5rem;
+  font-size: 1rem;
+}
+
+button {
+  padding: 0.6rem;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+button[disabled] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.error {
+  color: #c0392b;
+}
+
+.status {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+}
+
+#message-log {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
+#message-log li {
+  border: 1px solid #8884;
+  border-radius: 0.4rem;
+  padding: 0.5rem;
+  font-size: 0.85rem;
+}
+
+#message-log li[data-type='error'] {
+  border-color: #c0392b;
+}

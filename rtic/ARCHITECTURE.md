@@ -50,9 +50,9 @@
 5. [x] 데몬 systemd 서비스화 (자동 재시작, 헬스체크 엔드포인트)
 6. [x] 온프레미스 인프라: 방화벽·DDNS·Caddy 리버스 프록시(자동 HTTPS) 스크립트/설정 — 공유기 포트포워딩·DDNS 계정·도메인 연결은 수동(`infra/README.md` 참고)
 7. [ ] 통합 테스트: 공중망 환경(모바일 데이터 등)에서 NAT 통과 시나리오 검증
-8. [ ] 외부용 앱: 로그인 화면 + CI4 인증 연동
-9. [ ] 외부용 앱: 목소리 전송(마이크 캡처 → LiveKit 퍼블리시) UI
-10. [ ] 외부용 앱: 데이터 채널 수신 및 리턴 메시지 표시 UI
+8. [x] 외부용 앱: 로그인 화면 + CI4 인증 연동
+9. [x] 외부용 앱: 목소리 전송(마이크 캡처 → LiveKit 퍼블리시) UI
+10. [x] 외부용 앱: 데이터 채널 수신 및 리턴 메시지 표시 UI — 스키마 확정, 앱 수신은 구현. **데몬 발신 구현은 범위 밖**(후속 이슈)
 11. [ ] (백로그) 양방향 인터콤: 자택 마이크 연결 후 역방향 오디오 경로 설계·구현
 
 ## 8. 참고 기술 스택 요약
@@ -60,6 +60,7 @@
 - SFU: LiveKit (Go), 내장 TURN 사용. 토큰 발급은 CI4가 `firebase/php-jwt`로 LiveKit 액세스 토큰(HS256) 직접 생성
 - TURN(미사용, 보류): coturn
 - 리눅스 데몬: Python + PyGObject(GStreamer), `livekitwebrtcsrc`(gst-plugins-rs), prometheus_client, systemd
+- 외부용 앱: 바닐라 JS + Vite + `livekit-client`, Vitest/ESLint/Prettier
 - 네트워크/TLS: Caddy(자동 Let's Encrypt 리버스 프록시), ufw, DDNS(제공자 비종속 curl 스크립트)
 - 인프라: 온프레미스 자택 서버(우분투), CI/CD 없이 로컬 검증(저장소 공통 규칙)
 
@@ -73,7 +74,11 @@
 |---|---|---|
 | 로그인 | 앱 사용자 인증 | CI4 API 인증 → 룸 입장 JWT 발급(3절 1단계) |
 | 목소리 전송 | 마이크 캡처 후 자택 스피커로 실시간 송신 | 기존 처리 흐름(3절) 그대로 재사용 |
-| 리턴 메시지 표시 | 리눅스 데몬 측 상태·텍스트 메시지를 앱 UI에 표시 | LiveKit **데이터 채널**(WebRTC DataChannel)로 데몬→앱 텍스트 전송. 별도 프로토콜 신설 없이 기존 WebRTC 세션 재사용(초안 — 실제 구현 시 메시지 스키마 확정 필요) |
+| 리턴 메시지 표시 | 리눅스 데몬 측 상태·텍스트 메시지를 앱 UI에 표시 | LiveKit **텍스트 스트림**(데이터 채널), 토픽 `rtic.status`, 페이로드 `{type, message, ts}`(이슈 #9에서 확정, `web/README.md` 참고). 데몬 쪽 실제 발신 구현은 범위 밖 — 후속 이슈 |
+
+구현: [`web/`](web/)(바닐라 JS + livekit-client + Vite). CI4 API와 오리진이 다르므로
+`app/Config/Cors.php` + `app/Config/Filters.php`에 CORS 설정을 추가했다(`.env`의
+`cors.allowedOrigins`).
 
 ## 11. 향후 확장 — 양방향 인터콤 (백로그)
 - 자택 서버에 마이크가 연결되면, 데몬이 로컬 오디오를 캡처해 GStreamer로 인코딩 후 LiveKit에 퍼블리시하여 앱이 이를 재생하는 역방향 경로를 추가한다.

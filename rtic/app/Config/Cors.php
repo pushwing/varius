@@ -11,6 +11,17 @@ use CodeIgniter\Config\BaseConfig;
  */
 class Cors extends BaseConfig
 {
+    public function __construct()
+    {
+        parent::__construct();
+
+        $origins = array_filter(array_map('trim', explode(',', (string) env('cors.allowedOrigins', ''))));
+
+        $this->default['allowedOrigins'] = $origins;
+        $this->default['allowedMethods'] = ['GET', 'POST', 'OPTIONS'];
+        $this->default['allowedHeaders'] = ['Content-Type'];
+    }
+
     /**
      * The default CORS configuration.
      *

@@ -10,6 +10,7 @@
 - **coturn (TURN)** — NAT 통과. 인프라만 구축된 상태이며 현재는 LiveKit 내장 TURN을 대신 사용 중(미연동, `ARCHITECTURE.md` 4절 참고)
 - **리눅스 수신 데몬** — Python + GStreamer로 오디오 디코딩 후 스피커 출력([`daemon/`](daemon/) 참고)
 - **네트워크/TLS** — Caddy 리버스 프록시(자동 Let's Encrypt), ufw 방화벽, DDNS([`infra/`](infra/) 참고)
+- **외부용 앱** — 바닐라 JS + livekit-client, 로그인·목소리 전송·리턴 메시지 표시([`web/`](web/) 참고)
 
 위 구성 요소는 모두 **자택 서버(우분투)에 온프레미스로 설치**됩니다. AWS 등 클라우드 인프라는 사용하지 않습니다.
 
@@ -25,4 +26,5 @@ Claude Code 작업 규칙은 [`CLAUDE.md`](CLAUDE.md)를 참고하세요.
 - [x] LiveKit 온프레미스 배포 + CI4 토큰 검증 연동
 - [x] 리눅스 수신 데몬(GStreamer 프로토타입 + systemd 서비스화)
 - [x] 온프레미스 네트워크 인프라(방화벽·DDNS·Caddy 자동 HTTPS)
-- [ ] 외부용 앱, 통합 테스트 등 — `ARCHITECTURE.md` 7절 참고
+- [x] 외부용 앱(로그인·목소리 전송·리턴 메시지 표시) — 데몬 쪽 리턴 메시지 발신 구현은 후속 이슈
+- [ ] 통합 테스트 등 — `ARCHITECTURE.md` 7절 참고
