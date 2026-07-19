@@ -64,3 +64,12 @@ database.tests.DBDriver = SQLite3
 # jwt.secret = your-secret-key-change-this-in-production
 # jwt.roomEntryTtl = 300
 # jwt.roomName = rtic-home
+
+#--------------------------------------------------------------------
+# TURN (coturn use-auth-secret credential)
+#--------------------------------------------------------------------
+# rtic/coturn/.env의 TURN_SECRET과 반드시 동일한 값을 사용해야 한다.
+
+# turn.secret = your-secret-key-change-this-in-production
+# turn.credentialTtl = 300
+# turn.realm = rtic-home

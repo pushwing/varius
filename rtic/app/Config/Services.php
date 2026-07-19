@@ -3,6 +3,7 @@
 namespace Config;
 
 use App\Libraries\JwtTokenService;
+use App\Libraries\TurnCredentialService;
 use CodeIgniter\Config\BaseService;
 
 /**
@@ -27,5 +28,14 @@ class Services extends BaseService
         }
 
         return new JwtTokenService(config(Jwt::class));
+    }
+
+    public static function turnCredentialService(bool $getShared = true): TurnCredentialService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('turnCredentialService');
+        }
+
+        return new TurnCredentialService(config(Turn::class));
     }
 }

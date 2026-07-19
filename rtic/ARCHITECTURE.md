@@ -32,6 +32,7 @@
 - 공유기/방화벽에서 필요한 포트를 개방·포트포워딩한다: coturn UDP 3478(+ TLS fallback 443), LiveKit 시그널링/미디어 포트, CI4 API HTTPS 포트.
 - 외부 도메인 연결이 필요하면 DDNS(고정 IP가 아닐 경우) + Let's Encrypt 등으로 TLS 인증서를 구성한다.
 - 리전 다중화는 해당 없음(단일 자택 서버 구성).
+- coturn 배포 파일(`docker-compose.yml`, `turnserver.conf`)은 [`coturn/`](coturn/)에 있다. `use-auth-secret`(TURN REST API 방식) credential 발급 로직은 CI4 앱의 `app/Libraries/TurnCredentialService.php`가 담당하며, `coturn/.env`의 `TURN_SECRET`과 CI4 `.env`의 `turn.secret`이 반드시 동일해야 한다.
 
 ## 6. 리눅스 수신 데몬 요구사항
 - 네트워크 끊김 시 자동 재접속 (지수 백오프)
