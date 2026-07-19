@@ -26,5 +26,6 @@ Claude Code 작업 규칙은 [`CLAUDE.md`](CLAUDE.md)를 참고하세요.
 - [x] LiveKit 온프레미스 배포 + CI4 토큰 검증 연동
 - [x] 리눅스 수신 데몬(GStreamer 프로토타입 + systemd 서비스화)
 - [x] 온프레미스 네트워크 인프라(방화벽·DDNS·Caddy 자동 HTTPS)
-- [x] 외부용 앱(로그인·목소리 전송·리턴 메시지 표시) — 데몬 쪽 리턴 메시지 발신 구현은 후속 이슈
+- [x] 외부용 앱(로그인·목소리 전송·리턴 메시지 표시)
+- [x] 리눅스 데몬 리턴 메시지 발신(LiveKit 텍스트 스트림)
 - [ ] 통합 테스트 등 — `ARCHITECTURE.md` 7절 참고

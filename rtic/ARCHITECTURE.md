@@ -40,7 +40,7 @@
 - SFU 연결 상태 헬스체크 노출 — Prometheus `/metrics`(`rtic_daemon_up`, `rtic_daemon_pipeline_state`), 자체 구축 Grafana에서 스크레이프.
 - 오디오 출력 실패 시 자동 재시작: `systemd` `Restart=on-failure`
 - 구현·배포 파일은 [`daemon/`](daemon/) 참고(Python + GStreamer/PyGObject, `livekitwebrtcsrc` 사용 — 표준 apt에 없어 소스 빌드 또는 서드파티 `.deb` 필요, `daemon/README.md` 참고).
-- "상태를 데이터 채널로 회신"(2절)은 이번 이슈(#7) 범위 밖 — 외부용 앱 개발(#9)과 함께 다룬다.
+- "상태를 데이터 채널로 회신"(2절)은 `rtic_daemon/status_reporter.py`(이슈 #12)가 담당 — LiveKit 텍스트 스트림(토픽 `rtic.status`)으로 발신, 오디오 참가자와는 별개의 데이터 채널 전용 참가자(`<identity>-status`) 사용.
 
 ## 7. 개발 순서 제안 (Claude Code 작업 단위)
 1. [x] CI4: 인증 + 룸 토큰(JWT) 발급 API 엔드포인트 구현
@@ -52,7 +52,7 @@
 7. [ ] 통합 테스트: 공중망 환경(모바일 데이터 등)에서 NAT 통과 시나리오 검증
 8. [x] 외부용 앱: 로그인 화면 + CI4 인증 연동
 9. [x] 외부용 앱: 목소리 전송(마이크 캡처 → LiveKit 퍼블리시) UI
-10. [x] 외부용 앱: 데이터 채널 수신 및 리턴 메시지 표시 UI — 스키마 확정, 앱 수신은 구현. **데몬 발신 구현은 범위 밖**(후속 이슈)
+10. [x] 외부용 앱: 데이터 채널 수신 및 리턴 메시지 표시 UI — 스키마 확정(#9), 데몬 발신 구현 완료(#12)
 11. [ ] (백로그) 양방향 인터콤: 자택 마이크 연결 후 역방향 오디오 경로 설계·구현
 
 ## 8. 참고 기술 스택 요약
@@ -74,7 +74,7 @@
 |---|---|---|
 | 로그인 | 앱 사용자 인증 | CI4 API 인증 → 룸 입장 JWT 발급(3절 1단계) |
 | 목소리 전송 | 마이크 캡처 후 자택 스피커로 실시간 송신 | 기존 처리 흐름(3절) 그대로 재사용 |
-| 리턴 메시지 표시 | 리눅스 데몬 측 상태·텍스트 메시지를 앱 UI에 표시 | LiveKit **텍스트 스트림**(데이터 채널), 토픽 `rtic.status`, 페이로드 `{type, message, ts}`(이슈 #9에서 확정, `web/README.md` 참고). 데몬 쪽 실제 발신 구현은 범위 밖 — 후속 이슈 |
+| 리턴 메시지 표시 | 리눅스 데몬 측 상태·텍스트 메시지를 앱 UI에 표시 | LiveKit **텍스트 스트림**(데이터 채널), 토픽 `rtic.status`, 페이로드 `{type, message, ts}`(이슈 #9에서 확정, `web/README.md` 참고). 데몬 발신은 `rtic_daemon/status_reporter.py`(#12)가 담당 |
 
 구현: [`web/`](web/)(바닐라 JS + livekit-client + Vite). CI4 API와 오리진이 다르므로
 `app/Config/Cors.php` + `app/Config/Filters.php`에 CORS 설정을 추가했다(`.env`의

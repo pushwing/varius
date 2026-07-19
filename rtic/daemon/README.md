@@ -11,6 +11,7 @@
 - `rtic_daemon/pipeline.py` — GStreamer 파이프라인 조립 (`livekitwebrtcsrc ! queue ! audioconvert ! audioresample ! <sink>`)
 - `rtic_daemon/daemon.py` — 파이프라인 실행 루프, GLib 메인루프, 버스 메시지(ERROR/EOS) 처리
 - `rtic_daemon/health.py` — Prometheus 메트릭(`rtic_daemon_up`, `rtic_daemon_pipeline_state`, `rtic_daemon_start_time_seconds`)
+- `rtic_daemon/status_reporter.py` — LiveKit 텍스트 스트림(토픽 `rtic.status`)으로 앱(`../web/`)에 상태·에러 메시지를 발신. GStreamer/GLib 메인루프와는 별개의 백그라운드 asyncio 스레드에서 데이터 채널 전용 참가자(`<identity>-status`)로 접속한다.
 - `systemd/rtic-daemon.service` — systemd 유닛(지수 백오프 재시작)
 
 ## 동작 원리 — "재접속"을 프로세스 재시작으로 위임
@@ -76,6 +77,19 @@ python3 -m venv --system-site-packages .venv
 .venv/bin/ruff format --check .
 .venv/bin/python -m pytest -v
 ```
+
+## 리턴 메시지 발신 (LiveKit 텍스트 스트림)
+
+파이프라인이 PLAYING 상태에 처음 도달하면 `{"type":"status","message":"스피커 연결됨","ts":...}`를,
+ERROR/EOS 시에는 `{"type":"error"|"status", ...}`를 토픽 `rtic.status`로 발신한다.
+스키마는 `rtic/web/src/messageSchema.js`(#9)와 반드시 일치해야 한다.
+
+- 오디오 수신 참가자(`config.identity`)와 identity가 충돌하지 않도록 데이터 채널
+  전용 참가자는 `<identity>-status`를 쓴다.
+- 발신 실패(연결 불가 등)는 오디오 경로를 막지 않도록 로깅만 하고 무시한다 —
+  리턴 메시지는 부가 기능이다.
+- 로컬에서 실제 LiveKit(docker) + `@livekit/rtc-node` 리스너로 데몬이 보낸
+  메시지가 정확한 스키마로 수신됨을 실제 검증했다.
 
 ## 헬스체크 (Prometheus)
 

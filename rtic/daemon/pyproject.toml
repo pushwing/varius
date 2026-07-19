@@ -10,12 +10,15 @@ requires-python = ">=3.11"
 dependencies = [
     "PyGObject>=3.50",
     "prometheus-client>=0.20",
+    "livekit>=1.0",
+    "livekit-api>=1.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
     "ruff>=0.6",
+    "pyjwt>=2.8",
 ]
 
 [project.scripts]

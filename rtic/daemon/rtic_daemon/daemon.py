@@ -11,6 +11,7 @@ from gi.repository import GLib, Gst  # noqa: E402
 from . import health
 from .config import DaemonConfig
 from .pipeline import build_pipeline
+from .status_reporter import StatusReporter
 
 logger = logging.getLogger(__name__)
 
@@ -25,10 +26,13 @@ def run(config: DaemonConfig, source_description: str | None = None) -> int:
     Gst.init(None)
     health.start_metrics_server(config.metrics_port)
 
+    reporter = StatusReporter(config)
+    reporter.start()
+
     pipeline = build_pipeline(config, source_description)
     loop = GLib.MainLoop()
 
-    state = {"exit_code": 0, "shutdown_requested": False}
+    state = {"exit_code": 0, "shutdown_requested": False, "playing_reported": False}
 
     def _on_unix_signal(signum: int) -> bool:
         state["shutdown_requested"] = True
@@ -43,15 +47,20 @@ def run(config: DaemonConfig, source_description: str | None = None) -> int:
         if message.type == Gst.MessageType.ERROR:
             err, debug = message.parse_error()
             logger.error("GStreamer 에러: %s (%s)", err, debug)
+            reporter.send("error", f"오디오 파이프라인 에러: {err}")
             state["exit_code"] = 1
             loop.quit()
         elif message.type == Gst.MessageType.EOS:
             logger.warning("GStreamer 스트림 종료(EOS) — 재접속을 위해 종료합니다")
+            reporter.send("status", "연결이 끊어졌습니다 — 재접속을 시도합니다.")
             state["exit_code"] = 1
             loop.quit()
         elif message.type == Gst.MessageType.STATE_CHANGED and message.src == pipeline:
             _old, new, _pending = message.parse_state_changed()
             health.set_pipeline_state(int(new))
+            if new == Gst.State.PLAYING and not state["playing_reported"]:
+                state["playing_reported"] = True
+                reporter.send("status", "스피커 연결됨")
         return True
 
     bus = pipeline.get_bus()
@@ -64,6 +73,7 @@ def run(config: DaemonConfig, source_description: str | None = None) -> int:
     finally:
         pipeline.set_state(Gst.State.NULL)
         health.UP.set(0)
+        reporter.stop()
 
     if state["shutdown_requested"]:
         return 0
