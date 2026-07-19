@@ -1,0 +1,15 @@
+services:
+  livekit:
+    image: livekit/livekit-server:v1.9
+    container_name: rtic-livekit
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: ["--config", "/etc/livekit/livekit.yaml"]
+    volumes:
+      - ./livekit.yaml:/etc/livekit/livekit.yaml:ro
+    ports:
+      - "7880:7880/tcp"
+      - "7881:7881/tcp"
+      - "3478:3478/udp"
+      - "50000-50100:50000-50100/udp"

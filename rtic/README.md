@@ -5,9 +5,9 @@
 
 ## 구성
 
-- **CI4 API** — 인증, 룸 토큰(JWT) 발급
-- **LiveKit (SFU)** — WebRTC 시그널링·미디어 라우팅
-- **coturn (TURN)** — NAT 통과
+- **CI4 API** — 인증, LiveKit 액세스 토큰(JWT) 발급
+- **LiveKit (SFU)** — WebRTC 시그널링·미디어 라우팅, 내장 TURN 사용
+- **coturn (TURN)** — NAT 통과. 인프라만 구축된 상태이며 현재는 LiveKit 내장 TURN을 대신 사용 중(미연동, `ARCHITECTURE.md` 4절 참고)
 - **리눅스 수신 데몬** — GStreamer로 오디오 디코딩 후 스피커 출력
 
 위 구성 요소는 모두 **자택 서버(우분투)에 온프레미스로 설치**됩니다. AWS 등 클라우드 인프라는 사용하지 않습니다.
@@ -17,5 +17,9 @@ Claude Code 작업 규칙은 [`CLAUDE.md`](CLAUDE.md)를 참고하세요.
 
 ## 개발 상태
 
-아직 초기 설계 단계이며 코드는 없습니다. `ARCHITECTURE.md`의 "개발 순서 제안"에 따라
-CI4 인증/토큰 발급 API부터 순차적으로 구현할 예정입니다.
+`ARCHITECTURE.md`의 "개발 순서 제안"에 따라 순차 구현 중입니다.
+
+- [x] CI4 인증 + LiveKit 액세스 토큰 발급 API
+- [x] coturn 온프레미스 셀프호스팅 인프라(현재 미연동)
+- [x] LiveKit 온프레미스 배포 + CI4 토큰 검증 연동
+- [ ] 리눅스 수신 데몬, 외부용 앱, 통합 테스트 등 — `ARCHITECTURE.md` 7절 참고

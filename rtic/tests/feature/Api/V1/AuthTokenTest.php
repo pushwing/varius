@@ -23,15 +23,29 @@ final class AuthTokenTest extends CIUnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        putenv('jwt.secret=feature-test-secret-0123456789abcdef');
-        $_ENV['jwt.secret'] = 'feature-test-secret-0123456789abcdef';
+        $this->setEnv('livekit.apiKey', 'feature-test-api-key');
+        $this->setEnv('livekit.apiSecret', 'feature-test-secret-0123456789abcdef');
+        $this->setEnv('livekit.url', 'ws://localhost:7880');
     }
 
     protected function tearDown(): void
     {
         parent::tearDown();
-        putenv('jwt.secret');
-        unset($_ENV['jwt.secret']);
+        $this->unsetEnv('livekit.apiKey');
+        $this->unsetEnv('livekit.apiSecret');
+        $this->unsetEnv('livekit.url');
+    }
+
+    private function setEnv(string $key, string $value): void
+    {
+        putenv("{$key}={$value}");
+        $_ENV[$key] = $value;
+    }
+
+    private function unsetEnv(string $key): void
+    {
+        putenv($key);
+        unset($_ENV[$key]);
     }
 
     private function seedUser(string $email = 'user@example.com'): void
@@ -56,7 +70,7 @@ final class AuthTokenTest extends CIUnitTestCase
 
         $data = json_decode($result->getJSON(), true);
         $this->assertArrayHasKey('access_token', $data['data']);
-        $this->assertSame('Bearer', $data['data']['token_type']);
+        $this->assertSame('ws://localhost:7880', $data['data']['livekit_url']);
         $this->assertSame('rtic-home', $data['data']['room']);
     }
 

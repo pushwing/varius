@@ -32,13 +32,13 @@ final class AuthController extends BaseApiController
             return $this->error($e->errorCode(), $e->getMessage(), $e->httpStatusCode());
         }
 
-        $issued = Services::jwtTokenService()->issueRoomEntryToken($userId, (string) $body['email']);
+        $issued = Services::liveKitAccessTokenService()->issue((string) $userId);
 
         return $this->success([
             'access_token' => $issued['token'],
-            'token_type'   => 'Bearer',
-            'expires_in'   => $issued['expiresIn'],
+            'livekit_url'  => $issued['url'],
             'room'         => $issued['room'],
+            'expires_in'   => $issued['expiresIn'],
         ], [], 201);
     }
 

@@ -58,17 +58,23 @@ database.tests.DBDriver = SQLite3
 # logger.threshold = 4
 
 #--------------------------------------------------------------------
-# JWT (room 입장 토큰)
+# LiveKit (room 입장 토큰)
 #--------------------------------------------------------------------
+# rtic/livekit/.env의 LIVEKIT_KEYS(key: secret)와 apiKey/apiSecret이
+# 반드시 동일한 값을 사용해야 한다.
 
-# jwt.secret = your-secret-key-change-this-in-production
-# jwt.roomEntryTtl = 300
-# jwt.roomName = rtic-home
+# livekit.apiKey = change-me-api-key
+# livekit.apiSecret = change-me-api-secret-at-least-32-bytes
+# livekit.url = ws://localhost:7880
+# livekit.tokenTtl = 300
+# livekit.roomName = rtic-home
 
 #--------------------------------------------------------------------
-# TURN (coturn use-auth-secret credential)
+# TURN (coturn use-auth-secret credential) — 현재 미사용
 #--------------------------------------------------------------------
-# rtic/coturn/.env의 TURN_SECRET과 반드시 동일한 값을 사용해야 한다.
+# LiveKit 내장 TURN을 사용하기로 해 당장은 연동하지 않는다(이슈 #6).
+# 외부 coturn(#5)을 다시 쓰게 되면 rtic/coturn/.env의 TURN_SECRET과
+# 반드시 동일한 값을 사용해야 한다.
 
 # turn.secret = your-secret-key-change-this-in-production
 # turn.credentialTtl = 300

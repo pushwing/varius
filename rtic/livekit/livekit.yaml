@@ -1,0 +1,22 @@
+# LiveKit(SFU) 설정 — rtic 온프레미스 단일 노드
+#
+# API key/secret은 이 파일에 두지 않고 LIVEKIT_KEYS 환경변수(.env, 커밋 금지)로
+# 주입한다. 단일 서버(단일 노드) 구성이라 다중 노드 상태 동기화용 Redis는
+# 사용하지 않는다.
+
+port: 7880
+
+rtc:
+  tcp_port: 7881
+  port_range_start: 50000
+  port_range_end: 50100
+  use_external_ip: true
+
+# 별도 coturn(#5) 대신 LiveKit 내장 TURN을 사용한다 — 인증이 LiveKit 토큰
+# 발급/검증과 통합되어 있어 별도 credential 연동이 필요 없다.
+turn:
+  enabled: true
+  udp_port: 3478
+  # 운영 배포 시 공인 도메인 확보 후 TLS(443) 활성화:
+  # tls_port: 5349
+  # domain: turn.example.com

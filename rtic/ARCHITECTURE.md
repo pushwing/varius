@@ -11,20 +11,20 @@
 | 클라이언트(외부용 앱) | 로그인, 마이크 캡처, 목소리 전송, 리턴 메시지 표시 | 웹(getUserMedia) / 앱 |
 | CI4 API | 인증, 룸 토큰(JWT) 발급, 디바이스/이력 관리 | PHP 8.2+, CodeIgniter 4 |
 | SFU / 시그널링 | WebRTC 시그널링, 미디어 라우팅, 데이터 채널(리턴 메시지) | LiveKit (셀프호스팅 1순위), 대안: Janus |
-| TURN 서버 | NAT 통과, 미디어 릴레이 | coturn (UDP 3478 + 443 TLS fallback) |
+| TURN 서버 | NAT 통과, 미디어 릴레이 | LiveKit 내장 TURN 사용(이슈 #6). 별도 coturn(#5)은 인프라만 준비된 상태로 보류 — 3·4절 참고 |
 | 리눅스 수신 데몬 | SFU에 참가자로 접속, 오디오 디코딩 후 스피커 출력, 상태를 데이터 채널로 회신 | 우분투 서버(자택 설치), GStreamer webrtcbin → ALSA/PulseAudio, systemd 상주 |
 
 ## 3. 처리 흐름
-1. 클라이언트가 CI4 API에 인증 요청 → 짧은 만료시간의 룸 입장 JWT 발급
+1. 클라이언트가 CI4 API에 인증 요청 → 짧은 만료시간의 **LiveKit 액세스 토큰**(HS256 JWT, VideoGrant 포함) 발급. CI4가 자체 포맷 JWT를 발급하던 초기 설계(이슈 #4)를 LiveKit이 직접 검증 가능한 토큰 포맷으로 대체했다(이슈 #6).
 2. 클라이언트가 발급받은 토큰으로 LiveKit(SFU)에 접속, WebRTC 오퍼/앤서 교환
-3. NAT 통과 실패 시 coturn을 통해 미디어 릴레이 (HMAC 기반 단기 TTL credential)
+3. NAT 통과 실패 시 LiveKit 내장 TURN을 통해 미디어 릴레이(4절 참고)
 4. 리눅스 수신 데몬은 서버가 지정한 특정 room에만 참가자로 join (임의 room 지정 불가)
 5. 데몬이 수신한 Opus 오디오를 GStreamer 파이프라인으로 디코딩 → ALSA로 실시간 출력
 
 ## 4. 보안 요구사항
 - WebRTC 미디어는 DTLS-SRTP로 기본 암호화됨
-- CI4가 발급하는 룸 토큰은 짧은 만료시간(TTL) 적용
-- coturn credential은 `use-auth-secret` + HMAC 방식, 수십 초~수 분 TTL로 재사용 방지
+- CI4가 발급하는 LiveKit 액세스 토큰은 짧은 만료시간(TTL, 기본 300초) 적용, VideoGrant로 room·publish·subscribe·데이터 채널 권한만 최소 부여
+- TURN 인증은 LiveKit 내장 TURN이 토큰 검증과 함께 통합 처리한다. 별도 coturn(#5)의 `use-auth-secret` HMAC credential은 LiveKit의 외부 TURN 연동이 고정 정적 credential만 지원해 현재 흐름과 맞지 않아 연동을 보류했다 — coturn 인프라 코드는 남겨두고 필요 시 재검토한다.
 - 리눅스 데몬의 room 접근은 서버 측에서 강제 (클라이언트 임의 지정 금지)
 
 ## 5. 온프레미스 배포 가이드
@@ -32,7 +32,8 @@
 - 공유기/방화벽에서 필요한 포트를 개방·포트포워딩한다: coturn UDP 3478(+ TLS fallback 443), LiveKit 시그널링/미디어 포트, CI4 API HTTPS 포트.
 - 외부 도메인 연결이 필요하면 DDNS(고정 IP가 아닐 경우) + Let's Encrypt 등으로 TLS 인증서를 구성한다.
 - 리전 다중화는 해당 없음(단일 자택 서버 구성).
-- coturn 배포 파일(`docker-compose.yml`, `turnserver.conf`)은 [`coturn/`](coturn/)에 있다. `use-auth-secret`(TURN REST API 방식) credential 발급 로직은 CI4 앱의 `app/Libraries/TurnCredentialService.php`가 담당하며, `coturn/.env`의 `TURN_SECRET`과 CI4 `.env`의 `turn.secret`이 반드시 동일해야 한다.
+- LiveKit 배포 파일(`docker-compose.yml`, `livekit.yaml`)은 [`livekit/`](livekit/)에 있다. API key/secret은 `livekit/.env`의 `LIVEKIT_KEYS`로 주입하며, CI4 `.env`의 `livekit.apiKey`/`livekit.apiSecret`과 반드시 동일해야 한다. 토큰 발급은 CI4 앱의 `app/Libraries/LiveKitAccessTokenService.php`가 담당한다.
+- coturn 배포 파일(`docker-compose.yml`, `turnserver.conf`)은 [`coturn/`](coturn/)에 있다(현재 미사용, 4절 참고). `use-auth-secret` credential 발급 로직은 `app/Libraries/TurnCredentialService.php`에 남아 있다.
 
 ## 6. 리눅스 수신 데몬 요구사항
 - 네트워크 끊김 시 자동 재접속 (지수 백오프)
@@ -40,9 +41,9 @@
 - 오디오 출력 실패 시 자동 재시작: `systemd` `Restart=on-failure`
 
 ## 7. 개발 순서 제안 (Claude Code 작업 단위)
-1. [ ] CI4: 인증 + 룸 토큰(JWT) 발급 API 엔드포인트 구현
-2. [ ] coturn 셀프호스팅 설정 (docker-compose, HMAC secret 연동)
-3. [ ] LiveKit 셀프호스팅 배포 (docker-compose/k8s), CI4와 토큰 검증 연동
+1. [x] CI4: 인증 + 룸 토큰(JWT) 발급 API 엔드포인트 구현
+2. [x] coturn 셀프호스팅 설정 (docker-compose, HMAC secret 연동) — 인프라만 구축, LiveKit 연동은 보류(4절)
+3. [x] LiveKit 셀프호스팅 배포 (docker-compose/k8s), CI4와 토큰 검증 연동
 4. [ ] 리눅스 수신 데몬: GStreamer webrtcbin 파이프라인으로 프로토타입 작성
 5. [ ] 데몬 systemd 서비스화 (자동 재시작, 헬스체크 엔드포인트)
 6. [ ] 온프레미스 인프라: 자택 서버에 coturn/LiveKit/CI4 API 배치, 공유기 포트포워딩·방화벽(UDP 3478 등) 설정
@@ -54,8 +55,8 @@
 
 ## 8. 참고 기술 스택 요약
 - 백엔드: CodeIgniter 4 (PHP 8.2+), PHPUnit, PHPStan
-- SFU: LiveKit (Go)
-- TURN: coturn
+- SFU: LiveKit (Go), 내장 TURN 사용. 토큰 발급은 CI4가 `firebase/php-jwt`로 LiveKit 액세스 토큰(HS256) 직접 생성
+- TURN(미사용, 보류): coturn
 - 리눅스 데몬: GStreamer (webrtcbin), systemd
 - 인프라: 온프레미스 자택 서버(우분투), CI/CD 없이 로컬 검증(저장소 공통 규칙)
 

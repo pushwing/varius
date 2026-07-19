@@ -2,7 +2,7 @@
 
 namespace Config;
 
-use App\Libraries\JwtTokenService;
+use App\Libraries\LiveKitAccessTokenService;
 use App\Libraries\TurnCredentialService;
 use CodeIgniter\Config\BaseService;
 
@@ -21,13 +21,13 @@ use CodeIgniter\Config\BaseService;
  */
 class Services extends BaseService
 {
-    public static function jwtTokenService(bool $getShared = true): JwtTokenService
+    public static function liveKitAccessTokenService(bool $getShared = true): LiveKitAccessTokenService
     {
         if ($getShared) {
-            return static::getSharedInstance('jwtTokenService');
+            return static::getSharedInstance('liveKitAccessTokenService');
         }
 
-        return new JwtTokenService(config(Jwt::class));
+        return new LiveKitAccessTokenService(config(LiveKit::class));
     }
 
     public static function turnCredentialService(bool $getShared = true): TurnCredentialService
