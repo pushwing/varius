@@ -27,6 +27,7 @@ final class LiveKitAccessTokenService
         $token = JWT::encode([
             'iss' => $this->apiKey(),
             'sub' => $identity,
+            'jti' => bin2hex(random_bytes(16)),
             'nbf' => $now,
             'exp' => $now + $ttl,
             'video' => [

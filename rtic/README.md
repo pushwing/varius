@@ -28,4 +28,4 @@ Claude Code 작업 규칙은 [`CLAUDE.md`](CLAUDE.md)를 참고하세요.
 - [x] 온프레미스 네트워크 인프라(방화벽·DDNS·Caddy 자동 HTTPS)
 - [x] 외부용 앱(로그인·목소리 전송·리턴 메시지 표시)
 - [x] 리눅스 데몬 리턴 메시지 발신(LiveKit 텍스트 스트림)
-- [ ] 통합 테스트 등 — `ARCHITECTURE.md` 7절 참고
+- [x] 통합 테스트 — 토큰 재발급 자동화 테스트 + 실배포 후 수동 검증 런북([`INTEGRATION-TEST-RUNBOOK.md`](INTEGRATION-TEST-RUNBOOK.md))
