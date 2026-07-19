@@ -10,6 +10,8 @@
 - **coturn (TURN)** — NAT 통과
 - **리눅스 수신 데몬** — GStreamer로 오디오 디코딩 후 스피커 출력
 
+위 구성 요소는 모두 **자택 서버(우분투)에 온프레미스로 설치**됩니다. AWS 등 클라우드 인프라는 사용하지 않습니다.
+
 상세 아키텍처와 개발 순서는 [`ARCHITECTURE.md`](ARCHITECTURE.md)를,
 Claude Code 작업 규칙은 [`CLAUDE.md`](CLAUDE.md)를 참고하세요.
 
