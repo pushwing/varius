@@ -14,7 +14,7 @@ WebRTC 기반 인터콤 시스템. 상세 아키텍처는 [`ARCHITECTURE.md`](AR
 - **SFU/시그널링**: LiveKit (셀프호스팅)
 - **TURN**: coturn (`use-auth-secret` + HMAC)
 - **리눅스 수신 데몬**: GStreamer(webrtcbin) → ALSA/PulseAudio, systemd 상주
-- **인프라**: AWS (EC2/ECS + NLB)
+- **인프라**: 온프레미스 자택 서버(우분투). coturn/LiveKit/CI4 API·수신 데몬 모두 이 서버에 설치하며, 클라우드(AWS 등)는 사용하지 않는다. 상세는 [`ARCHITECTURE.md`](ARCHITECTURE.md) 5·9절 참고.
 
 이 프로젝트 내 PHP(CodeIgniter 4) 코드는 부모 저장소들의 전역 PHP 규칙
 ([`~/.claude/rules/code-style.md`](~/.claude/rules/code-style.md),
