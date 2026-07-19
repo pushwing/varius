@@ -8,6 +8,9 @@ Type=simple
 User=rtic
 Group=audio
 EnvironmentFile=/etc/rtic-daemon/env
+# livekitwebrtcsrc를 홈 디렉토리에 소스 빌드한 경우(README 참고) 그 경로를
+# 지정해야 한다. 실행 사용자의 실제 설치 경로에 맞게 조정한다.
+Environment=GST_PLUGIN_PATH=/home/rtic/.local/lib/gstreamer-1.0
 ExecStart=/opt/rtic-daemon/.venv/bin/python -m rtic_daemon
 
 # 네트워크 끊김·EOS 등 실패로 프로세스가 종료되면 재시작한다. 정상 종료

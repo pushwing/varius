@@ -20,7 +20,11 @@ class DaemonConfig:
     api_secret: str
     room_name: str
     identity: str = "rtic-speaker"
-    audio_sink: str = "autoaudiosink"
+    # WebRTC 실시간 오디오는 sync=true면 클럭 불일치로 소리가 안 난다 —
+    # 기본 sink에 sync=false를 반드시 포함한다. 실서버에서는 보통
+    # `alsasink device=plughw:N,M sync=false`로 출력 장치까지 지정해
+    # override 한다(.env.example 참고).
+    audio_sink: str = "autoaudiosink sync=false"
     metrics_port: int = 9477
 
     @classmethod
@@ -41,6 +45,6 @@ class DaemonConfig:
             api_secret=env["RTIC_LIVEKIT_API_SECRET"],
             room_name=env["RTIC_LIVEKIT_ROOM_NAME"],
             identity=env.get("RTIC_DAEMON_IDENTITY", "rtic-speaker"),
-            audio_sink=env.get("RTIC_AUDIO_SINK", "autoaudiosink"),
+            audio_sink=env.get("RTIC_AUDIO_SINK", "autoaudiosink sync=false"),
             metrics_port=metrics_port,
         )

@@ -39,7 +39,7 @@
 - 네트워크 끊김 시 자동 재접속 (지수 백오프) — 데몬 자체는 재연결 로직 없이 에러/EOS 시 종료 코드 1로 종료하고, **systemd 254+(Ubuntu 24.04+)의 `RestartSteps`/`RestartMaxDelaySec` 네이티브 지수 백오프**로 재시작을 위임한다.
 - SFU 연결 상태 헬스체크 노출 — Prometheus `/metrics`(`rtic_daemon_up`, `rtic_daemon_pipeline_state`), 자체 구축 Grafana에서 스크레이프.
 - 오디오 출력 실패 시 자동 재시작: `systemd` `Restart=on-failure`
-- 구현·배포 파일은 [`daemon/`](daemon/) 참고(Python + GStreamer/PyGObject, `livekitwebrtcsrc` 사용 — 표준 apt에 없어 소스 빌드 또는 서드파티 `.deb` 필요, `daemon/README.md` 참고).
+- 구현·배포 파일은 [`daemon/`](daemon/) 참고(Python + GStreamer/PyGObject, `livekitwebrtcsrc` 사용 — 표준 apt에 없어 소스 빌드 필요. 실서버 배포에서 검증한 필수 조건: `gstreamer1.0-nice`, 실행 사용자 `audio` 그룹, 실시간 오디오 sink `sync=false`. `daemon/README.md` 참고).
 - "상태를 데이터 채널로 회신"(2절)은 `rtic_daemon/status_reporter.py`(이슈 #12)가 담당 — LiveKit 텍스트 스트림(토픽 `rtic.status`)으로 발신, 오디오 참가자와는 별개의 데이터 채널 전용 참가자(`<identity>-status`) 사용.
 
 ## 7. 개발 순서 제안 (Claude Code 작업 단위)

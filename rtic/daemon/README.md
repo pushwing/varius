@@ -24,25 +24,59 @@
 
 ## 사전 준비 (자택 우분투 서버)
 
+> 아래 절차는 Ubuntu 24.04에 **실제 배포하며 검증**한 것이다.
+
 ```bash
 sudo apt install python3 python3-venv python3-gi \
   gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
-  gstreamer1.0-plugins-bad gstreamer1.0-alsa gstreamer1.0-pulseaudio
+  gstreamer1.0-plugins-bad gstreamer1.0-alsa gstreamer1.0-pulseaudio \
+  gstreamer1.0-nice
 ```
 
-### livekitwebrtcsrc 설치 (표준 apt 저장소에 없음)
+⚠️ `gstreamer1.0-nice`(libnice, ICE 협상용 `nicesrc`)를 빠뜨리면
+`livekitwebrtcsrc`가 파이프라인 구성 중 "missing plugin" 에러로 실패한다.
+
+### 오디오 그룹 (필수)
+
+데몬을 실행하는 사용자가 `audio` 그룹에 있어야 `/dev/snd/*`에 접근할 수
+있다. 없으면 `aplay -l`이 "no soundcards found"로 나오고 소리가 안 난다.
+
+```bash
+sudo usermod -aG audio "$USER"   # 적용은 재로그인 후(또는 `newgrp audio`)
+```
+
+### livekitwebrtcsrc 설치 (표준 apt 저장소에 없음 — 소스 빌드 필요)
 
 `livekitwebrtcsrc`는 GStreamer 공식 Rust 플러그인(`gst-plugins-rs`)에
-포함돼 있지만 `livekit` feature가 기본 빌드에는 꺼져 있어 아래 중 하나가
-필요합니다.
+포함돼 있지만 `livekit` feature가 기본 빌드에는 꺼져 있어 **소스 빌드가
+사실상 유일한 방법**이다(사전빌드 `.deb`를 배포하던 mopidy 저장소는 현재
+Spotify 플러그인만 제공하며 webrtc 플러그인은 없다).
 
-- **소스 빌드**: Rust 툴체인 + `cargo-c` 설치 후 `gst-plugins-rs`를
-  `--features livekit`로 빌드해 `cargo cinstall`.
-- **서드파티 사전빌드 `.deb`**: https://github.com/mopidy/gst-plugins-rs-build/releases 에서
-  플랫폼에 맞는 패키지를 받아 설치.
+```bash
+# 1) Rust 툴체인
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+source "$HOME/.cargo/env"
 
-플러그인이 GStreamer 기본 prefix 밖에 설치됐다면 `GST_PLUGIN_PATH`를
-`systemd` 유닛의 `Environment=`에 추가해야 한다.
+# 2) 빌드 의존 패키지
+sudo apt install -y build-essential pkg-config libssl-dev git \
+  libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgstreamer-plugins-bad1.0-dev
+
+# 3) cargo-c (GStreamer 플러그인 C 라이브러리 빌드/설치 도구)
+cargo install cargo-c
+
+# 4) 빌드 + 홈 디렉토리에 설치 (sudo 불필요, ~10-20분)
+cd ~
+git clone --depth 1 https://github.com/GStreamer/gst-plugins-rs.git
+cd gst-plugins-rs/net/webrtc
+cargo cinstall --prefix="$HOME/.local" --libdir="$HOME/.local/lib" --features livekit
+
+# 5) 확인
+GST_PLUGIN_PATH="$HOME/.local/lib/gstreamer-1.0" gst-inspect-1.0 livekitwebrtcsrc
+```
+
+플러그인이 GStreamer 기본 prefix 밖(`~/.local`)에 설치됐으므로,
+`GST_PLUGIN_PATH="$HOME/.local/lib/gstreamer-1.0"`를 실행 환경(아래 systemd
+유닛의 `Environment=` 또는 셸)에 반드시 넣어야 한다.
 
 ## 설치
 
@@ -107,3 +141,30 @@ scrape_configs:
 재시작 여부는 Prometheus의 기본 `up` 메트릭으로도 확인할 수 있다.
 `rtic_daemon_pipeline_state`는 GStreamer `Gst.State` 정수값(NULL=1, READY=2,
 PAUSED=3, PLAYING=4)이다.
+
+## 트러블슈팅 — "연결은 되는데 스피커에서 소리가 안 남"
+
+실제 배포 중 겪은 문제와 원인을 순서대로 좁히는 방법. 로그에
+`원격 트랙 수신 시작: pad=audio_0`이 찍히면 오디오는 데몬까지 도달한
+것이므로, 그 이후(출력) 단계만 보면 된다.
+
+1. **서버 스피커 자체가 나는지** (데몬과 무관):
+   `speaker-test -D hw:0,0 -t sine -f 440 -c 2 -l 1` — 안 나면 `audio`
+   그룹(위 참고)·볼륨(`alsamixer`)·물리 연결 문제다. `aplay -l`로 카드
+   번호를 확인해 `hw:카드,디바이스`를 맞춘다.
+2. **`Auto-Mute Mode`**: `alsamixer`에서 이 항목이 `Enabled`면 헤드폰/
+   특정 잭 연결 시 다른 출력을 자동 음소거한다 — `Disabled`로 바꾼다.
+3. **sync=false (가장 흔한 원인)**: 파이프라인 로그에 `alsasink ...
+   wrote 960 of 960`이 반복되는데도(=데이터는 정상 출력 중) 소리가
+   없으면, WebRTC 지터로 오디오 클럭이 안 맞아 sink가 재생을 미루는
+   것이다. sink에 `sync=false`를 붙인다(`RTIC_AUDIO_SINK`,
+   `.env.example` 참고). 기본값에는 이미 포함돼 있다.
+4. **포맷 불일치**: raw `hw:`는 샘플레이트/채널을 자동 변환하지 않아
+   무음이 될 수 있다 — `plughw:`를 쓰면 ALSA가 변환해준다.
+5. **정말 무음이 들어오는지 확인**: sink를
+   `audioconvert ! wavenc ! filesink location=/tmp/x.wav`로 바꿔 몇 초
+   녹음한 뒤 그 파일을 재생해본다. 파일에 소리가 있으면 수신은 정상이고
+   실시간 sink 설정(위 3·4)만 문제, 파일도 무음이면 애초에 퍼블리시
+   측(브라우저 마이크)이 무음을 보낸 것이다.
+
+검증된 운영 sink 예: `RTIC_AUDIO_SINK=alsasink device=plughw:0,0 sync=false`

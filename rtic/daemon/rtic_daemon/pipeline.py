@@ -16,7 +16,7 @@ def livekit_source_description(config: DaemonConfig) -> str:
     """운영 환경에서 사용할 livekitwebrtcsrc 소스 세그먼트를 만든다.
 
     livekitwebrtcsrc(gst-plugins-rs, `--features livekit`)는 표준 apt 저장소에
-    없어 자택 서버에 소스 빌드 또는 서드파티 .deb로 별도 설치해야 한다.
+    없어 자택 서버에 소스 빌드로 별도 설치해야 한다(README 참고).
     """
     return (
         "livekitwebrtcsrc name=src "

@@ -28,7 +28,8 @@ def test_from_env_applies_defaults():
     config = DaemonConfig.from_env(_valid_env())
 
     assert config.identity == "rtic-speaker"
-    assert config.audio_sink == "autoaudiosink"
+    # WebRTC 실시간 오디오는 sync=false가 필수라 기본 sink에 포함돼 있어야 한다.
+    assert config.audio_sink == "autoaudiosink sync=false"
     assert config.metrics_port == 9477
 
 
