@@ -12,7 +12,7 @@
 | CI4 API | 인증, 룸 토큰(JWT) 발급, 디바이스/이력 관리 | PHP 8.2+, CodeIgniter 4 |
 | SFU / 시그널링 | WebRTC 시그널링, 미디어 라우팅, 데이터 채널(리턴 메시지) | LiveKit (셀프호스팅 1순위), 대안: Janus |
 | TURN 서버 | NAT 통과, 미디어 릴레이 | LiveKit 내장 TURN 사용(이슈 #6). 별도 coturn(#5)은 인프라만 준비된 상태로 보류 — 3·4절 참고 |
-| 리눅스 수신 데몬 | SFU에 참가자로 접속, 오디오 디코딩 후 스피커 출력, 상태를 데이터 채널로 회신 | 우분투 서버(자택 설치), GStreamer webrtcbin → ALSA/PulseAudio, systemd 상주 |
+| 리눅스 수신 데몬 | SFU에 참가자로 접속, 오디오 디코딩 후 스피커 출력, 상태를 데이터 채널로 회신(예정) | 우분투 서버(자택 설치), Python + GStreamer(`livekitwebrtcsrc`) → ALSA/PulseAudio, systemd 상주 |
 
 ## 3. 처리 흐름
 1. 클라이언트가 CI4 API에 인증 요청 → 짧은 만료시간의 **LiveKit 액세스 토큰**(HS256 JWT, VideoGrant 포함) 발급. CI4가 자체 포맷 JWT를 발급하던 초기 설계(이슈 #4)를 LiveKit이 직접 검증 가능한 토큰 포맷으로 대체했다(이슈 #6).
@@ -36,16 +36,18 @@
 - coturn 배포 파일(`docker-compose.yml`, `turnserver.conf`)은 [`coturn/`](coturn/)에 있다(현재 미사용, 4절 참고). `use-auth-secret` credential 발급 로직은 `app/Libraries/TurnCredentialService.php`에 남아 있다.
 
 ## 6. 리눅스 수신 데몬 요구사항
-- 네트워크 끊김 시 자동 재접속 (지수 백오프)
-- SFU 연결 상태 헬스체크 노출 (자체 구축 Prometheus/Grafana 연동)
+- 네트워크 끊김 시 자동 재접속 (지수 백오프) — 데몬 자체는 재연결 로직 없이 에러/EOS 시 종료 코드 1로 종료하고, **systemd 254+(Ubuntu 24.04+)의 `RestartSteps`/`RestartMaxDelaySec` 네이티브 지수 백오프**로 재시작을 위임한다.
+- SFU 연결 상태 헬스체크 노출 — Prometheus `/metrics`(`rtic_daemon_up`, `rtic_daemon_pipeline_state`), 자체 구축 Grafana에서 스크레이프.
 - 오디오 출력 실패 시 자동 재시작: `systemd` `Restart=on-failure`
+- 구현·배포 파일은 [`daemon/`](daemon/) 참고(Python + GStreamer/PyGObject, `livekitwebrtcsrc` 사용 — 표준 apt에 없어 소스 빌드 또는 서드파티 `.deb` 필요, `daemon/README.md` 참고).
+- "상태를 데이터 채널로 회신"(2절)은 이번 이슈(#7) 범위 밖 — 외부용 앱 개발(#9)과 함께 다룬다.
 
 ## 7. 개발 순서 제안 (Claude Code 작업 단위)
 1. [x] CI4: 인증 + 룸 토큰(JWT) 발급 API 엔드포인트 구현
 2. [x] coturn 셀프호스팅 설정 (docker-compose, HMAC secret 연동) — 인프라만 구축, LiveKit 연동은 보류(4절)
 3. [x] LiveKit 셀프호스팅 배포 (docker-compose/k8s), CI4와 토큰 검증 연동
-4. [ ] 리눅스 수신 데몬: GStreamer webrtcbin 파이프라인으로 프로토타입 작성
-5. [ ] 데몬 systemd 서비스화 (자동 재시작, 헬스체크 엔드포인트)
+4. [x] 리눅스 수신 데몬: GStreamer webrtcbin 파이프라인으로 프로토타입 작성
+5. [x] 데몬 systemd 서비스화 (자동 재시작, 헬스체크 엔드포인트)
 6. [ ] 온프레미스 인프라: 자택 서버에 coturn/LiveKit/CI4 API 배치, 공유기 포트포워딩·방화벽(UDP 3478 등) 설정
 7. [ ] 통합 테스트: 공중망 환경(모바일 데이터 등)에서 NAT 통과 시나리오 검증
 8. [ ] 외부용 앱: 로그인 화면 + CI4 인증 연동
@@ -57,7 +59,7 @@
 - 백엔드: CodeIgniter 4 (PHP 8.2+), PHPUnit, PHPStan
 - SFU: LiveKit (Go), 내장 TURN 사용. 토큰 발급은 CI4가 `firebase/php-jwt`로 LiveKit 액세스 토큰(HS256) 직접 생성
 - TURN(미사용, 보류): coturn
-- 리눅스 데몬: GStreamer (webrtcbin), systemd
+- 리눅스 데몬: Python + PyGObject(GStreamer), `livekitwebrtcsrc`(gst-plugins-rs), prometheus_client, systemd
 - 인프라: 온프레미스 자택 서버(우분투), CI/CD 없이 로컬 검증(저장소 공통 규칙)
 
 ## 9. 리눅스 서버 물리 배치

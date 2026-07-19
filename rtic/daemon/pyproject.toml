@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rtic-daemon"
+version = "0.1.0"
+description = "rtic 리눅스 수신 데몬 — LiveKit 룸 오디오를 자택 스피커로 출력"
+requires-python = ">=3.11"
+dependencies = [
+    "PyGObject>=3.50",
+    "prometheus-client>=0.20",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[project.scripts]
+rtic-daemon = "rtic_daemon.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["rtic_daemon*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+# gi.require_version()는 gi.repository import보다 먼저 호출해야 하는
+# PyGObject의 필수 관례라 이후 import가 파일 상단이 아니게 된다.
+"rtic_daemon/pipeline.py" = ["E402"]
+"rtic_daemon/daemon.py" = ["E402"]
+"tests/test_pipeline.py" = ["E402"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

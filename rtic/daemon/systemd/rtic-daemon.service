@@ -1,0 +1,29 @@
+[Unit]
+Description=rtic 리눅스 수신 데몬 (LiveKit 룸 오디오 -> 자택 스피커)
+After=network-online.target sound.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=rtic
+Group=audio
+EnvironmentFile=/etc/rtic-daemon/env
+ExecStart=/opt/rtic-daemon/.venv/bin/python -m rtic_daemon
+
+# 네트워크 끊김·EOS 등 실패로 프로세스가 종료되면 재시작한다. 정상 종료
+# (SIGTERM, systemctl stop)는 종료 코드 0이라 재시작 대상이 아니다.
+Restart=on-failure
+
+# systemd 254+(Ubuntu 24.04+)의 네이티브 지수 백오프. 1초 -> 최대 60초까지
+# 10단계에 걸쳐 늘어난다. 더 오래된 systemd에서는 RestartSteps/
+# RestartMaxDelaySec이 무시되고 RestartSec(1초) 고정 재시작으로 동작한다 —
+# 이 경우 방화벽·coturn/LiveKit 쪽에서 과도한 재접속 시도를 별도로 제한한다.
+RestartSec=1
+RestartSteps=10
+RestartMaxDelaySec=60
+
+# 오디오 출력 장치 접근 실패 등도 실패로 간주해 재시작한다.
+SuccessExitStatus=0
+
+[Install]
+WantedBy=multi-user.target
