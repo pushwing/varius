@@ -1,0 +1,19 @@
+[Unit]
+Description=rtic CI4 API (내부 바인딩, Caddy가 443에서 리버스 프록시)
+After=network.target
+
+[Service]
+Type=simple
+User=rtic
+WorkingDirectory=/opt/rtic/rtic
+ExecStart=/usr/bin/php spark serve --host 127.0.0.1 --port 8080
+Restart=on-failure
+RestartSec=1
+RestartSteps=10
+RestartMaxDelaySec=60
+
+# 가족 규모 홈서버 스케일에서는 php-fpm 없이 CI4 내장 서버로 충분하다.
+# 트래픽이 늘어나면 php-fpm + Caddy php_fastcgi로 교체를 검토한다.
+
+[Install]
+WantedBy=multi-user.target

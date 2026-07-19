@@ -29,8 +29,8 @@
 
 ## 5. 온프레미스 배포 가이드
 - coturn, LiveKit, CI4 API 모두 **자택 서버에 온프레미스로 설치**한다(클라우드 미사용).
-- 공유기/방화벽에서 필요한 포트를 개방·포트포워딩한다: coturn UDP 3478(+ TLS fallback 443), LiveKit 시그널링/미디어 포트, CI4 API HTTPS 포트.
-- 외부 도메인 연결이 필요하면 DDNS(고정 IP가 아닐 경우) + Let's Encrypt 등으로 TLS 인증서를 구성한다.
+- 공유기/방화벽 포트포워딩: TCP 80·443(Caddy, Let's Encrypt+CI4 API+LiveKit 시그널링), UDP 3478(LiveKit 내장 TURN), UDP 50000–50100(LiveKit ICE 미디어). coturn은 현재 미사용이라 별도 포워딩하지 않는다(4절). 상세·자동화 스크립트는 [`infra/`](infra/) 참고(이슈 #8).
+- 외부 도메인 연결은 DDNS(고정 IP가 아닐 경우, `infra/ddns/`)로 유지하고, TLS 인증서는 Caddy가 Let's Encrypt로 자동 발급·갱신한다(`infra/caddy/Caddyfile`) — certbot 등 별도 도구 불필요.
 - 리전 다중화는 해당 없음(단일 자택 서버 구성).
 - LiveKit 배포 파일(`docker-compose.yml`, `livekit.yaml`)은 [`livekit/`](livekit/)에 있다. API key/secret은 `livekit/.env`의 `LIVEKIT_KEYS`로 주입하며, CI4 `.env`의 `livekit.apiKey`/`livekit.apiSecret`과 반드시 동일해야 한다. 토큰 발급은 CI4 앱의 `app/Libraries/LiveKitAccessTokenService.php`가 담당한다.
 - coturn 배포 파일(`docker-compose.yml`, `turnserver.conf`)은 [`coturn/`](coturn/)에 있다(현재 미사용, 4절 참고). `use-auth-secret` credential 발급 로직은 `app/Libraries/TurnCredentialService.php`에 남아 있다.
@@ -48,7 +48,7 @@
 3. [x] LiveKit 셀프호스팅 배포 (docker-compose/k8s), CI4와 토큰 검증 연동
 4. [x] 리눅스 수신 데몬: GStreamer webrtcbin 파이프라인으로 프로토타입 작성
 5. [x] 데몬 systemd 서비스화 (자동 재시작, 헬스체크 엔드포인트)
-6. [ ] 온프레미스 인프라: 자택 서버에 coturn/LiveKit/CI4 API 배치, 공유기 포트포워딩·방화벽(UDP 3478 등) 설정
+6. [x] 온프레미스 인프라: 방화벽·DDNS·Caddy 리버스 프록시(자동 HTTPS) 스크립트/설정 — 공유기 포트포워딩·DDNS 계정·도메인 연결은 수동(`infra/README.md` 참고)
 7. [ ] 통합 테스트: 공중망 환경(모바일 데이터 등)에서 NAT 통과 시나리오 검증
 8. [ ] 외부용 앱: 로그인 화면 + CI4 인증 연동
 9. [ ] 외부용 앱: 목소리 전송(마이크 캡처 → LiveKit 퍼블리시) UI
@@ -60,6 +60,7 @@
 - SFU: LiveKit (Go), 내장 TURN 사용. 토큰 발급은 CI4가 `firebase/php-jwt`로 LiveKit 액세스 토큰(HS256) 직접 생성
 - TURN(미사용, 보류): coturn
 - 리눅스 데몬: Python + PyGObject(GStreamer), `livekitwebrtcsrc`(gst-plugins-rs), prometheus_client, systemd
+- 네트워크/TLS: Caddy(자동 Let's Encrypt 리버스 프록시), ufw, DDNS(제공자 비종속 curl 스크립트)
 - 인프라: 온프레미스 자택 서버(우분투), CI/CD 없이 로컬 검증(저장소 공통 규칙)
 
 ## 9. 리눅스 서버 물리 배치

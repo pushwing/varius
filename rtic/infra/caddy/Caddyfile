@@ -1,0 +1,16 @@
+# rtic 리버스 프록시 — Caddy가 443에서 자동 HTTPS(Let's Encrypt)를 처리하고
+# 내부(127.0.0.1)의 CI4 API·LiveKit으로 프록시한다. 인증서 발급/갱신은
+# Caddy가 전부 자동으로 처리하므로 certbot 등 별도 도구가 필요 없다.
+#
+# 배포 전 {$RTIC_API_DOMAIN}, {$RTIC_LIVEKIT_DOMAIN}을 실제 도메인/DDNS
+# 호스트네임으로 환경변수로 주입한다(예: /etc/caddy/rtic.env).
+
+{$RTIC_API_DOMAIN} {
+	reverse_proxy 127.0.0.1:8080
+}
+
+{$RTIC_LIVEKIT_DOMAIN} {
+	# LiveKit 시그널링은 WebSocket을 쓴다 — Caddy는 Connection: Upgrade를
+	# 자동 감지해 별도 설정 없이 웹소켓을 그대로 프록시한다.
+	reverse_proxy 127.0.0.1:7880
+}

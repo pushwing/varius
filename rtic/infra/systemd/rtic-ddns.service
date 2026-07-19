@@ -1,0 +1,9 @@
+[Unit]
+Description=rtic DDNS 갱신
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/rtic-ddns/env
+ExecStart=/opt/rtic-infra/ddns/update-ddns.sh
