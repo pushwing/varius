@@ -27,7 +27,6 @@ def run(config: DaemonConfig, source_description: str | None = None) -> int:
     health.start_metrics_server(config.metrics_port)
 
     reporter = StatusReporter(config)
-    reporter.start()
 
     pipeline = build_pipeline(config, source_description)
     loop = GLib.MainLoop()
@@ -82,6 +81,9 @@ def run(config: DaemonConfig, source_description: str | None = None) -> int:
 
     change = pipeline.set_state(Gst.State.PLAYING)
     logger.info("파이프라인을 PLAYING으로 전환 요청 — 결과: %s", change)
+
+    reporter.start()
+
     try:
         loop.run()
     finally:
