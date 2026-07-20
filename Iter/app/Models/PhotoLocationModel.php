@@ -1,0 +1,98 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Models;
+
+use App\Services\Ingest\PhotoLocation;
+use CodeIgniter\Model;
+
+class PhotoLocationModel extends Model
+{
+    protected $table = 'photo_locations';
+    protected $primaryKey = 'id';
+    protected $returnType = 'array';
+    protected $useTimestamps = true;
+    protected $createdField = 'created_at';
+    protected $updatedField = '';
+
+    /**
+     * @var list<string>
+     */
+    protected $allowedFields = [
+        'user_id',
+        'google_media_item_id',
+        'lat',
+        'lng',
+        'taken_at',
+    ];
+
+    /**
+     * 동선 좌표들을 저장한다. 사용자당 이미 적재된 media_item_id 는 건너뛴다(idempotent).
+     *
+     * @param list<PhotoLocation> $locations
+     *
+     * @return int 실제로 삽입된 건수
+     */
+    public function saveMany(int $userId, array $locations): int
+    {
+        if ($locations === []) {
+            return 0;
+        }
+
+        $existing = $this->existingMediaItemIds($userId, array_map(
+            static fn (PhotoLocation $l): string => $l->mediaItemId,
+            $locations,
+        ));
+
+        $rows = [];
+        foreach ($locations as $location) {
+            if (isset($existing[$location->mediaItemId])) {
+                continue; // 중복 제외
+            }
+            // 같은 배치 안의 중복도 한 번만.
+            $existing[$location->mediaItemId] = true;
+
+            $rows[] = [
+                'user_id' => $userId,
+                'google_media_item_id' => $location->mediaItemId,
+                'lat' => $location->lat,
+                'lng' => $location->lng,
+                'taken_at' => $location->takenAt,
+            ];
+        }
+
+        if ($rows === []) {
+            return 0;
+        }
+
+        return (int) $this->insertBatch($rows);
+    }
+
+    /**
+     * 주어진 media_item_id 중 이미 저장된 것을 집합(키=id)으로 반환한다.
+     *
+     * @param list<string> $mediaItemIds
+     *
+     * @return array<string, true>
+     */
+    private function existingMediaItemIds(int $userId, array $mediaItemIds): array
+    {
+        if ($mediaItemIds === []) {
+            return [];
+        }
+
+        /** @var list<array<string, mixed>> $rows */
+        $rows = $this->select('google_media_item_id')
+            ->where('user_id', $userId)
+            ->whereIn('google_media_item_id', array_values(array_unique($mediaItemIds)))
+            ->findAll();
+
+        $set = [];
+        foreach ($rows as $row) {
+            $set[(string) $row['google_media_item_id']] = true;
+        }
+
+        return $set;
+    }
+}

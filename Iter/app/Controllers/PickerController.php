@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Models\PhotoLocationModel;
+use App\Services\Ingest\PhotoLocation;
 use CodeIgniter\HTTP\ResponseInterface;
 use Throwable;
 
@@ -102,6 +104,39 @@ class PickerController extends BaseController
         }
 
         return $this->response->setJSON(['mediaItems' => $items]);
+    }
+
+    /**
+     * 적재 — 선택 항목 원본을 내려받아 EXIF 좌표를 추출·저장한다(POST /picker/ingest).
+     * Picker → Ingest → photo_locations 저장까지 한 번에 수행하고 저장 건수를 돌려준다.
+     */
+    public function ingest(): ResponseInterface
+    {
+        $userId = $this->currentUserId();
+        if ($userId === null) {
+            return $this->unauthorized();
+        }
+
+        $sessionId = $this->activeSessionId();
+        if ($sessionId === null) {
+            return $this->noActiveSession();
+        }
+
+        try {
+            $token = service('googlePhotosAuth')->getValidAccessToken($userId);
+            $mediaItems = service('photoPicker')->listPickedMediaItems($token, $sessionId);
+            $locations = service('photoIngest')->ingest($mediaItems, $token);
+        } catch (Throwable $e) {
+            return $this->serviceFailure($e);
+        }
+
+        $model = model(PhotoLocationModel::class);
+        $saved = $model->saveMany($userId, $locations);
+
+        return $this->response->setJSON([
+            'saved' => $saved,
+            'locations' => array_map(static fn (PhotoLocation $l): array => $l->toArray(), $locations),
+        ]);
     }
 
     /**

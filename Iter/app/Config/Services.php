@@ -7,6 +7,9 @@ namespace Config;
 use App\Models\OAuthTokenModel;
 use App\Models\UserModel;
 use App\Services\GooglePhotosAuthService;
+use App\Services\Ingest\CurlMultiDownloader;
+use App\Services\Ingest\NativeExifExtractor;
+use App\Services\PhotoIngestService;
 use App\Services\PhotoPickerService;
 use CodeIgniter\Config\BaseService;
 use League\OAuth2\Client\Provider\Google;
@@ -69,5 +72,19 @@ class Services extends BaseService
         }
 
         return new PhotoPickerService(static::curlrequest());
+    }
+
+    /**
+     * 사진 원본 → EXIF 좌표 추출 서비스.
+     *
+     * curl_multi 병렬 다운로더 + 네이티브 EXIF 추출기를 조립한다.
+     */
+    public static function photoIngest(bool $getShared = true): PhotoIngestService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('photoIngest');
+        }
+
+        return new PhotoIngestService(new CurlMultiDownloader(), new NativeExifExtractor());
     }
 }

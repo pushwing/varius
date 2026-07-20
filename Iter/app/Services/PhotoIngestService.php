@@ -16,7 +16,7 @@ use App\Services\Ingest\PhotoLocation;
  *
  * 원본 이미지는 저장하지 않는다 — EXIF 추출 후 임시 파일을 즉시 폐기한다.
  */
-final class PhotoIngestService
+class PhotoIngestService
 {
     /**
      * 지구 반지름(km) — Haversine 거리 계산용.

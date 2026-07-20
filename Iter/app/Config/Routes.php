@@ -15,3 +15,4 @@ $routes->get('auth/google/callback', 'AuthController::callback');
 $routes->post('picker/sessions', 'PickerController::create');
 $routes->get('picker/sessions/status', 'PickerController::status');
 $routes->get('picker/media-items', 'PickerController::items');
+$routes->post('picker/ingest', 'PickerController::ingest');
