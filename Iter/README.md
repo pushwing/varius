@@ -37,12 +37,36 @@
 상세 명세는 [`docs/photo-gps-tracker-spec.md`](docs/photo-gps-tracker-spec.md)를,
 Claude Code 작업 규칙은 [`CLAUDE.md`](CLAUDE.md)를 참고하세요.
 
+## 로컬 실행 · 설정
+
+```bash
+composer install
+cp env .env                 # 이미 .env 가 있으면 생략
+php spark key:generate      # encryption.key 설정 (토큰 암호화에 필수)
+```
+
+`.env` 에 Google OAuth 자격증명을 채웁니다(커밋 금지):
+
+```
+google.oauth.clientId     = '...'
+google.oauth.clientSecret = '...'
+google.oauth.redirectUri  = 'http://localhost:8080/auth/google/callback'
+```
+
+- Google Cloud Console 에서 OAuth 클라이언트(웹) 를 만들고, 승인된 리디렉션 URI 에
+  위 `redirectUri` 를 등록합니다. 스코프에 `photospicker.mediaitems.readonly` 를 포함합니다.
+- 서버 구동: `php spark serve` → 브라우저에서 `/auth/google` 접속 시 Google 로그인으로 리다이렉트됩니다.
+- 로그인 후 콜백에서 사용자를 upsert 하고 refresh/access token 을 **암호화**해 `oauth_tokens` 에 저장합니다.
+
+> **수동 확인**: 실제 code→token 교환은 실 Google 자격증명이 있어야 검증됩니다.
+> 자동 테스트는 인가 URL 생성·state 검증·암호화 라운드트립·토큰 갱신·콜백 upsert 를 커버합니다(`composer ci`).
+
 ## 개발 순서
 
 명세 8절 체크리스트에 따라 순차 구현합니다.
 
-- [ ] `GooglePhotosAuthService` — OAuth2 로그인/콜백/토큰 갱신
-- [ ] `oauth_tokens` 마이그레이션 + 토큰 암호화 저장
+- [x] `GooglePhotosAuthService` — OAuth2 로그인/콜백/토큰 갱신 *(이슈 #13)*
+- [x] `oauth_tokens` 마이그레이션 + 토큰 암호화 저장 *(이슈 #13)*
 - [ ] `PhotoPickerService` — 세션 생성·폴링·목록 조회
 - [ ] 세션 10장 제한 적용(요청 파라미터 또는 후처리 검증)
 - [ ] `PhotoIngestService` — 원본 병렬 다운로드(`curl_multi_init`)
