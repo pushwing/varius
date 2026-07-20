@@ -8,7 +8,12 @@ use App\Models\OAuthTokenModel;
 use App\Models\PhotoLocationModel;
 use App\Models\UserModel;
 use App\Services\GooglePhotosAuthService;
+use App\Services\Ingest\GdThumbnailGenerator;
+use App\Services\Ingest\NativeUploadedZipHandler;
+use App\Services\Ingest\TakeoutMetadataParser;
+use App\Services\Ingest\UploadedZipHandlerInterface;
 use App\Services\RouteVisualizationService;
+use App\Services\TakeoutIngestService;
 use CodeIgniter\Config\BaseService;
 use League\OAuth2\Client\Provider\Google;
 
@@ -69,5 +74,34 @@ class Services extends BaseService
         }
 
         return new RouteVisualizationService(new PhotoLocationModel());
+    }
+
+    /**
+     * 업로드된 zip 파일 검증·저장 서비스.
+     */
+    public static function uploadedZipHandler(bool $getShared = true): UploadedZipHandlerInterface
+    {
+        if ($getShared) {
+            return static::getSharedInstance('uploadedZipHandler');
+        }
+
+        return new NativeUploadedZipHandler();
+    }
+
+    /**
+     * Google Takeout zip → 동선 좌표 적재 서비스.
+     *
+     * JSON 사이드카 파서 + 300px 썸네일 생성기를 조립한다.
+     */
+    public static function takeoutIngest(bool $getShared = true): TakeoutIngestService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('takeoutIngest');
+        }
+
+        return new TakeoutIngestService(
+            new TakeoutMetadataParser(),
+            new GdThumbnailGenerator(WRITEPATH . 'uploads/thumbnails'),
+        );
     }
 }
