@@ -160,14 +160,13 @@ class PhotoIngestService
     }
 
     /**
-     * mediaItem.mediaMetadata.creationTime(RFC3339) 을 "Y-m-d H:i:s" 로 변환한다. 없으면 null.
+     * mediaItem.createTime(RFC3339, Picker API 최상위 필드) 을 "Y-m-d H:i:s" 로 변환한다. 없으면 null.
      *
      * @param array<string, mixed> $item
      */
     private function creationTime(array $item): ?string
     {
-        $metadata = $item['mediaMetadata'] ?? null;
-        $creation = is_array($metadata) ? ($metadata['creationTime'] ?? null) : null;
+        $creation = $item['createTime'] ?? null;
 
         if (! is_string($creation) || $creation === '') {
             return null;

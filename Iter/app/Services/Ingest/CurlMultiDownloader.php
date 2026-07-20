@@ -45,15 +45,23 @@ class CurlMultiDownloader implements MediaItemDownloaderInterface
         $paths = [];
         foreach ($jobs as $id => $job) {
             $tmpPath = $job['tmpPath'];
-            $success = ($results[$id] ?? false) === true && is_file($tmpPath) && filesize($tmpPath) > 0;
-            // 정확한 HTTP 상태는 executeBatch 내부에서 소비되므로, 여기선 성공/실패만 200/0 으로 집계한다.
-            $this->usageTracker?->record(GoogleApiName::MediaDownload, $success ? 200 : 0);
+            $info = $results[$id] ?? ['httpCode' => 0, 'curlError' => '결과 없음(작업 시작 실패)'];
+            $httpCode = $info['httpCode'];
+            $success = $httpCode >= 200 && $httpCode < 300 && is_file($tmpPath) && filesize($tmpPath) > 0;
+
+            $this->usageTracker?->record(GoogleApiName::MediaDownload, $httpCode);
 
             if ($success) {
                 $paths[$id] = $tmpPath;
 
                 continue;
             }
+
+            log_message('warning', '원본 다운로드 실패: media_item_id={id} http_status={status} curl_error={error}', [
+                'id' => $id,
+                'status' => $httpCode,
+                'error' => $info['curlError'] !== '' ? $info['curlError'] : '(없음)',
+            ]);
 
             // 실패·빈 파일은 남기지 않는다.
             if (is_file($tmpPath)) {
@@ -67,6 +75,8 @@ class CurlMultiDownloader implements MediaItemDownloaderInterface
     /**
      * mediaItems 에서 다운로드 작업을 구성한다. baseUrl·id 가 없는 항목은 제외한다.
      *
+     * Picker API 는 baseUrl 을 mediaFile.baseUrl 에 중첩해서 내려준다(최상위 baseUrl 아님).
+     *
      * @param list<array<string, mixed>> $mediaItems
      *
      * @return array<string, array{url: string, headers: list<string>, tmpPath: string}>
@@ -78,7 +88,10 @@ class CurlMultiDownloader implements MediaItemDownloaderInterface
         $jobs = [];
         foreach ($mediaItems as $item) {
             $id = isset($item['id']) ? (string) $item['id'] : '';
-            $baseUrl = isset($item['baseUrl']) && is_string($item['baseUrl']) ? $item['baseUrl'] : '';
+            $mediaFile = $item['mediaFile'] ?? null;
+            $baseUrl = is_array($mediaFile) && isset($mediaFile['baseUrl']) && is_string($mediaFile['baseUrl'])
+                ? $mediaFile['baseUrl']
+                : '';
             if ($id === '' || $baseUrl === '') {
                 continue;
             }
@@ -98,7 +111,7 @@ class CurlMultiDownloader implements MediaItemDownloaderInterface
      *
      * @param array<string, array{url: string, headers: list<string>, tmpPath: string}> $jobs
      *
-     * @return array<string, bool> mediaItemId => 성공 여부
+     * @return array<string, array{httpCode: int, curlError: string}> mediaItemId => HTTP 상태·curl 에러
      */
     protected function executeBatch(array $jobs): array
     {
@@ -138,7 +151,10 @@ class CurlMultiDownloader implements MediaItemDownloaderInterface
         foreach ($handles as $id => $ch) {
             $httpCode = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
             $errno = curl_errno($ch);
-            $results[$id] = $errno === 0 && $httpCode >= 200 && $httpCode < 300;
+            $results[$id] = [
+                'httpCode' => $httpCode,
+                'curlError' => $errno !== 0 ? curl_error($ch) : '',
+            ];
 
             curl_multi_remove_handle($multi, $ch);
             fclose($files[$id]);

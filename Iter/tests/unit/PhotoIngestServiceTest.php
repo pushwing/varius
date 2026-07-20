@@ -92,7 +92,8 @@ final class PhotoIngestServiceTest extends CIUnitTestCase
     public function testIngestFallsBackToCreationTimeWhenExifHasNoDateTime(): void
     {
         $mediaItems = [
-            ['id' => 'a', 'baseUrl' => 'https://base/a', 'mediaMetadata' => ['creationTime' => '2024-03-15T09:30:00Z']],
+            // Picker API 는 createTime 을 최상위(item.createTime)에 둔다(mediaMetadata 아님).
+            ['id' => 'a', 'baseUrl' => 'https://base/a', 'createTime' => '2024-03-15T09:30:00Z'],
         ];
 
         $service = new PhotoIngestService(
