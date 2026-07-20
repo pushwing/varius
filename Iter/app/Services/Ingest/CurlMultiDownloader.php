@@ -75,6 +75,8 @@ class CurlMultiDownloader implements MediaItemDownloaderInterface
     /**
      * mediaItems 에서 다운로드 작업을 구성한다. baseUrl·id 가 없는 항목은 제외한다.
      *
+     * Picker API 는 baseUrl 을 mediaFile.baseUrl 에 중첩해서 내려준다(최상위 baseUrl 아님).
+     *
      * @param list<array<string, mixed>> $mediaItems
      *
      * @return array<string, array{url: string, headers: list<string>, tmpPath: string}>
@@ -86,7 +88,10 @@ class CurlMultiDownloader implements MediaItemDownloaderInterface
         $jobs = [];
         foreach ($mediaItems as $item) {
             $id = isset($item['id']) ? (string) $item['id'] : '';
-            $baseUrl = isset($item['baseUrl']) && is_string($item['baseUrl']) ? $item['baseUrl'] : '';
+            $mediaFile = $item['mediaFile'] ?? null;
+            $baseUrl = is_array($mediaFile) && isset($mediaFile['baseUrl']) && is_string($mediaFile['baseUrl'])
+                ? $mediaFile['baseUrl']
+                : '';
             if ($id === '' || $baseUrl === '') {
                 continue;
             }

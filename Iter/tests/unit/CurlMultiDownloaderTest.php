@@ -28,9 +28,11 @@ final class CurlMultiDownloaderTest extends CIUnitTestCase
         $downloader = $this->fakeDownloader();
 
         $paths = $downloader->download([
-            ['id' => 'a', 'baseUrl' => 'https://base/a'],
-            ['id' => 'b'], // baseUrl 없음 → 제외
-            ['id' => '', 'baseUrl' => 'https://base/none'], // id 없음 → 제외
+            // Picker API 는 baseUrl 을 mediaFile.baseUrl 에 중첩해서 내려준다(최상위 아님).
+            ['id' => 'a', 'mediaFile' => ['baseUrl' => 'https://base/a']],
+            ['id' => 'b'], // mediaFile 없음 → 제외
+            ['id' => 'c', 'mediaFile' => []], // mediaFile.baseUrl 없음 → 제외
+            ['id' => '', 'mediaFile' => ['baseUrl' => 'https://base/none']], // id 없음 → 제외
         ], 'token123');
 
         try {
@@ -59,7 +61,7 @@ final class CurlMultiDownloaderTest extends CIUnitTestCase
     {
         $downloader = $this->fakeDownloader(succeed: false);
 
-        $paths = $downloader->download([['id' => 'a', 'baseUrl' => 'https://base/a']], 'token123');
+        $paths = $downloader->download([['id' => 'a', 'mediaFile' => ['baseUrl' => 'https://base/a']]], 'token123');
 
         $this->assertSame([], $paths);
         // 실패한 임시 파일은 남지 않는다.
@@ -73,7 +75,7 @@ final class CurlMultiDownloaderTest extends CIUnitTestCase
         $tracker->expects($this->once())->method('record')->with(GoogleApiName::MediaDownload, 200);
 
         $downloader = new RecordingCurlMultiDownloader(sys_get_temp_dir(), true, $tracker);
-        $paths = $downloader->download([['id' => 'a', 'baseUrl' => 'https://base/a']], 'token123');
+        $paths = $downloader->download([['id' => 'a', 'mediaFile' => ['baseUrl' => 'https://base/a']]], 'token123');
 
         foreach ($paths as $p) {
             if (is_file($p)) {
@@ -89,7 +91,7 @@ final class CurlMultiDownloaderTest extends CIUnitTestCase
         $tracker->expects($this->once())->method('record')->with(GoogleApiName::MediaDownload, 403);
 
         $downloader = new RecordingCurlMultiDownloader(sys_get_temp_dir(), false, $tracker);
-        $downloader->download([['id' => 'a', 'baseUrl' => 'https://base/a']], 'token123');
+        $downloader->download([['id' => 'a', 'mediaFile' => ['baseUrl' => 'https://base/a']]], 'token123');
     }
 
     public function testFailedDownloadIsLoggedWithHttpCodeAndCurlError(): void
@@ -102,7 +104,7 @@ final class CurlMultiDownloaderTest extends CIUnitTestCase
         );
 
         // log_message 호출 자체가 예외 없이 완료되고, 실패 항목은 여전히 제외됨을 확인한다.
-        $paths = $downloader->download([['id' => 'a', 'baseUrl' => 'https://base/a']], 'token123');
+        $paths = $downloader->download([['id' => 'a', 'mediaFile' => ['baseUrl' => 'https://base/a']]], 'token123');
 
         $this->assertSame([], $paths);
     }
