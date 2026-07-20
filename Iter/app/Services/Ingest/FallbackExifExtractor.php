@@ -19,6 +19,18 @@ final class FallbackExifExtractor implements ExifExtractorInterface
 
     public function extract(string $filePath): ?ExifLocation
     {
-        return $this->primary->extract($filePath) ?? $this->secondary->extract($filePath);
+        $result = $this->primary->extract($filePath);
+        if ($result !== null) {
+            return $result;
+        }
+
+        $result = $this->secondary->extract($filePath);
+        if ($result === null) {
+            log_message('warning', 'EXIF 추출 완전 실패(1차·2차 모두): file={file}', [
+                'file' => basename($filePath),
+            ]);
+        }
+
+        return $result;
     }
 }
