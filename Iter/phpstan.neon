@@ -1,0 +1,24 @@
+parameters:
+    tmpDir: build/phpstan
+    level: 6
+    paths:
+        - app
+        - tests
+    bootstrapFiles:
+        - vendor/codeigniter4/framework/system/Test/bootstrap.php
+    excludePaths:
+        - app/Views/*
+        - app/Config/Routes.php
+    # CI4 부트스트랩이 상수를 고정값으로 정의해 발생하는 "항상 참/거짓" 오탐 방지
+    dynamicConstantNames:
+        - APP_NAMESPACE
+        - CI_DEBUG
+        - ENVIRONMENT
+    treatPhpDocTypesAsCertain: false
+    universalObjectCratesClasses:
+        - CodeIgniter\Entity\Entity
+        - CodeIgniter\HTTP\Header
+    ignoreErrors:
+        # 스캐폴드 기본 헬스 테스트: 부트스트랩이 APPPATH 를 항상 정의함
+        - identifier: method.alreadyNarrowedType
+          path: tests/unit/HealthTest.php

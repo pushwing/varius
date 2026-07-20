@@ -1,0 +1,52 @@
+{
+    "name": "pushwing/iter",
+    "description": "Iter — Google Photos GPS 동선 시각화",
+    "license": "MIT",
+    "type": "project",
+    "require": {
+        "php": "^8.2",
+        "codeigniter4/framework": "^4.7",
+        "league/oauth2-client": "^2.7",
+        "league/oauth2-google": "^4.0"
+    },
+    "require-dev": {
+        "fakerphp/faker": "^1.9",
+        "friendsofphp/php-cs-fixer": "^3.64",
+        "mikey179/vfsstream": "^1.6",
+        "phpstan/phpstan": "^2.0",
+        "phpunit/phpunit": "^10.5.16"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/",
+            "Config\\": "app/Config/"
+        },
+        "exclude-from-classmap": [
+            "**/Database/Migrations/**"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\Support\\": "tests/_support"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true,
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
+    },
+    "scripts": {
+        "cs-fix": "php-cs-fixer fix --verbose --ansi",
+        "cs": "php-cs-fixer fix --dry-run --diff --ansi",
+        "analyse": "phpstan analyse --ansi",
+        "test": "phpunit",
+        "ci": [
+            "@cs",
+            "@analyse",
+            "@test"
+        ]
+    }
+}
