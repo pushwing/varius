@@ -1,4 +1,4 @@
-# rtic 통합 테스트 런북 — 공중망 NAT 통과 시나리오 (이슈 #10)
+# rtic 통합 테스트 런북 — 공중망 NAT 통과(이슈 #10) + 양방향 인터콤(이슈 #11)
 
 ## 왜 런북인가
 
@@ -21,6 +21,7 @@
 - [ ] Caddy가 실제 Let's Encrypt 인증서를 발급받아 `https://` 로 CI4 API·LiveKit 시그널링에 접근 가능
 - [ ] `rtic-api`, `rtic-daemon`, LiveKit, (필요 시 `rtic-ddns.timer`) systemd/docker 서비스가 모두 기동 중
 - [ ] 자택 서버 스피커에 실제 오디오 출력 장치 연결됨
+- [ ] (양방향 검증 시) 자택 서버에 USB 마이크 연결됨 + 데몬 마이크 설정 완료(시나리오 4 사전 준비 참고)
 
 ## 시나리오 1 — 모바일 데이터에서 NAT 통과
 
@@ -78,6 +79,80 @@
 - [ ] 만료 후 재로그인 정상 동작
 - [ ] 특이사항:
 
+## 시나리오 4 — 역방향 오디오: 자택 마이크 → 앱 (이슈 #11, 양방향 인터콤)
+
+데몬이 로컬 USB 마이크 오디오를 LiveKit에 퍼블리시하고, 웹 앱이 이를
+수신·재생하는 경로다. 코드로는 파이프라인 조립·프로세스 수명주기까지만
+검증했고(데몬 pytest, 웹 vitest), **실제 마이크 캡처·오디오 왕복은 실물
+마이크 + 실배포가 있어야** 확인할 수 있어 여기 수동 절차로 남긴다.
+
+### 4-0. 사전 준비 (자택 서버, 최초 1회)
+
+`livekitwebrtcsink`(수신용 `livekitwebrtcsrc`와 동일한 gst-plugins-rs
+`--features livekit` 빌드에 포함)와 캡처 디바이스를 확인·설정한다.
+
+```bash
+# 1) sink 요소가 설치돼 있는지 확인 (없으면 daemon/README.md의 소스 빌드 절차)
+gst-inspect-1.0 livekitwebrtcsink >/dev/null && echo "OK: livekitwebrtcsink 있음"
+
+# 2) 캡처(입력) 카드/디바이스 번호 확인 — 출력용 `aplay -l`이 아니라 `arecord -l`
+arecord -l
+#   예) card 1: Device [USB Audio Device], device 0  →  plughw:1,0
+
+# 3) 데몬 env(/etc/rtic-daemon/env)에 마이크 설정 추가 후 재시작
+#    RTIC_MIC_ENABLED=true
+#    RTIC_AUDIO_SOURCE=alsasrc device=plughw:1,0   ← 위에서 확인한 번호로
+sudo systemctl restart rtic-daemon
+```
+
+- [ ] `gst-inspect-1.0 livekitwebrtcsink` 존재 확인
+- [ ] `arecord -l`로 확인한 캡처 디바이스: `plughw:____,____`
+- [ ] `/etc/rtic-daemon/env`에 `RTIC_MIC_ENABLED=true` + `RTIC_AUDIO_SOURCE` 반영
+
+### 4-1. 데몬 측 파이프라인 기동 확인
+
+```bash
+# 두 방향 파이프라인이 모두 PLAYING까지 올라오는지 로그로 확인
+journalctl -u rtic-daemon -n 50 --no-pager | grep -E "\[speaker\]|\[mic\]|마이크 퍼블리시"
+```
+
+- 기대: `마이크 퍼블리시 파이프라인을 구성합니다`, `[speaker] ... PLAYING`,
+  `[mic] ... PLAYING` 로그가 보인다.
+- `[mic]` 파이프라인이 에러로 죽으면 캡처 디바이스 번호(`plughw:N,M`)나
+  `audio` 그룹 권한(`daemon/README.md`)을 재확인한다. 데몬은 어느 방향이든
+  에러·EOS면 실패 종료해 systemd가 재시작하므로, 잘못된 소스면 재시작
+  루프에 빠진다 — `journalctl`로 원인 로그를 먼저 본다.
+
+- [ ] `[speaker]`/`[mic]` 두 파이프라인 PLAYING 확인
+
+### 4-2. 앱에서 자택 마이크 소리 수신·재생
+
+1. 모바일/PC 브라우저로 앱에 로그인해 룸에 접속한다(시나리오 1과 동일).
+2. 자택 서버 마이크 앞에서 소리를 낸다(말하기/박수).
+3. 앱 쪽 기기에서 그 소리가 재생되는지 확인한다. 앱은 자동 구독
+   (`autoSubscribe=true`)이라 별도 조작 없이 재생돼야 한다.
+4. **실패 시 점검**: 앱 브라우저 콘솔에서 원격 트랙 구독 여부를 확인한다.
+   - `chrome://webrtc-internals`에서 inbound audio 트랙이 잡히는지,
+   - DOM에 재생용 `<audio>` element가 추가됐는지(`audioPlayback.js`),
+   - 다수 브라우저의 자동재생 정책상 **사용자 상호작용(로그인 클릭) 이후**
+     재생이 허용되는데, 이미 로그인 클릭을 거치므로 정상이어야 한다. 그래도
+     무음이면 기기 볼륨·탭 음소거를 확인한다.
+
+- [ ] 자택 마이크 소리가 앱에서 재생됨
+- [ ] (선택) 역방향 체감 지연:
+- [ ] 실패 — 원인:
+
+### 4-3. 동시 양방향(풀 듀플렉스) 확인
+
+1. 앱에서 마이크 켜기(정방향: 앱 → 자택 스피커)와 동시에 자택 마이크로
+   소리를 낸다(역방향: 자택 마이크 → 앱).
+2. 양쪽 소리가 동시에 서로에게 전달되는지, 에코/하울링이 과도하지 않은지
+   확인한다(자택 서버에서 스피커·마이크가 가까우면 에코가 생길 수 있음 —
+   물리 배치나 향후 에코 캔슬레이션 검토 대상으로 기록만 한다).
+
+- [ ] 양방향 동시 전달 확인
+- [ ] 에코/하울링 특이사항:
+
 ## 결과 요약
 
 | 시나리오 | 결과 | 비고 |
@@ -85,5 +160,7 @@
 | NAT 통과(모바일 데이터) | | |
 | 지연 200~300ms | | |
 | 토큰 만료/재발급 | | |
+| 역방향 오디오(자택 마이크 → 앱) | | |
+| 동시 양방향(풀 듀플렉스) | | |
 
 테스트 수행일: \_\_\_\_\_\_\_\_ / 수행자: \_\_\_\_\_\_\_\_
