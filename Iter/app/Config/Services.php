@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Config;
 
 use App\Models\OAuthTokenModel;
+use App\Models\PhotoLocationModel;
 use App\Models\UserModel;
 use App\Services\GooglePhotosAuthService;
 use App\Services\Ingest\CurlMultiDownloader;
 use App\Services\Ingest\NativeExifExtractor;
 use App\Services\PhotoIngestService;
 use App\Services\PhotoPickerService;
+use App\Services\RouteVisualizationService;
 use CodeIgniter\Config\BaseService;
 use League\OAuth2\Client\Provider\Google;
 
@@ -86,5 +88,19 @@ class Services extends BaseService
         }
 
         return new PhotoIngestService(new CurlMultiDownloader(), new NativeExifExtractor());
+    }
+
+    /**
+     * 날짜별 동선 시각화 서비스.
+     *
+     * photo_locations 를 읽어 날짜별 그룹·색상·시간순 좌표로 조합한다.
+     */
+    public static function routeVisualization(bool $getShared = true): RouteVisualizationService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('routeVisualization');
+        }
+
+        return new RouteVisualizationService(new PhotoLocationModel());
     }
 }

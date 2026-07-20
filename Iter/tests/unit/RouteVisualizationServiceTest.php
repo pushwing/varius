@@ -1,0 +1,83 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Unit;
+
+use App\Models\PhotoLocationModel;
+use App\Services\RouteVisualizationService;
+use CodeIgniter\Test\CIUnitTestCase;
+
+/**
+ * @internal
+ */
+final class RouteVisualizationServiceTest extends CIUnitTestCase
+{
+    /**
+     * findByUserOrdered 가 주어진 행들을 돌려주도록 스텁한 서비스.
+     *
+     * @param list<array<string, mixed>> $rows
+     */
+    private function serviceWithRows(array $rows): RouteVisualizationService
+    {
+        $model = $this->createMock(PhotoLocationModel::class);
+        $model->method('findByUserOrdered')->willReturn($rows);
+
+        return new RouteVisualizationService($model);
+    }
+
+    public function testGroupsPointsByDateWithDistinctColors(): void
+    {
+        $service = $this->serviceWithRows([
+            ['google_media_item_id' => 'm1', 'lat' => '37.5000000', 'lng' => '127.0000000', 'taken_at' => '2024-03-15 09:00:00'],
+            ['google_media_item_id' => 'm2', 'lat' => '37.6000000', 'lng' => '127.1000000', 'taken_at' => '2024-03-15 12:00:00'],
+            ['google_media_item_id' => 'm3', 'lat' => '35.1000000', 'lng' => '129.0000000', 'taken_at' => '2024-03-16 08:00:00'],
+        ]);
+
+        $result = $service->buildForUser(1);
+
+        $this->assertCount(2, $result['dates']);
+        $this->assertSame('2024-03-15', $result['dates'][0]['date']);
+        $this->assertSame('2024-03-16', $result['dates'][1]['date']);
+        $this->assertCount(2, $result['dates'][0]['points']);
+        $this->assertCount(1, $result['dates'][1]['points']);
+
+        // 날짜마다 색상이 달라야 한다.
+        $this->assertNotSame($result['dates'][0]['color'], $result['dates'][1]['color']);
+    }
+
+    public function testPointShapeHasFloatCoordsAndMediaItemId(): void
+    {
+        $service = $this->serviceWithRows([
+            ['google_media_item_id' => 'm1', 'lat' => '37.5000000', 'lng' => '127.0000000', 'taken_at' => '2024-03-15 09:00:00'],
+        ]);
+
+        $point = $service->buildForUser(1)['dates'][0]['points'][0];
+
+        $this->assertSame('m1', $point['media_item_id']);
+        $this->assertIsFloat($point['lat']);
+        $this->assertIsFloat($point['lng']);
+        $this->assertEqualsWithDelta(37.5, $point['lat'], 0.0001);
+        $this->assertSame('2024-03-15 09:00:00', $point['taken_at']);
+    }
+
+    public function testPointsWithinDateKeepChronologicalOrder(): void
+    {
+        $service = $this->serviceWithRows([
+            ['google_media_item_id' => 'early', 'lat' => '37.5', 'lng' => '127.0', 'taken_at' => '2024-03-15 09:00:00'],
+            ['google_media_item_id' => 'late', 'lat' => '37.6', 'lng' => '127.1', 'taken_at' => '2024-03-15 18:00:00'],
+        ]);
+
+        $points = $service->buildForUser(1)['dates'][0]['points'];
+
+        $this->assertSame('early', $points[0]['media_item_id']);
+        $this->assertSame('late', $points[1]['media_item_id']);
+    }
+
+    public function testReturnsEmptyDatesWhenNoLocations(): void
+    {
+        $service = $this->serviceWithRows([]);
+
+        $this->assertSame(['dates' => []], $service->buildForUser(1));
+    }
+}

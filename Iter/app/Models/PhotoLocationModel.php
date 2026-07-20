@@ -28,6 +28,22 @@ class PhotoLocationModel extends Model
     ];
 
     /**
+     * 사용자 좌표를 촬영 시각 오름차순으로 조회한다(동선 조합용, 필요 컬럼만).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function findByUserOrdered(int $userId): array
+    {
+        /** @var list<array<string, mixed>> $rows */
+        $rows = $this->select('google_media_item_id, lat, lng, taken_at')
+            ->where('user_id', $userId)
+            ->orderBy('taken_at', 'ASC')
+            ->findAll();
+
+        return $rows;
+    }
+
+    /**
      * 동선 좌표들을 저장한다. 사용자당 이미 적재된 media_item_id 는 건너뛴다(idempotent).
      *
      * @param list<PhotoLocation> $locations

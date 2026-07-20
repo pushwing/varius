@@ -140,16 +140,6 @@ class PickerController extends BaseController
     }
 
     /**
-     * 로그인 사용자 id 를 세션에서 얻는다. 없으면 null.
-     */
-    private function currentUserId(): ?int
-    {
-        $userId = session()->get('user_id');
-
-        return is_int($userId) && $userId > 0 ? $userId : null;
-    }
-
-    /**
      * 진행 중인 Picker 세션 id 를 얻는다. 없으면 null.
      */
     private function activeSessionId(): ?string

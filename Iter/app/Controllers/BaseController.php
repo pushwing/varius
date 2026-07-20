@@ -44,4 +44,14 @@ abstract class BaseController extends Controller
         // Preload any models, libraries, etc, here.
         // $this->session = service('session');
     }
+
+    /**
+     * 로그인 사용자 id 를 세션에서 얻는다. 없으면 null.
+     */
+    protected function currentUserId(): ?int
+    {
+        $userId = session()->get('user_id');
+
+        return is_int($userId) && $userId > 0 ? $userId : null;
+    }
 }

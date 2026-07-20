@@ -16,3 +16,7 @@ $routes->post('picker/sessions', 'PickerController::create');
 $routes->get('picker/sessions/status', 'PickerController::status');
 $routes->get('picker/media-items', 'PickerController::items');
 $routes->post('picker/ingest', 'PickerController::ingest');
+
+// 동선 시각화
+$routes->get('routes', 'RouteController::data');
+$routes->get('map', 'RouteController::map');
