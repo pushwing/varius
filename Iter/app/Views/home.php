@@ -19,7 +19,9 @@ declare(strict_types=1);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iter — 내 동선</title>
+    <meta name="description" content="Google 포토에서 선택한 사진의 GPS·촬영 시각을 추출해 날짜별 이동 동선을 지도 위에 시각화하는 서비스입니다.">
+    <meta property="og:site_name" content="Iter">
+    <title>Iter</title>
     <style>
         html, body { margin: 0; font-family: system-ui, sans-serif; color: #222; }
         nav { display: flex; gap: 16px; padding: 12px 20px; border-bottom: 1px solid #ddd; align-items: center; }
