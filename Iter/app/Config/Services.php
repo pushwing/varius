@@ -7,6 +7,7 @@ namespace Config;
 use App\Models\OAuthTokenModel;
 use App\Models\UserModel;
 use App\Services\GooglePhotosAuthService;
+use App\Services\PhotoPickerService;
 use CodeIgniter\Config\BaseService;
 use League\OAuth2\Client\Provider\Google;
 
@@ -53,5 +54,20 @@ class Services extends BaseService
             new UserModel(),
             static::encrypter(),
         );
+    }
+
+    /**
+     * Google Photos Picker 세션 서비스.
+     *
+     * CI4 내장 CURLRequest 를 주입해 Picker REST API(세션 생성·폴링·목록 조회)를 호출한다.
+     * 요청당 최대 매수는 10장으로 고정한다.
+     */
+    public static function photoPicker(bool $getShared = true): PhotoPickerService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('photoPicker');
+        }
+
+        return new PhotoPickerService(static::curlrequest());
     }
 }
