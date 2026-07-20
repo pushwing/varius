@@ -7,16 +7,13 @@ namespace Config;
 use App\Models\OAuthTokenModel;
 use App\Models\PhotoLocationModel;
 use App\Models\UserModel;
-use App\Services\GoogleApiUsageTracker;
 use App\Services\GooglePhotosAuthService;
-use App\Services\Ingest\CurlMultiDownloader;
-use App\Services\Ingest\ExifToolExtractor;
-use App\Services\Ingest\FallbackExifExtractor;
 use App\Services\Ingest\GdThumbnailGenerator;
-use App\Services\Ingest\NativeExifExtractor;
-use App\Services\PhotoIngestService;
-use App\Services\PhotoPickerService;
+use App\Services\Ingest\NativeUploadedZipHandler;
+use App\Services\Ingest\TakeoutMetadataParser;
+use App\Services\Ingest\UploadedZipHandlerInterface;
 use App\Services\RouteVisualizationService;
+use App\Services\TakeoutIngestService;
 use CodeIgniter\Config\BaseService;
 use League\OAuth2\Client\Provider\Google;
 
@@ -66,55 +63,6 @@ class Services extends BaseService
     }
 
     /**
-     * Google Photos Picker 세션 서비스.
-     *
-     * CI4 내장 CURLRequest 를 주입해 Picker REST API(세션 생성·폴링·목록 조회)를 호출한다.
-     * 요청당 최대 매수는 10장으로 고정한다.
-     */
-    public static function photoPicker(bool $getShared = true): PhotoPickerService
-    {
-        if ($getShared) {
-            return static::getSharedInstance('photoPicker');
-        }
-
-        return new PhotoPickerService(static::curlrequest(), 10, null, 60, static::googleApiUsageTracker());
-    }
-
-    /**
-     * 사진 원본 → EXIF 좌표 추출 서비스.
-     *
-     * curl_multi 병렬 다운로더 + (네이티브 → exiftool 폴백) EXIF 추출기 + 300px 썸네일 생성기를 조립한다.
-     * HEIC 등 네이티브가 못 읽는 포맷은 exiftool 바이너리(shell_exec)로 재시도한다.
-     */
-    public static function photoIngest(bool $getShared = true): PhotoIngestService
-    {
-        if ($getShared) {
-            return static::getSharedInstance('photoIngest');
-        }
-
-        $extractor = new FallbackExifExtractor(new NativeExifExtractor(), new ExifToolExtractor());
-        $thumbnailer = new GdThumbnailGenerator(WRITEPATH . 'uploads/thumbnails');
-        $downloader = new CurlMultiDownloader(usageTracker: static::googleApiUsageTracker());
-
-        return new PhotoIngestService($downloader, $extractor, 200.0, $thumbnailer);
-    }
-
-    /**
-     * Google API 쿼터 사용량 추적기.
-     *
-     * PhotoPickerService·CurlMultiDownloader 의 호출마다 일 단위 카운터를 남겨
-     * 프로젝트 쿼터 소진 속도를 로그로 모니터링할 수 있게 한다.
-     */
-    public static function googleApiUsageTracker(bool $getShared = true): GoogleApiUsageTracker
-    {
-        if ($getShared) {
-            return static::getSharedInstance('googleApiUsageTracker');
-        }
-
-        return new GoogleApiUsageTracker(static::cache());
-    }
-
-    /**
      * 날짜별 동선 시각화 서비스.
      *
      * photo_locations 를 읽어 날짜별 그룹·색상·시간순 좌표로 조합한다.
@@ -126,5 +74,34 @@ class Services extends BaseService
         }
 
         return new RouteVisualizationService(new PhotoLocationModel());
+    }
+
+    /**
+     * 업로드된 zip 파일 검증·저장 서비스.
+     */
+    public static function uploadedZipHandler(bool $getShared = true): UploadedZipHandlerInterface
+    {
+        if ($getShared) {
+            return static::getSharedInstance('uploadedZipHandler');
+        }
+
+        return new NativeUploadedZipHandler();
+    }
+
+    /**
+     * Google Takeout zip → 동선 좌표 적재 서비스.
+     *
+     * JSON 사이드카 파서 + 300px 썸네일 생성기를 조립한다.
+     */
+    public static function takeoutIngest(bool $getShared = true): TakeoutIngestService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('takeoutIngest');
+        }
+
+        return new TakeoutIngestService(
+            new TakeoutMetadataParser(),
+            new GdThumbnailGenerator(WRITEPATH . 'uploads/thumbnails'),
+        );
     }
 }

@@ -43,7 +43,7 @@ final class HomeControllerTest extends CIUnitTestCase
         $this->assertStringNotContainsString('id="start-picker"', $body);
     }
 
-    public function testShowsMenuAndPickerButtonWhenLoggedIn(): void
+    public function testShowsMenuAndUploadFormWhenLoggedIn(): void
     {
         $userId = (new UserModel())->upsertByGoogleSub('sub-home', 'home@example.com', 'Home');
 
@@ -55,7 +55,8 @@ final class HomeControllerTest extends CIUnitTestCase
         $this->assertStringContainsString('/map', $body);
         $this->assertStringContainsString('로그아웃', $body);
         $this->assertStringContainsString('/auth/logout', $body);
-        $this->assertStringContainsString('id="start-picker"', $body);
-        $this->assertStringContainsString('/picker/sessions', $body);
+        $this->assertStringContainsString('id="takeout-form"', $body);
+        $this->assertStringContainsString('/takeout/upload', $body);
+        $this->assertStringContainsString('takeout.google.com', $body);
     }
 }

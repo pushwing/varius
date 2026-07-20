@@ -3,15 +3,13 @@
 declare(strict_types=1);
 
 /**
- * 홈 화면 — 비로그인 시 랜딩, 로그인 시 상단 메뉴 + Picker 흐름 UI.
+ * 홈 화면 — 비로그인 시 랜딩, 로그인 시 상단 메뉴 + Takeout zip 업로드 폼.
  *
  * @var int|null $userId    로그인 사용자 id(비로그인 시 null)
  * @var string   $loginUrl
  * @var string   $logoutUrl
  * @var string   $mapUrl
- * @var string   $sessionsUrl
- * @var string   $statusUrl
- * @var string   $ingestUrl
+ * @var string   $uploadUrl
  */
 ?>
 <!DOCTYPE html>
@@ -19,7 +17,7 @@ declare(strict_types=1);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Google 포토에서 선택한 사진의 GPS·촬영 시각을 추출해 날짜별 이동 동선을 지도 위에 시각화하는 서비스입니다.">
+    <meta name="description" content="Google Takeout으로 내보낸 사진의 GPS·촬영 시각을 추출해 날짜별 이동 동선을 지도 위에 시각화하는 서비스입니다.">
     <meta property="og:site_name" content="Iter">
     <title>Iter</title>
     <style>
@@ -40,6 +38,9 @@ declare(strict_types=1);
         #error { margin-top: 20px; font-size: 14px; color: #c0392b; }
         .legal-footer { margin-top: 24px; font-size: 13px; }
         .legal-footer a { color: #777; }
+        .help { margin-top: 16px; font-size: 13px; color: #666; text-align: left; line-height: 1.6; }
+        .help a { color: #1a73e8; }
+        input[type="file"] { margin-top: 20px; }
 
         main.landing { max-width: 560px; }
         .landing .lead { font-size: 16px; color: #444; margin-bottom: 8px; }
@@ -49,9 +50,7 @@ declare(strict_types=1);
             list-style: none; margin: 32px 0; padding: 0;
             display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; text-align: left;
         }
-        .steps li {
-            background: #f7f8fa; border-radius: 10px; padding: 16px;
-        }
+        .steps li { background: #f7f8fa; border-radius: 10px; padding: 16px; }
         .steps .num {
             display: inline-flex; align-items: center; justify-content: center;
             width: 22px; height: 22px; border-radius: 50%;
@@ -74,18 +73,18 @@ declare(strict_types=1);
     <main class="landing">
         <h1>Iter</h1>
         <p class="lead">내가 찍은 사진 속 GPS로, 여행의 동선을 지도 위에 그려드립니다.</p>
-        <p class="sub">Google 포토에서 사진을 몇 장 고르기만 하면, 언제 어디를 다녀왔는지 날짜별 경로로 한눈에 확인할 수 있어요.</p>
+        <p class="sub">Google Takeout에서 내보낸 사진 zip을 업로드하면, 언제 어디를 다녀왔는지 날짜별 경로로 한눈에 확인할 수 있어요.</p>
 
         <ul class="steps">
             <li>
                 <span class="num">1</span>
-                <div class="title">사진 선택</div>
-                <div class="desc">Google 포토 Picker에서 위치를 확인하고 싶은 사진을 직접 고릅니다.</div>
+                <div class="title">Takeout 내보내기</div>
+                <div class="desc">Google 계정에서 사진(Google Photos)만 선택해 zip으로 내보냅니다.</div>
             </li>
             <li>
                 <span class="num">2</span>
-                <div class="title">위치·시간 추출</div>
-                <div class="desc">선택한 사진의 촬영 위치와 시각을 자동으로 읽어옵니다.</div>
+                <div class="title">zip 업로드</div>
+                <div class="desc">받은 zip 파일을 그대로 업로드하면 위치·시간을 자동으로 읽어옵니다.</div>
             </li>
             <li>
                 <span class="num">3</span>
@@ -97,8 +96,8 @@ declare(strict_types=1);
         <a class="btn" href="<?= esc($loginUrl, 'attr') ?>">Google로 로그인</a>
 
         <p class="privacy-note">
-            Google 포토 라이브러리 전체가 아니라, 직접 선택한 사진에만 접근합니다.
-            사진 원본은 서버에 저장하지 않으며, 위치·시각 정보 추출이 끝나는 즉시 삭제됩니다.
+            업로드된 zip은 위치·시각 정보 추출이 끝나는 즉시 서버에서 삭제됩니다.
+            원본 사진 파일은 저장하지 않습니다.
         </p>
 
         <p class="legal-footer">
@@ -117,106 +116,67 @@ declare(strict_types=1);
             <a href="/terms-of-service.html">서비스 이용약관</a>
         </span>
     </nav>
-    <main
-        id="picker-flow"
-        data-sessions-url="<?= esc($sessionsUrl, 'attr') ?>"
-        data-status-url="<?= esc($statusUrl, 'attr') ?>"
-        data-ingest-url="<?= esc($ingestUrl, 'attr') ?>"
-        data-map-url="<?= esc($mapUrl, 'attr') ?>"
-        data-login-url="<?= esc($loginUrl, 'attr') ?>"
-    >
+    <main id="takeout-flow">
         <h1>사진 가져오기</h1>
-        <button id="start-picker" class="btn">사진 선택하기</button>
+        <p class="help">
+            <a href="https://takeout.google.com" target="_blank" rel="noopener">takeout.google.com</a>에서
+            "Google Photos"만 선택해 내보낸 뒤, 받은 zip 파일을 업로드하세요.
+        </p>
+        <form id="takeout-form" data-upload-url="<?= esc($uploadUrl, 'attr') ?>" data-map-url="<?= esc($mapUrl, 'attr') ?>">
+            <input type="file" id="takeout-file" name="file" accept=".zip">
+            <div>
+                <button type="submit" id="upload-btn" class="btn">업로드</button>
+            </div>
+        </form>
         <div id="status"></div>
         <div id="error"></div>
     </main>
 
     <script>
         (function () {
-            var root = document.getElementById('picker-flow');
-            var startBtn = document.getElementById('start-picker');
+            var form = document.getElementById('takeout-form');
+            var fileInput = document.getElementById('takeout-file');
+            var uploadBtn = document.getElementById('upload-btn');
             var statusEl = document.getElementById('status');
             var errorEl = document.getElementById('error');
-            var pollTimer = null;
-            var pollCount = 0;
-            var MAX_POLLS = 150;
-            var POLL_INTERVAL_MS = 2000;
+            var uploadUrl = form.dataset.uploadUrl;
+            var mapUrl = form.dataset.mapUrl;
 
-            var urls = {
-                sessions: root.dataset.sessionsUrl,
-                status: root.dataset.statusUrl,
-                ingest: root.dataset.ingestUrl,
-                map: root.dataset.mapUrl,
-                login: root.dataset.loginUrl
-            };
+            form.addEventListener('submit', function (evt) {
+                evt.preventDefault();
 
-            startBtn.addEventListener('click', startFlow);
-
-            function startFlow() {
-                reset();
-                setBusy(true);
-                statusEl.textContent = '세션을 만드는 중...';
-
-                fetch(urls.sessions, { method: 'POST', headers: { Accept: 'application/json' } })
-                    .then(handleJson)
-                    .then(function (data) {
-                        if (!data.pickerUri) { throw new Error('pickerUri 를 받지 못했습니다'); }
-                        openPicker(data.pickerUri);
-                        statusEl.textContent = '선택을 기다리는 중...';
-                        pollCount = 0;
-                        pollTimer = setTimeout(pollStatus, POLL_INTERVAL_MS);
-                    })
-                    .catch(onError);
-            }
-
-            function openPicker(pickerUri) {
-                var win = window.open(pickerUri, '_blank');
-                if (!win) {
-                    var link = document.createElement('a');
-                    link.id = 'picker-link';
-                    link.href = pickerUri;
-                    link.target = '_blank';
-                    link.textContent = '여기를 눌러 구글 포토에서 사진을 선택하세요';
-                    root.insertBefore(link, statusEl);
-                }
-            }
-
-            function pollStatus() {
-                pollCount++;
-                if (pollCount > MAX_POLLS) {
-                    onError(new Error('선택 시간이 초과됐습니다'));
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    showError('zip 파일을 선택해주세요');
                     return;
                 }
 
-                fetch(urls.status, { headers: { Accept: 'application/json' } })
-                    .then(handleJson)
-                    .then(function (data) {
-                        if (data.mediaItemsSet) {
-                            statusEl.textContent = '사진을 저장하는 중...';
-                            ingest();
-                        } else {
-                            pollTimer = setTimeout(pollStatus, POLL_INTERVAL_MS);
-                        }
-                    })
-                    .catch(onError);
-            }
+                reset();
+                setBusy(true);
+                statusEl.textContent = '처리 중...';
 
-            function ingest() {
-                fetch(urls.ingest, { method: 'POST', headers: { Accept: 'application/json' } })
+                var body = new FormData();
+                body.append('file', fileInput.files[0]);
+
+                fetch(uploadUrl, { method: 'POST', body: body, headers: { Accept: 'application/json' } })
                     .then(handleJson)
                     .then(function (data) {
-                        statusEl.textContent = data.saved + '장 저장됨';
+                        var message = data.saved + '장 저장됨';
+                        if (data.totalCandidates > data.saved) {
+                            message += '(' + data.totalCandidates + '장 중 상한까지만 처리됨)';
+                        }
+                        statusEl.textContent = message;
+
                         var link = document.createElement('a');
                         link.className = 'btn';
-                        link.href = urls.map;
+                        link.href = mapUrl;
                         link.textContent = '지도에서 보기';
                         link.style.marginTop = '12px';
                         link.style.display = 'inline-block';
-                        root.appendChild(link);
+                        document.getElementById('takeout-flow').appendChild(link);
                         setBusy(false);
                     })
                     .catch(onError);
-            }
+            });
 
             function handleJson(res) {
                 if (!res.ok) {
@@ -230,15 +190,17 @@ declare(strict_types=1);
             }
 
             function onError(err) {
-                clearTimeout(pollTimer);
-                errorEl.textContent = (err && err.message) || '오류가 발생했습니다';
+                showError((err && err.message) || '오류가 발생했습니다', err && err.status === 401);
+            }
+
+            function showError(message, isAuthError) {
+                errorEl.textContent = message;
                 errorEl.appendChild(document.createElement('br'));
 
-                if (err && err.status === 401) {
-                    // 세션 만료 등 인증 실패는 재시도 대신 로그인 페이지로 안내한다.
+                if (isAuthError) {
                     var loginLink = document.createElement('a');
                     loginLink.className = 'btn';
-                    loginLink.href = urls.login;
+                    loginLink.href = '<?= esc($loginUrl, 'js') ?>';
                     loginLink.textContent = '다시 로그인하기';
                     errorEl.appendChild(loginLink);
                 } else {
@@ -253,16 +215,12 @@ declare(strict_types=1);
             }
 
             function setBusy(busy) {
-                startBtn.disabled = busy;
+                uploadBtn.disabled = busy;
             }
 
             function reset() {
-                clearTimeout(pollTimer);
-                pollCount = 0;
                 statusEl.textContent = '';
                 errorEl.innerHTML = '';
-                var existingLink = document.getElementById('picker-link');
-                if (existingLink) { existingLink.remove(); }
                 setBusy(false);
             }
         })();

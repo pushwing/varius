@@ -9,7 +9,7 @@ use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
- * Picker 세션 생성 레이트 리밋(사용자당·미로그인 시 IP당 시간당 N회).
+ * 요청 레이트 리밋(사용자당·미로그인 시 IP당 시간당 N회).
  *
  * CI4 throttler(토큰 버킷)로 한도를 관리하고, 초과 시 429 로 차단한다.
  * 한도는 .env 의 ratelimit.session.per_hour 로 조정한다(기본 10회/시간).
@@ -30,7 +30,7 @@ class SessionRateLimitFilter implements FilterInterface
         if ($throttler->check($this->key($request), $this->perHour(), HOUR, 1) === false) {
             return service('response')
                 ->setStatusCode(429)
-                ->setJSON(['error' => '세션 생성 요청이 너무 잦습니다. 잠시 후 다시 시도하세요.']);
+                ->setJSON(['error' => '요청이 너무 잦습니다. 잠시 후 다시 시도하세요.']);
         }
 
         return null;
@@ -59,7 +59,7 @@ class SessionRateLimitFilter implements FilterInterface
     }
 
     /**
-     * 시간당 허용 세션 생성 횟수(.env 설정, 기본 10).
+     * 시간당 허용 요청 횟수(.env 설정, 기본 10).
      */
     private function perHour(): int
     {

@@ -32,8 +32,9 @@ class GoogleOAuth extends BaseConfig
     /**
      * 요청 스코프.
      *
-     * openid/email/profile 은 사용자 식별(sub·email·name)용,
-     * photospicker.mediaitems.readonly 는 Picker API 접근용.
+     * 사용자 식별(sub·email·name)용. Google Photos API(Picker/Library)는 다운로드
+     * 원본에서 GPS EXIF 를 의도적으로 제거하므로 더는 호출하지 않는다 — GPS 는
+     * Google Takeout zip 업로드로 얻는다(Iter/CLAUDE.md 참고).
      *
      * @var list<string>
      */
@@ -41,7 +42,6 @@ class GoogleOAuth extends BaseConfig
         'openid',
         'email',
         'profile',
-        'https://www.googleapis.com/auth/photospicker.mediaitems.readonly',
     ];
 
     public function __construct()

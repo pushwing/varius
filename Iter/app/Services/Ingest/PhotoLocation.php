@@ -7,7 +7,7 @@ namespace App\Services\Ingest;
 /**
  * 동선 한 점 — media_item_id + 좌표 + 촬영 시각 + (있으면) 썸네일 경로.
  *
- * PhotoIngestService 의 출력 단위이며, 후속 저장 단계에서 photo_locations 로 적재된다.
+ * TakeoutIngestService 의 출력 단위이며, 후속 저장 단계에서 photo_locations 로 적재된다.
  * 썸네일은 지도 미리보기 표시용 예외 보관 대상이다(Iter/CLAUDE.md 저장 정책).
  */
 final readonly class PhotoLocation

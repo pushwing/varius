@@ -15,9 +15,7 @@ class Home extends BaseController
             'loginUrl' => site_url('auth/google'),
             'logoutUrl' => site_url('auth/logout'),
             'mapUrl' => site_url('map'),
-            'sessionsUrl' => site_url('picker/sessions'),
-            'statusUrl' => site_url('picker/sessions/status'),
-            'ingestUrl' => site_url('picker/ingest'),
+            'uploadUrl' => site_url('takeout/upload'),
         ]);
     }
 }

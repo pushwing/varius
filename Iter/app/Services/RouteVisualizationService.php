@@ -51,7 +51,7 @@ final class RouteVisualizationService
                 'lat' => (float) ($row['lat'] ?? 0),
                 'lng' => (float) ($row['lng'] ?? 0),
                 'taken_at' => $takenAt,
-                'media_item_id' => (string) ($row['google_media_item_id'] ?? ''),
+                'media_item_id' => (string) ($row['source_item_id'] ?? ''),
             ];
         }
 

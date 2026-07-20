@@ -33,12 +33,7 @@ final class GooglePhotosAuthServiceTest extends CIUnitTestCase
             'clientId' => 'test-client-id',
             'clientSecret' => 'test-secret',
             'redirectUri' => 'http://localhost:8080/auth/google/callback',
-            'scopes' => [
-                'openid',
-                'email',
-                'profile',
-                'https://www.googleapis.com/auth/photospicker.mediaitems.readonly',
-            ],
+            'scopes' => ['openid', 'email', 'profile'],
         ]);
 
         $url = $this->makeService($provider)->getAuthorizationUrl('state-token-abc');
@@ -47,7 +42,7 @@ final class GooglePhotosAuthServiceTest extends CIUnitTestCase
         $this->assertStringContainsString('state=state-token-abc', $url);
         $this->assertStringContainsString('access_type=offline', $url);
         $this->assertStringContainsString('prompt=consent', $url);
-        $this->assertStringContainsString('photospicker.mediaitems.readonly', rawurldecode($url));
+        $this->assertStringContainsString('profile', rawurldecode($url));
     }
 
     public function testExchangeCodeRequestsAuthorizationCodeGrant(): void
