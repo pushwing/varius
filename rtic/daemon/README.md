@@ -2,25 +2,32 @@
 
 자택 우분투 서버에서 LiveKit 룸에 참가자로 접속해 오디오를 디코딩한 뒤 물리
 스피커로 출력하는 데몬입니다. Python + GStreamer(PyGObject)로 구현했으며,
-재접속·헬스체크는 애플리케이션이 아니라 **systemd(지수 백오프 재시작)** 와
+재접속은 **파이프라인별 in-process 지수 백오프 재시작**(`supervisor.py`), 헬스체크는
 **Prometheus `/metrics`** 로 위임합니다.
 
 ## 구성
 
 - `rtic_daemon/config.py` — 환경변수 기반 설정(`DaemonConfig`). 양방향(마이크 퍼블리시)은 `RTIC_MIC_ENABLED`/`RTIC_AUDIO_SOURCE`로 제어.
 - `rtic_daemon/pipeline.py` — GStreamer 파이프라인 조립. 수신(스피커) `livekitwebrtcsrc ! queue ! audioconvert ! audioresample ! <sink>` + (양방향 시) 송신(마이크) `<source> ! queue ! audioconvert ! audioresample ! livekitwebrtcsink`. 마이크 퍼블리셔는 별개 참가자(`<identity>-mic`)로 접속하고 Opus 인코딩은 sink가 내부 처리한다.
-- `rtic_daemon/daemon.py` — 파이프라인 실행 루프, GLib 메인루프, 버스 메시지(ERROR/EOS) 처리. `RTIC_MIC_ENABLED` 시 수신·송신 두 파이프라인을 같은 루프에서 돌리며, 어느 쪽이든 에러·EOS면 실패 종료(systemd 재시작).
+- `rtic_daemon/daemon.py` — 파이프라인 실행 루프, GLib 메인루프. `RTIC_MIC_ENABLED` 시 수신·송신 두 파이프라인을 같은 루프에서 감독한다.
+- `rtic_daemon/supervisor.py` — `SupervisedPipeline`: 파이프라인 하나를 감독하며 에러/EOS 시 **그 파이프라인만** 지수 백오프로 in-process 재구성한다(수신·송신 상호 독립).
 - `rtic_daemon/health.py` — Prometheus 메트릭(`rtic_daemon_up`, `rtic_daemon_pipeline_state`, `rtic_daemon_start_time_seconds`)
 - `rtic_daemon/status_reporter.py` — LiveKit 텍스트 스트림(토픽 `rtic.status`)으로 앱(`../web/`)에 상태·에러 메시지를 발신. GStreamer/GLib 메인루프와는 별개의 백그라운드 asyncio 스레드에서 데이터 채널 전용 참가자(`<identity>-status`)로 접속한다.
-- `systemd/rtic-daemon.service` — systemd 유닛(지수 백오프 재시작)
+- `systemd/rtic-daemon.service` — systemd 유닛(프로세스 크래시 시 `Restart=on-failure` 안전망)
 
-## 동작 원리 — "재접속"을 프로세스 재시작으로 위임
+## 동작 원리 — "재접속"을 파이프라인별 in-process 재시작으로 처리
 
-데몬은 자체적으로 재연결 루프를 구현하지 않습니다. GStreamer 파이프라인이
-에러(`ERROR`)나 스트림 종료(`EOS`, 예: LiveKit 연결 끊김)를 만나면 **종료 코드
-1로 즉시 종료**하고, systemd가 `RestartSteps`/`RestartMaxDelaySec`(systemd
-254+, Ubuntu 24.04+)로 지수 백오프하며 재시작합니다. `SIGTERM`/`SIGINT`로 받은
-정상 종료는 종료 코드 0이라 재시작 대상이 아닙니다.
+GStreamer 파이프라인이 에러(`ERROR`)나 스트림 종료(`EOS`, 예: LiveKit 연결
+끊김)를 만나면 `SupervisedPipeline`(`rtic_daemon/supervisor.py`)이 **그
+파이프라인만** 지수 백오프(기본 1초→최대 30초)로 다시 세웁니다. **프로세스는
+죽지 않고** `SIGTERM`/`SIGINT`로만 종료(코드 0)합니다.
+
+> ⚠️ 이전에는 파이프라인 에러 시 프로세스를 코드 1로 종료해 systemd가 재시작
+> 하는 방식이었으나, 양방향(수신·송신) 확장 후 **한 방향의 끊김이 다른 방향까지
+> 죽이는 문제**가 있어 파이프라인별 독립 재시작으로 바꿨습니다(수신
+> `livekitwebrtcsrc`의 nicesrc가 앱 송신 종료 시 올리는 "Internal data stream
+> error"가 마이크 퍼블리시를 끊지 않게 하기 위함). systemd `Restart=on-failure`
+> 는 이제 **프로세스 자체가 크래시한 경우의 안전망**으로만 남습니다.
 
 ## 사전 준비 (자택 우분투 서버)
 
@@ -114,9 +121,14 @@ python3 -m venv --system-site-packages .venv
 
 ## 리턴 메시지 발신 (LiveKit 텍스트 스트림)
 
-파이프라인이 PLAYING 상태에 처음 도달하면 `{"type":"status","message":"스피커 연결됨","ts":...}`를,
-ERROR/EOS 시에는 `{"type":"error"|"status", ...}`를 토픽 `rtic.status`로 발신한다.
+파이프라인이 PLAYING 상태에 **처음** 도달하면 `{"type":"status","message":"스피커 연결됨","ts":...}`
+(양방향이면 마이크도 "마이크 연결됨")를 토픽 `rtic.status`로 발신한다.
 스키마는 `rtic/web/src/messageSchema.js`(#9)와 반드시 일치해야 한다.
+
+> 파이프라인 에러·EOS는 이제 in-process로 자가복구(`supervisor.py`)되므로,
+> 자가복구되는 일시적 끊김은 앱에 에러 메시지로 보내지 않는다(데몬 로그·메트릭
+> 으로만 관찰). 이전엔 매 끊김마다 앱에 "오디오 파이프라인 에러"가 떠 노이즈가
+> 컸다. 재연결 성공 시 "연결됨"도 최초 1회만 보내 반복 표시를 막는다.
 
 - 오디오 수신 참가자(`config.identity`)와 identity가 충돌하지 않도록 데이터 채널
   전용 참가자는 `<identity>-status`를 쓴다.

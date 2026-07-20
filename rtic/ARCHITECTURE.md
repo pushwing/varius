@@ -36,9 +36,9 @@
 - coturn 배포 파일(`docker-compose.yml`, `turnserver.conf`)은 [`coturn/`](coturn/)에 있다(현재 미사용, 4절 참고). `use-auth-secret` credential 발급 로직은 `app/Libraries/TurnCredentialService.php`에 남아 있다.
 
 ## 6. 리눅스 수신 데몬 요구사항
-- 네트워크 끊김 시 자동 재접속 (지수 백오프) — 데몬 자체는 재연결 로직 없이 에러/EOS 시 종료 코드 1로 종료하고, **systemd 254+(Ubuntu 24.04+)의 `RestartSteps`/`RestartMaxDelaySec` 네이티브 지수 백오프**로 재시작을 위임한다.
+- 네트워크 끊김 시 자동 재접속 (지수 백오프) — **파이프라인별 in-process 재시작**(`rtic_daemon/supervisor.py`의 `SupervisedPipeline`, 기본 1초→최대 30초 백오프)으로 처리한다. 프로세스는 죽지 않고 해당 파이프라인만 다시 세운다 → 양방향에서 한 방향 끊김이 다른 방향을 죽이지 않는다(수신 `livekitwebrtcsrc`의 nicesrc가 앱 송신 종료 시 올리는 "Internal data stream error"가 마이크 퍼블리시를 끊지 않게). systemd `Restart=on-failure`는 프로세스 크래시 안전망으로만 남는다. (초기 단방향 설계는 에러 시 프로세스를 코드 1로 종료해 systemd `RestartSteps` 백오프에 위임했으나, 양방향 확장(#11) 후 위 방식으로 대체.)
 - SFU 연결 상태 헬스체크 노출 — Prometheus `/metrics`(`rtic_daemon_up`, `rtic_daemon_pipeline_state`), 자체 구축 Grafana에서 스크레이프.
-- 오디오 출력 실패 시 자동 재시작: `systemd` `Restart=on-failure`
+- 오디오 출력/입력 실패 시 해당 파이프라인 in-process 백오프 재시작(위 참고). 프로세스 크래시 시엔 `systemd` `Restart=on-failure`가 안전망.
 - 구현·배포 파일은 [`daemon/`](daemon/) 참고(Python + GStreamer/PyGObject, `livekitwebrtcsrc` 사용 — 표준 apt에 없어 소스 빌드 필요. 실서버 배포에서 검증한 필수 조건: `gstreamer1.0-nice`, 실행 사용자 `audio` 그룹, 실시간 오디오 sink `sync=false`. `daemon/README.md` 참고).
 - "상태를 데이터 채널로 회신"(2절)은 `rtic_daemon/status_reporter.py`(이슈 #12)가 담당 — LiveKit 텍스트 스트림(토픽 `rtic.status`)으로 발신, 오디오 참가자와는 별개의 데이터 채널 전용 참가자(`<identity>-status`) 사용.
 
@@ -83,7 +83,7 @@
 ## 11. 양방향 인터콤 (이슈 #11 — 구현 완료)
 자택 서버에 마이크가 연결되면 데몬이 로컬 오디오를 캡처해 GStreamer로 LiveKit에 퍼블리시하고, 앱이 이를 재생하는 역방향 경로다. 기존 단방향 구조를 **대칭 복제**해 구현했다.
 
-- **데몬(송신)**: `RTIC_MIC_ENABLED=true`이면 수신(스피커) 파이프라인과 함께 송신(마이크) 파이프라인을 같은 GLib 루프에서 돌린다. `<audio_source> ! queue ! audioconvert ! audioresample ! livekitwebrtcsink` 구조로, 마이크 캡처 소스는 `RTIC_AUDIO_SOURCE`(예: `alsasrc device=plughw:1,0`)로 지정한다. Opus 인코딩은 `livekitwebrtcsink`가 내부 처리하며(별도 opusenc 불필요), 오디오 수신기와 identity 충돌을 피하려 `<identity>-mic` 별도 참가자로 접속한다. 두 방향 중 어느 쪽이든 에러·EOS면 실패 종료해 systemd가 전체를 재시작한다(6절 정책과 일관).
+- **데몬(송신)**: `RTIC_MIC_ENABLED=true`이면 수신(스피커) 파이프라인과 함께 송신(마이크) 파이프라인을 같은 GLib 루프에서 돌린다. `<audio_source> ! queue ! audioconvert ! audioresample ! livekitwebrtcsink` 구조로, 마이크 캡처 소스는 `RTIC_AUDIO_SOURCE`(예: `alsasrc device=plughw:1,0`)로 지정한다. Opus 인코딩은 `livekitwebrtcsink`가 내부 처리하며(별도 opusenc 불필요), 오디오 수신기와 identity 충돌을 피하려 `<identity>-mic` 별도 참가자로 접속한다. 수신·송신은 서로 독립이라 한 방향이 끊겨도 다른 방향은 유지된다 — 각 파이프라인이 에러·EOS 시 프로세스를 죽이지 않고 자기만 in-process 백오프 재시작한다(6절 참고).
 - **앱(수신)**: `RoomEvent.TrackSubscribed`로 데몬 오디오 트랙을 받아 재생한다(`web/src/audioPlayback.js`). `room.connect`의 기본 `autoSubscribe=true`로 자동 구독되므로 재생 element만 붙인다.
 - **토큰**: `LiveKitAccessTokenService`가 발급하는 앱 토큰은 이미 `canPublish`/`canSubscribe`를 모두 포함해 양방향에 별도 변경이 필요 없다.
 - **검증**: 실제 마이크 캡처·오디오 왕복 지연은 실배포·실물 마이크가 필요해 [`INTEGRATION-TEST-RUNBOOK.md`](INTEGRATION-TEST-RUNBOOK.md)의 수동 절차로 확인한다. `livekitwebrtcsink`의 코덱 협상은 실서버(`gst-inspect-1.0 livekitwebrtcsink`)에서 최종 확인한다.

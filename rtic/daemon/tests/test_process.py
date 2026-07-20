@@ -54,18 +54,24 @@ def test_sigterm_causes_clean_exit_zero():
     assert returncode == 0, proc.stdout.read()
 
 
-def test_stream_end_causes_exit_one():
-    # num-buffers로 유한한 스트림을 만들어 자연스럽게 EOS가 발생하게 한다
-    # (재접속 대상 실패로 취급 — systemd가 지수 백오프로 재시작해야 하는 경로).
+def test_pipeline_error_restarts_in_process_not_exit():
+    # num-buffers로 유한한 스트림을 만들어 EOS가 반복 발생하게 한다.
+    # 예전에는 EOS -> 프로세스 종료(코드 1) -> systemd 재시작이었으나,
+    # 양방향에서는 한 방향 끊김이 다른 방향을 죽이지 않도록 **해당 파이프라인만
+    # in-process 백오프 재시작**한다. 따라서 프로세스는 계속 살아 있어야 한다.
     proc = _spawn("audiotestsrc is-live=true wave=silence num-buffers=10", metrics_port=9582)
     try:
-        returncode = proc.wait(timeout=15)
+        time.sleep(3.0)  # EOS -> 재시작 사이클이 여러 번 돌 시간을 준다
+        assert proc.poll() is None, "프로세스가 종료됐습니다(재시작 대신):\n" + proc.stdout.read()
+        proc.send_signal(signal.SIGTERM)
+        returncode = proc.wait(timeout=10)
     finally:
         if proc.poll() is None:
             proc.kill()
             proc.wait()
 
-    assert returncode == 1, proc.stdout.read()
+    # 정상 종료(SIGTERM)는 항상 0 — 파이프라인 에러는 프로세스 종료 코드에 영향 없음.
+    assert returncode == 0, proc.stdout.read()
 
 
 def test_mic_enabled_runs_both_pipelines_and_exits_clean_on_sigterm():
@@ -94,6 +100,34 @@ def test_mic_enabled_runs_both_pipelines_and_exits_clean_on_sigterm():
 
     assert returncode == 0, output
     # 마이크 퍼블리시 파이프라인이 실제로 기동됐는지 로그로 확인한다.
+    assert "마이크 퍼블리시" in output, output
+
+
+def test_speaker_error_keeps_mic_and_process_alive():
+    # 수신(스피커) 소스가 유한(EOS 반복)이어도, 마이크 퍼블리시 파이프라인과
+    # 프로세스는 살아 있어야 한다(한 방향 끊김이 다른 방향을 죽이지 않음).
+    proc = _spawn(
+        "audiotestsrc is-live=true wave=silence num-buffers=10",  # 수신측: 곧 EOS
+        metrics_port=9585,
+        extra_env={
+            "RTIC_MIC_ENABLED": "true",
+            "RTIC_AUDIO_SOURCE": "audiotestsrc is-live=true wave=silence",  # 마이크측: 무한
+            "RTIC_TEST_SINK_DESCRIPTION": "fakesink",
+        },
+    )
+    try:
+        time.sleep(3.0)
+        alive = proc.poll() is None
+        proc.send_signal(signal.SIGTERM)
+        returncode = proc.wait(timeout=10)
+        output = proc.stdout.read()
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait()
+
+    assert alive, "수신측 에러로 프로세스가 죽었습니다:\n" + output
+    assert returncode == 0, output
     assert "마이크 퍼블리시" in output, output
 
 
