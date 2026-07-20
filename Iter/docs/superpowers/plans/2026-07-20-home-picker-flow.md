@@ -17,6 +17,9 @@
 - 클라이언트 JS 상태 머신은 자동화 테스트 대상에서 제외한다(프로젝트에 JS 테스트 프레임워크 없음, `map.php`와 동일 기존 정책) — PHP 쪽에서 렌더링된 마크업(메뉴 링크·버튼 id·API URL data 속성)만 feature 테스트로 검증한다.
 - 로그아웃은 CSRF 보호 없이 `GET`으로 구현한다(프로젝트 전역 CSRF 필터가 `app/Config/Filters.php`에서 비활성 상태 — `Iter/CLAUDE.md`·스펙 문서 7절 참고).
 - 커밋 메시지 형식: 이모지 + Conventional Commits 접두어 + 한국어 설명(전역 git-workflow 규칙).
+- `session()->destroy()`는 CI4 testing 환경에서 no-op이다(`Session::destroy()` 소스에 명시) — 로그아웃 등 테스트로 검증해야 하는 세션 제거는 `session()->remove(키)`를 쓴다(기존 `AuthController::callback()`의 `oauth_state` 제거와 동일 패턴).
+- `FeatureTestTrait::call()`은 매 요청마다 `$_SESSION`을 마지막 `withSession()` 스냅샷으로 되돌린다 — 한 테스트 안에서 여러 요청을 이어갈 때 이전 요청이 세션을 바꿨다면 다음 요청 전에 인자 없이 `withSession()`을 다시 호출해 현재 `$_SESSION`을 재캡처해야 한다.
+- `FeatureTestTrait`로 시뮬레이션한 요청의 응답 본문은 (CI4 testing 환경의 debug 뷰 래핑 경로 특성상) 비ASCII 문자가 HTML 숫자 엔티티로 나올 수 있다 — 실제 브라우저·`spark serve` 응답에는 나타나지 않는 테스트 하네스 한정 현상(실사용자 영향 없음, 원인은 조사했으나 정확한 발생 지점은 특정하지 못함; 기존 `map.php` 렌더링에서도 동일하게 재현되어 이번 작업과 무관함을 확인). 한글 등 비ASCII 텍스트를 본문에서 검증하는 feature 테스트는 `html_entity_decode()`로 디코딩한 뒤 비교한다.
 
 ---
 
@@ -28,7 +31,8 @@
 - Test: `Iter/tests/feature/AuthControllerTest.php`
 
 **Interfaces:**
-- Produces: `AuthController::logout(): RedirectResponse` — `GET /auth/logout` 호출 시 `session()->destroy()` 후 `/`로 리다이렉트. Task 2의 `home.php` 뷰가 이 라우트를 로그아웃 링크(`href`)로 참조한다.
+- Produces: `AuthController::logout(): RedirectResponse` — `GET /auth/logout` 호출 시 `session()->remove('user_id')` 후 `/`로 리다이렉트. Task 2의 `home.php` 뷰가 이 라우트를 로그아웃 링크(`href`)로 참조한다.
+  > ⚠️ 구현 중 발견: `session()->destroy()`는 CI4 testing 환경에서 no-op(`Session::destroy()` 소스에 `if (ENVIRONMENT === 'testing') { return; }`)라 테스트로 검증 불가능하다. 이미 `callback()`이 쓰는 `session()->remove()`(테스트에서도 실제 동작)로 대체한다.
 
 - [ ] **Step 1: 실패하는 테스트 작성**
 
@@ -47,7 +51,10 @@
     {
         $this->withSession(['user_id' => 42])->get('auth/logout');
 
-        $result = $this->post('picker/sessions');
+        // withSession() 를 인자 없이 호출하면 로그아웃으로 변경된 현재 $_SESSION 을 다시 캡처한다
+        // (FeatureTestTrait::call() 은 매 요청마다 $_SESSION 을 마지막 withSession() 스냅샷으로 되돌리므로,
+        // 재캡처하지 않으면 두 번째 요청이 로그아웃 이전 세션으로 되돌아간다).
+        $result = $this->withSession()->post('picker/sessions');
 
         $result->assertStatus(401);
     }
@@ -79,11 +86,14 @@ $routes->get('auth/logout', 'AuthController::logout');
 ```php
 
     /**
-     * 로그아웃 — 세션을 파괴하고 홈으로 리다이렉트한다(GET /auth/logout).
+     * 로그아웃 — 인증 상태를 지우고 홈으로 리다이렉트한다(GET /auth/logout).
+     *
+     * session()->destroy() 는 CI4 testing 환경에서 no-op 이라(Session::destroy() 참고)
+     * 테스트로 검증 가능한 remove() 로 인증 키만 명시적으로 제거한다.
      */
     public function logout(): RedirectResponse
     {
-        session()->destroy();
+        session()->remove('user_id');
 
         return redirect()->to('/');
     }
@@ -133,6 +143,7 @@ use App\Models\UserModel;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
 use CodeIgniter\Test\FeatureTestTrait;
+use CodeIgniter\Test\TestResponse;
 
 /**
  * @internal
@@ -145,12 +156,23 @@ final class HomeControllerTest extends CIUnitTestCase
     protected $refresh = true;
     protected $namespace = 'App';
 
+    /**
+     * FeatureTestTrait 로 시뮬레이션한 요청은 (CI4 testing 환경의 debug 뷰 래핑 경로 특성상)
+     * 응답 본문의 비ASCII 문자가 HTML 숫자 엔티티로 나올 수 있다 — 실제 브라우저·spark serve
+     * 응답에는 나타나지 않는 테스트 하네스 한정 현상(실사용자 영향 없음, 이 프로젝트의 기존
+     * map.php 렌더링에서도 동일하게 재현됨). 엔티티 디코딩 후 비교해 두 표현 모두 견고하게 통과시킨다.
+     */
+    private function decodedBody(TestResponse $result): string
+    {
+        return html_entity_decode((string) $result->getBody(), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
+
     public function testShowsLoginButtonWhenNotLoggedIn(): void
     {
         $result = $this->get('/');
 
         $result->assertStatus(200);
-        $body = (string) $result->getBody();
+        $body = $this->decodedBody($result);
         $this->assertStringContainsString('Google로 로그인', $body);
         $this->assertStringContainsString('/auth/google', $body);
         $this->assertStringNotContainsString('id="start-picker"', $body);
@@ -163,7 +185,7 @@ final class HomeControllerTest extends CIUnitTestCase
         $result = $this->withSession(['user_id' => $userId])->get('/');
 
         $result->assertStatus(200);
-        $body = (string) $result->getBody();
+        $body = $this->decodedBody($result);
         $this->assertStringContainsString('지도 보기', $body);
         $this->assertStringContainsString('/map', $body);
         $this->assertStringContainsString('로그아웃', $body);
