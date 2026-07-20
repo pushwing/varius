@@ -8,6 +8,7 @@ use App\Services\Ingest\ExifExtractorInterface;
 use App\Services\Ingest\ExifLocation;
 use App\Services\Ingest\MediaItemDownloaderInterface;
 use App\Services\Ingest\PhotoLocation;
+use App\Services\Ingest\ThumbnailGeneratorInterface;
 use App\Services\PhotoIngestService;
 use CodeIgniter\Test\CIUnitTestCase;
 
@@ -115,6 +116,63 @@ final class PhotoIngestServiceTest extends CIUnitTestCase
         );
 
         $this->assertSame([], $service->ingest($mediaItems, 'ya29.token'));
+    }
+
+    public function testIngestIncludesThumbnailPathWhenGeneratorSucceeds(): void
+    {
+        $mediaItems = [['id' => 'a', 'baseUrl' => 'https://base/a']];
+
+        $thumbnailer = $this->createMock(ThumbnailGeneratorInterface::class);
+        $thumbnailer->expects($this->once())
+            ->method('generate')
+            ->with('/fake/a', 'a')
+            ->willReturn('/thumbs/a.jpg');
+
+        $service = new PhotoIngestService(
+            $this->downloader(['a' => '/fake/a']),
+            $this->extractor(['/fake/a' => new ExifLocation(37.5, 127.0, '2024-03-15 09:00:00')]),
+            200.0,
+            $thumbnailer,
+        );
+
+        $result = $service->ingest($mediaItems, 'ya29.token');
+
+        $this->assertCount(1, $result);
+        $this->assertSame('/thumbs/a.jpg', $result[0]->thumbnailPath);
+    }
+
+    public function testIngestThumbnailPathIsNullWhenGeneratorFails(): void
+    {
+        $mediaItems = [['id' => 'a', 'baseUrl' => 'https://base/a']];
+
+        $thumbnailer = $this->createMock(ThumbnailGeneratorInterface::class);
+        $thumbnailer->method('generate')->willReturn(null); // 실패해도 ingest 는 중단되지 않는다.
+
+        $service = new PhotoIngestService(
+            $this->downloader(['a' => '/fake/a']),
+            $this->extractor(['/fake/a' => new ExifLocation(37.5, 127.0, '2024-03-15 09:00:00')]),
+            200.0,
+            $thumbnailer,
+        );
+
+        $result = $service->ingest($mediaItems, 'ya29.token');
+
+        $this->assertCount(1, $result);
+        $this->assertNull($result[0]->thumbnailPath);
+    }
+
+    public function testIngestThumbnailPathIsNullWhenNoGeneratorInjected(): void
+    {
+        $mediaItems = [['id' => 'a', 'baseUrl' => 'https://base/a']];
+
+        $service = new PhotoIngestService(
+            $this->downloader(['a' => '/fake/a']),
+            $this->extractor(['/fake/a' => new ExifLocation(37.5, 127.0, '2024-03-15 09:00:00')]),
+        );
+
+        $result = $service->ingest($mediaItems, 'ya29.token');
+
+        $this->assertNull($result[0]->thumbnailPath);
     }
 
     public function testFilterOutliersRemovesImpossibleSpeed(): void

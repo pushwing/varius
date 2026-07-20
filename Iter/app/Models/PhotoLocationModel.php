@@ -24,6 +24,7 @@ class PhotoLocationModel extends Model
         'google_media_item_id',
         'lat',
         'lng',
+        'thumbnail_path',
         'taken_at',
     ];
 
@@ -35,7 +36,7 @@ class PhotoLocationModel extends Model
     public function findByUserOrdered(int $userId): array
     {
         /** @var list<array<string, mixed>> $rows */
-        $rows = $this->select('google_media_item_id, lat, lng, taken_at')
+        $rows = $this->select('google_media_item_id, lat, lng, thumbnail_path, taken_at')
             ->where('user_id', $userId)
             ->orderBy('taken_at', 'ASC')
             ->findAll();
@@ -74,6 +75,7 @@ class PhotoLocationModel extends Model
                 'google_media_item_id' => $location->mediaItemId,
                 'lat' => $location->lat,
                 'lng' => $location->lng,
+                'thumbnail_path' => $location->thumbnailPath,
                 'taken_at' => $location->takenAt,
             ];
         }

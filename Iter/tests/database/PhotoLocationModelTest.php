@@ -47,6 +47,18 @@ final class PhotoLocationModelTest extends CIUnitTestCase
         ]);
     }
 
+    public function testSaveManyPersistsThumbnailPath(): void
+    {
+        (new PhotoLocationModel())->saveMany($this->userId, [
+            new PhotoLocation('media-thumb', 37.5, 127.0, '2024-03-15 09:00:00', '/thumbs/media-thumb.jpg'),
+        ]);
+
+        $this->seeInDatabase('photo_locations', [
+            'google_media_item_id' => 'media-thumb',
+            'thumbnail_path' => '/thumbs/media-thumb.jpg',
+        ]);
+    }
+
     public function testSaveManySkipsDuplicateMediaItemIds(): void
     {
         $model = new PhotoLocationModel();

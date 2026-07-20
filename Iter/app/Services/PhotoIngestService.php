@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Services\Ingest\ExifExtractorInterface;
 use App\Services\Ingest\MediaItemDownloaderInterface;
 use App\Services\Ingest\PhotoLocation;
+use App\Services\Ingest\ThumbnailGeneratorInterface;
 
 /**
  * 선택된 사진 원본에서 동선 좌표를 추출하는 핵심 서비스.
@@ -14,7 +15,8 @@ use App\Services\Ingest\PhotoLocation;
  * HTTP 요청 컨텍스트에 의존하지 않는 순수 함수형: 입력 mediaItems + access token →
  * 출력 PhotoLocation 배열. 다운로더·추출기를 주입받아 조합하므로 향후 큐 워커로 분리하기 쉽다.
  *
- * 원본 이미지는 저장하지 않는다 — EXIF 추출 후 임시 파일을 즉시 폐기한다.
+ * 풀사이즈 원본 이미지는 저장하지 않는다 — EXIF 추출 후 임시 파일을 즉시 폐기한다.
+ * 썸네일 생성기가 주입되면 폐기 전 지도 미리보기용 썸네일만 예외로 남긴다(Iter/CLAUDE.md 저장 정책).
  */
 class PhotoIngestService
 {
@@ -27,6 +29,7 @@ class PhotoIngestService
         private readonly MediaItemDownloaderInterface $downloader,
         private readonly ExifExtractorInterface $extractor,
         private readonly float $maxSpeedKmh = 200.0,
+        private readonly ?ThumbnailGeneratorInterface $thumbnailGenerator = null,
     ) {
     }
 
@@ -49,11 +52,16 @@ class PhotoIngestService
             }
 
             $path = $paths[$id];
+            $thumbnailPath = null;
 
             try {
                 $exifLocation = $this->extractor->extract($path);
+                if ($exifLocation !== null && $this->thumbnailGenerator !== null) {
+                    // 풀사이즈 원본을 폐기하기 전, 존재하는 동안 썸네일을 생성한다.
+                    $thumbnailPath = $this->thumbnailGenerator->generate($path, $id);
+                }
             } finally {
-                // 원본은 보관하지 않는다 — 추출 성패와 무관하게 임시 파일 폐기.
+                // 풀사이즈 원본은 보관하지 않는다 — 추출 성패와 무관하게 임시 파일 폐기.
                 if (is_file($path)) {
                     unlink($path);
                 }
@@ -68,7 +76,7 @@ class PhotoIngestService
                 continue; // 촬영 시각을 알 수 없으면 동선에 배치 불가
             }
 
-            $locations[] = new PhotoLocation($id, $exifLocation->lat, $exifLocation->lng, $takenAt);
+            $locations[] = new PhotoLocation($id, $exifLocation->lat, $exifLocation->lng, $takenAt, $thumbnailPath);
         }
 
         return $this->filterOutliers($locations);

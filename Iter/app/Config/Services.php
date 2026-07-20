@@ -9,6 +9,9 @@ use App\Models\PhotoLocationModel;
 use App\Models\UserModel;
 use App\Services\GooglePhotosAuthService;
 use App\Services\Ingest\CurlMultiDownloader;
+use App\Services\Ingest\ExifToolExtractor;
+use App\Services\Ingest\FallbackExifExtractor;
+use App\Services\Ingest\GdThumbnailGenerator;
 use App\Services\Ingest\NativeExifExtractor;
 use App\Services\PhotoIngestService;
 use App\Services\PhotoPickerService;
@@ -79,7 +82,8 @@ class Services extends BaseService
     /**
      * 사진 원본 → EXIF 좌표 추출 서비스.
      *
-     * curl_multi 병렬 다운로더 + 네이티브 EXIF 추출기를 조립한다.
+     * curl_multi 병렬 다운로더 + (네이티브 → exiftool 폴백) EXIF 추출기 + 300px 썸네일 생성기를 조립한다.
+     * HEIC 등 네이티브가 못 읽는 포맷은 exiftool 바이너리(shell_exec)로 재시도한다.
      */
     public static function photoIngest(bool $getShared = true): PhotoIngestService
     {
@@ -87,7 +91,10 @@ class Services extends BaseService
             return static::getSharedInstance('photoIngest');
         }
 
-        return new PhotoIngestService(new CurlMultiDownloader(), new NativeExifExtractor());
+        $extractor = new FallbackExifExtractor(new NativeExifExtractor(), new ExifToolExtractor());
+        $thumbnailer = new GdThumbnailGenerator(WRITEPATH . 'uploads/thumbnails');
+
+        return new PhotoIngestService(new CurlMultiDownloader(), $extractor, 200.0, $thumbnailer);
     }
 
     /**
