@@ -60,4 +60,17 @@ class AuthController extends BaseController
 
         return redirect()->to('/')->with('message', '로그인이 완료되었습니다.');
     }
+
+    /**
+     * 로그아웃 — 인증 상태를 지우고 홈으로 리다이렉트한다(GET /auth/logout).
+     *
+     * session()->destroy() 는 CI4 testing 환경에서 no-op 이라(Session::destroy() 참고)
+     * 테스트로 검증 가능한 remove() 로 인증 키만 명시적으로 제거한다.
+     */
+    public function logout(): RedirectResponse
+    {
+        session()->remove('user_id');
+
+        return redirect()->to('/');
+    }
 }
