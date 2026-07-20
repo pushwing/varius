@@ -44,10 +44,17 @@ class PhotoIngestService
     {
         $paths = $this->downloader->download($mediaItems, $accessToken);
 
+        log_message('info', 'Ingest 다운로드: 요청 {requested}건 중 {downloaded}건 성공', [
+            'requested' => count($mediaItems),
+            'downloaded' => count($paths),
+        ]);
+
         $locations = [];
         foreach ($mediaItems as $item) {
             $id = isset($item['id']) ? (string) $item['id'] : '';
             if ($id === '' || ! isset($paths[$id])) {
+                log_message('warning', 'Ingest 스킵(다운로드 실패): media_item_id={id}', ['id' => $id]);
+
                 continue;
             }
 
@@ -68,18 +75,29 @@ class PhotoIngestService
             }
 
             if ($exifLocation === null) {
+                log_message('warning', 'Ingest 스킵(GPS EXIF 없음): media_item_id={id}', ['id' => $id]);
+
                 continue; // GPS 없는 사진은 제외
             }
 
             $takenAt = $exifLocation->takenAt ?? $this->creationTime($item);
             if ($takenAt === null) {
+                log_message('warning', 'Ingest 스킵(촬영 시각 없음): media_item_id={id}', ['id' => $id]);
+
                 continue; // 촬영 시각을 알 수 없으면 동선에 배치 불가
             }
 
             $locations[] = new PhotoLocation($id, $exifLocation->lat, $exifLocation->lng, $takenAt, $thumbnailPath);
         }
 
-        return $this->filterOutliers($locations);
+        $filtered = $this->filterOutliers($locations);
+
+        log_message('info', 'Ingest 완료: GPS 추출 {extracted}건, 이상치 필터 후 {kept}건', [
+            'extracted' => count($locations),
+            'kept' => count($filtered),
+        ]);
+
+        return $filtered;
     }
 
     /**
