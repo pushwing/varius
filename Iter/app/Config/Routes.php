@@ -5,7 +5,7 @@ declare(strict_types=1);
 use CodeIgniter\Router\RouteCollection;
 
 /** @var RouteCollection $routes */
-$routes->get('/', 'Home::index');
+$routes->match(['get', 'head'], '/', 'Home::index');
 
 // Google OAuth2 인증
 $routes->get('auth/google', 'AuthController::redirect');
