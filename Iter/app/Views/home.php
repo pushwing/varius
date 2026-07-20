@@ -38,14 +38,67 @@ declare(strict_types=1);
         #error { margin-top: 20px; font-size: 14px; color: #c0392b; }
         .legal-footer { margin-top: 24px; font-size: 13px; }
         .legal-footer a { color: #777; }
+
+        main.landing { max-width: 560px; }
+        .landing .lead { font-size: 16px; color: #444; margin-bottom: 8px; }
+        .landing .sub { font-size: 14px; color: #777; margin-bottom: 32px; }
+        .landing .btn { padding: 12px 28px; font-size: 16px; }
+        .steps {
+            list-style: none; margin: 32px 0; padding: 0;
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; text-align: left;
+        }
+        .steps li {
+            background: #f7f8fa; border-radius: 10px; padding: 16px;
+        }
+        .steps .num {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 22px; height: 22px; border-radius: 50%;
+            background: #1a73e8; color: #fff; font-size: 12px; font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .steps .title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+        .steps .desc { font-size: 13px; color: #666; line-height: 1.5; }
+        .privacy-note {
+            margin-top: 28px; padding: 14px 16px; border-radius: 10px;
+            background: #eef4ff; color: #3a5a9c; font-size: 13px; text-align: left; line-height: 1.6;
+        }
+        @media (max-width: 520px) {
+            .steps { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
 <?php if ($userId === null): ?>
-    <main>
+    <main class="landing">
         <h1>Iter</h1>
-        <p>구글 포토에서 사진을 선택하면 촬영 위치를 지도 위 동선으로 보여줍니다.</p>
+        <p class="lead">내가 찍은 사진 속 GPS로, 여행의 동선을 지도 위에 그려드립니다.</p>
+        <p class="sub">Google 포토에서 사진을 몇 장 고르기만 하면, 언제 어디를 다녀왔는지 날짜별 경로로 한눈에 확인할 수 있어요.</p>
+
+        <ul class="steps">
+            <li>
+                <span class="num">1</span>
+                <div class="title">사진 선택</div>
+                <div class="desc">Google 포토 Picker에서 위치를 확인하고 싶은 사진을 직접 고릅니다.</div>
+            </li>
+            <li>
+                <span class="num">2</span>
+                <div class="title">위치·시간 추출</div>
+                <div class="desc">선택한 사진의 촬영 위치와 시각을 자동으로 읽어옵니다.</div>
+            </li>
+            <li>
+                <span class="num">3</span>
+                <div class="title">동선 확인</div>
+                <div class="desc">날짜별 색으로 구분된 마커와 경로선으로 지도 위에서 동선을 확인합니다.</div>
+            </li>
+        </ul>
+
         <a class="btn" href="<?= esc($loginUrl, 'attr') ?>">Google로 로그인</a>
+
+        <p class="privacy-note">
+            Google 포토 라이브러리 전체가 아니라, 직접 선택한 사진에만 접근합니다.
+            사진 원본은 서버에 저장하지 않으며, 위치·시각 정보 추출이 끝나는 즉시 삭제됩니다.
+        </p>
+
         <p class="legal-footer">
             <a href="/privacy-policy.html">개인정보처리방침</a> ·
             <a href="/terms-of-service.html">서비스 이용약관</a>
