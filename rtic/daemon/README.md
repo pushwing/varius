@@ -7,9 +7,9 @@
 
 ## 구성
 
-- `rtic_daemon/config.py` — 환경변수 기반 설정(`DaemonConfig`)
-- `rtic_daemon/pipeline.py` — GStreamer 파이프라인 조립 (`livekitwebrtcsrc ! queue ! audioconvert ! audioresample ! <sink>`)
-- `rtic_daemon/daemon.py` — 파이프라인 실행 루프, GLib 메인루프, 버스 메시지(ERROR/EOS) 처리
+- `rtic_daemon/config.py` — 환경변수 기반 설정(`DaemonConfig`). 양방향(마이크 퍼블리시)은 `RTIC_MIC_ENABLED`/`RTIC_AUDIO_SOURCE`로 제어.
+- `rtic_daemon/pipeline.py` — GStreamer 파이프라인 조립. 수신(스피커) `livekitwebrtcsrc ! queue ! audioconvert ! audioresample ! <sink>` + (양방향 시) 송신(마이크) `<source> ! queue ! audioconvert ! audioresample ! livekitwebrtcsink`. 마이크 퍼블리셔는 별개 참가자(`<identity>-mic`)로 접속하고 Opus 인코딩은 sink가 내부 처리한다.
+- `rtic_daemon/daemon.py` — 파이프라인 실행 루프, GLib 메인루프, 버스 메시지(ERROR/EOS) 처리. `RTIC_MIC_ENABLED` 시 수신·송신 두 파이프라인을 같은 루프에서 돌리며, 어느 쪽이든 에러·EOS면 실패 종료(systemd 재시작).
 - `rtic_daemon/health.py` — Prometheus 메트릭(`rtic_daemon_up`, `rtic_daemon_pipeline_state`, `rtic_daemon_start_time_seconds`)
 - `rtic_daemon/status_reporter.py` — LiveKit 텍스트 스트림(토픽 `rtic.status`)으로 앱(`../web/`)에 상태·에러 메시지를 발신. GStreamer/GLib 메인루프와는 별개의 백그라운드 asyncio 스레드에서 데이터 채널 전용 참가자(`<identity>-status`)로 접속한다.
 - `systemd/rtic-daemon.service` — systemd 유닛(지수 백오프 재시작)

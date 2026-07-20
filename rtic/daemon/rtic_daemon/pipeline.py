@@ -48,3 +48,50 @@ def build_pipeline(config: DaemonConfig, source_description: str | None = None) 
         raise RuntimeError("GStreamer 파이프라인 생성에 실패했습니다.")
 
     return pipeline
+
+
+def livekit_sink_description(config: DaemonConfig) -> str:
+    """자택 마이크 오디오를 LiveKit에 퍼블리시할 livekitwebrtcsink 세그먼트를 만든다.
+
+    수신용 livekitwebrtcsrc와 대칭 구조이며 같은 gst-plugins-rs 플러그인
+    (`--features livekit`)에 포함돼 있다(별도 빌드 불필요). 오디오 수신기
+    (`config.identity`)와 identity가 겹치지 않도록 `<identity>-mic` 별도
+    참가자로 접속한다(status_reporter의 `-status` 선례와 동일).
+    """
+    mic_identity = f"{config.identity}-mic"
+    return (
+        "livekitwebrtcsink name=sink "
+        f"signaller::ws-url={_quote(config.ws_url)} "
+        f"signaller::api-key={_quote(config.api_key)} "
+        f"signaller::secret-key={_quote(config.api_secret)} "
+        f"signaller::room-name={_quote(config.room_name)} "
+        f"signaller::identity={_quote(mic_identity)} "
+        f"signaller::participant-name={_quote(mic_identity)}"
+    )
+
+
+def build_publish_pipeline_description(
+    config: DaemonConfig, sink_description: str | None = None
+) -> str:
+    """마이크 캡처 -> LiveKit 퍼블리시 파이프라인 문자열을 만든다.
+
+    `sink_description`을 넘기면(테스트에서 fakesink 등으로 대체) 그 값을
+    싱크 세그먼트로 사용하고, 생략하면 운영용 livekitwebrtcsink를 사용한다.
+    livekitwebrtcsink가 내부적으로 Opus 인코딩을 처리하므로 원시 오디오를
+    그대로 주입한다(별도 opusenc 불필요).
+    """
+    if sink_description is None:
+        sink_description = livekit_sink_description(config)
+
+    return f"{config.audio_source} ! queue ! audioconvert ! audioresample ! {sink_description}"
+
+
+def build_publish_pipeline(
+    config: DaemonConfig, sink_description: str | None = None
+) -> Gst.Pipeline:
+    description = build_publish_pipeline_description(config, sink_description)
+    pipeline = Gst.parse_launch(description)
+    if pipeline is None:
+        raise RuntimeError("GStreamer 퍼블리시 파이프라인 생성에 실패했습니다.")
+
+    return pipeline

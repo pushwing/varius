@@ -31,6 +31,9 @@ def test_from_env_applies_defaults():
     # WebRTC 실시간 오디오는 sync=false가 필수라 기본 sink에 포함돼 있어야 한다.
     assert config.audio_sink == "autoaudiosink sync=false"
     assert config.metrics_port == 9477
+    # 양방향(마이크 퍼블리시)은 기본 off — 기존 스피커 전용 배포에 영향 없게.
+    assert config.mic_enabled is False
+    assert config.audio_source == "autoaudiosrc"
 
 
 def test_from_env_allows_overriding_defaults():
@@ -45,6 +48,34 @@ def test_from_env_allows_overriding_defaults():
     assert config.identity == "living-room"
     assert config.audio_sink == "alsasink"
     assert config.metrics_port == 9999
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("true", True),
+        ("True", True),
+        ("1", True),
+        ("yes", True),
+        ("on", True),
+        ("false", False),
+        ("0", False),
+        ("", False),
+    ],
+)
+def test_from_env_parses_mic_enabled_flag(raw, expected):
+    config = DaemonConfig.from_env(_valid_env(RTIC_MIC_ENABLED=raw))
+
+    assert config.mic_enabled is expected
+
+
+def test_from_env_reads_audio_source_override():
+    config = DaemonConfig.from_env(
+        _valid_env(RTIC_MIC_ENABLED="true", RTIC_AUDIO_SOURCE="alsasrc device=plughw:1,0")
+    )
+
+    assert config.mic_enabled is True
+    assert config.audio_source == "alsasrc device=plughw:1,0"
 
 
 @pytest.mark.parametrize(

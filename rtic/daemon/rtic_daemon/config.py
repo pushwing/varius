@@ -12,6 +12,12 @@ _REQUIRED = (
     "RTIC_LIVEKIT_ROOM_NAME",
 )
 
+_TRUTHY = frozenset({"1", "true", "yes", "on"})
+
+
+def _parse_bool(value: str) -> bool:
+    return value.strip().lower() in _TRUTHY
+
 
 @dataclass(frozen=True)
 class DaemonConfig:
@@ -26,6 +32,13 @@ class DaemonConfig:
     # override 한다(.env.example 참고).
     audio_sink: str = "autoaudiosink sync=false"
     metrics_port: int = 9477
+    # 양방향(역방향) 인터콤: 자택 마이크 오디오를 LiveKit에 퍼블리시할지 여부.
+    # 기본 off — 마이크 미연결·스피커 전용 배포에는 영향이 없어야 한다.
+    mic_enabled: bool = False
+    # 마이크 캡처용 GStreamer 소스 element. 기본은 시스템 기본 입력을 잡는
+    # autoaudiosrc이며, 실서버에서는 `arecord -l`로 확인한 캡처 카드를
+    # `alsasrc device=plughw:N,M`으로 지정해 override 한다(.env.example 참고).
+    audio_source: str = "autoaudiosrc"
 
     @classmethod
     def from_env(cls, env: Mapping[str, str]) -> DaemonConfig:
@@ -47,4 +60,6 @@ class DaemonConfig:
             identity=env.get("RTIC_DAEMON_IDENTITY", "rtic-speaker"),
             audio_sink=env.get("RTIC_AUDIO_SINK", "autoaudiosink sync=false"),
             metrics_port=metrics_port,
+            mic_enabled=_parse_bool(env.get("RTIC_MIC_ENABLED", "")),
+            audio_source=env.get("RTIC_AUDIO_SOURCE", "autoaudiosrc"),
         )

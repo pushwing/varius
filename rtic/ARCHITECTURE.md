@@ -53,7 +53,7 @@
 8. [x] 외부용 앱: 로그인 화면 + CI4 인증 연동
 9. [x] 외부용 앱: 목소리 전송(마이크 캡처 → LiveKit 퍼블리시) UI
 10. [x] 외부용 앱: 데이터 채널 수신 및 리턴 메시지 표시 UI — 스키마 확정(#9), 데몬 발신 구현 완료(#12)
-11. [ ] (백로그) 양방향 인터콤: 자택 마이크 연결 후 역방향 오디오 경로 설계·구현
+11. [x] 양방향 인터콤: 자택 마이크 연결 후 역방향 오디오 경로 설계·구현(이슈 #11, 11절 참고)
 
 ## 8. 참고 기술 스택 요약
 - 백엔드: CodeIgniter 4 (PHP 8.2+), PHPUnit, PHPStan
@@ -67,7 +67,7 @@
 ## 9. 리눅스 서버 물리 배치
 - 위치: 자택 내부(온프레미스). coturn/LiveKit/CI4 API·리눅스 수신 데몬 **모두 자택 서버에 온프레미스로 설치**한다(AWS 등 클라우드 미사용, 5절 참고).
 - 스피커: 연결 완료 — 1차 목표(클라이언트 → 자택 스피커, 단방향)의 출력 장치.
-- 마이크: 미연결, **추후 연결 예정**. 연결되면 양방향 인터콤(자택 마이크 → 클라이언트)으로 확장 — 10절 참고.
+- 마이크: **연결 완료(USB)**. 양방향 인터콤(자택 마이크 → 클라이언트) 역방향 경로 구현됨 — 11절 참고. 캡처 디바이스는 `arecord -l`로 확인해 데몬 `RTIC_AUDIO_SOURCE`에 지정한다.
 
 ## 10. 외부용 앱 기능 스펙
 | 기능 | 설명 | 처리 방식 |
@@ -80,6 +80,10 @@
 `app/Config/Cors.php` + `app/Config/Filters.php`에 CORS 설정을 추가했다(`.env`의
 `cors.allowedOrigins`).
 
-## 11. 향후 확장 — 양방향 인터콤 (백로그)
-- 자택 서버에 마이크가 연결되면, 데몬이 로컬 오디오를 캡처해 GStreamer로 인코딩 후 LiveKit에 퍼블리시하여 앱이 이를 재생하는 역방향 경로를 추가한다.
-- 현재 스펙(2~7절)은 단방향(클라이언트 → 자택 스피커) 기준이며, 양방향 확장은 별도 이슈로 설계한다.
+## 11. 양방향 인터콤 (이슈 #11 — 구현 완료)
+자택 서버에 마이크가 연결되면 데몬이 로컬 오디오를 캡처해 GStreamer로 LiveKit에 퍼블리시하고, 앱이 이를 재생하는 역방향 경로다. 기존 단방향 구조를 **대칭 복제**해 구현했다.
+
+- **데몬(송신)**: `RTIC_MIC_ENABLED=true`이면 수신(스피커) 파이프라인과 함께 송신(마이크) 파이프라인을 같은 GLib 루프에서 돌린다. `<audio_source> ! queue ! audioconvert ! audioresample ! livekitwebrtcsink` 구조로, 마이크 캡처 소스는 `RTIC_AUDIO_SOURCE`(예: `alsasrc device=plughw:1,0`)로 지정한다. Opus 인코딩은 `livekitwebrtcsink`가 내부 처리하며(별도 opusenc 불필요), 오디오 수신기와 identity 충돌을 피하려 `<identity>-mic` 별도 참가자로 접속한다. 두 방향 중 어느 쪽이든 에러·EOS면 실패 종료해 systemd가 전체를 재시작한다(6절 정책과 일관).
+- **앱(수신)**: `RoomEvent.TrackSubscribed`로 데몬 오디오 트랙을 받아 재생한다(`web/src/audioPlayback.js`). `room.connect`의 기본 `autoSubscribe=true`로 자동 구독되므로 재생 element만 붙인다.
+- **토큰**: `LiveKitAccessTokenService`가 발급하는 앱 토큰은 이미 `canPublish`/`canSubscribe`를 모두 포함해 양방향에 별도 변경이 필요 없다.
+- **검증**: 실제 마이크 캡처·오디오 왕복 지연은 실배포·실물 마이크가 필요해 [`INTEGRATION-TEST-RUNBOOK.md`](INTEGRATION-TEST-RUNBOOK.md)의 수동 절차로 확인한다. `livekitwebrtcsink`의 코덱 협상은 실서버(`gst-inspect-1.0 livekitwebrtcsink`)에서 최종 확인한다.

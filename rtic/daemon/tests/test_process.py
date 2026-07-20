@@ -68,6 +68,35 @@ def test_stream_end_causes_exit_one():
     assert returncode == 1, proc.stdout.read()
 
 
+def test_mic_enabled_runs_both_pipelines_and_exits_clean_on_sigterm():
+    # 양방향(마이크 퍼블리시) 활성화 시 수신·송신 두 파이프라인이 함께 떠도
+    # SIGTERM으로 깨끗하게 종료(코드 0)돼야 한다. 실제 livekitwebrtcsink는
+    # 이 환경에 없으므로 RTIC_TEST_SINK_DESCRIPTION=fakesink로 대체하고,
+    # 마이크 소스도 audiotestsrc로 대체한다.
+    proc = _spawn(
+        "audiotestsrc is-live=true wave=silence",
+        metrics_port=9584,
+        extra_env={
+            "RTIC_MIC_ENABLED": "true",
+            "RTIC_AUDIO_SOURCE": "audiotestsrc is-live=true wave=silence",
+            "RTIC_TEST_SINK_DESCRIPTION": "fakesink",
+        },
+    )
+    try:
+        time.sleep(1.0)
+        proc.send_signal(signal.SIGTERM)
+        returncode = proc.wait(timeout=10)
+        output = proc.stdout.read()
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait()
+
+    assert returncode == 0, output
+    # 마이크 퍼블리시 파이프라인이 실제로 기동됐는지 로그로 확인한다.
+    assert "마이크 퍼블리시" in output, output
+
+
 def test_metrics_endpoint_serves_prometheus_format():
     import urllib.request
 

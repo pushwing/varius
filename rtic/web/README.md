@@ -1,15 +1,17 @@
 # rtic 외부용 웹 앱
 
 공중 인터넷에서 접속하는 클라이언트(웹) — 로그인, 목소리 전송(마이크 퍼블리시),
-리눅스 데몬이 보내는 리턴 메시지 표시를 담당합니다. 프레임워크 없이 바닐라
-JS + [livekit-client](https://github.com/livekit/client-sdk-js) + Vite로
-구성했습니다(가족용 인터콤 규모라 프레임워크 오버헤드가 불필요하다고 판단).
+자택 마이크 오디오 수신·재생(양방향), 리눅스 데몬이 보내는 리턴 메시지 표시를
+담당합니다. 프레임워크 없이 바닐라 JS +
+[livekit-client](https://github.com/livekit/client-sdk-js) + Vite로 구성했습니다
+(가족용 인터콤 규모라 프레임워크 오버헤드가 불필요하다고 판단).
 
 ## 구성
 
 - `src/api.js` — CI4 `/api/v1/tokens` 로그인 요청(테스트 가능한 순수 함수)
 - `src/messageSchema.js` — 리턴 메시지 스키마 파싱/검증(아래 참고)
-- `src/main.js` — DOM 와이어링: 로그인 폼 → LiveKit `Room` 연결 → 마이크 토글 → 메시지 로그 렌더링
+- `src/audioPlayback.js` — 역방향 오디오 재생: 데몬이 퍼블리시한 오디오 트랙을 attach 해 재생(테스트 가능한 순수 함수)
+- `src/main.js` — DOM 와이어링: 로그인 폼 → LiveKit `Room` 연결 → 마이크 토글 → `RoomEvent.TrackSubscribed` 오디오 재생 → 메시지 로그 렌더링
 
 ## 리턴 메시지 스키마 (이슈 #9에서 확정)
 

@@ -1,7 +1,8 @@
 import './style.css';
-import { Room } from 'livekit-client';
+import { Room, RoomEvent } from 'livekit-client';
 import { login, ApiError } from './api.js';
 import { parseReturnMessage, RETURN_MESSAGE_TOPIC } from './messageSchema.js';
+import { handleAudioTrackSubscribed } from './audioPlayback.js';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8321';
 
@@ -42,6 +43,13 @@ async function connectToRoom(session) {
     } catch (err) {
       console.warn('잘못된 리턴 메시지를 무시했습니다:', err);
     }
+  });
+
+  // 역방향 오디오(자택 마이크 -> 앱): 데몬이 퍼블리시한 트랙을 수신해 재생한다.
+  // room.connect는 기본 autoSubscribe=true라 데몬 트랙이 자동 구독되며,
+  // 여기서 재생 element만 붙이면 된다(이슈 #11).
+  room.on(RoomEvent.TrackSubscribed, (track) => {
+    handleAudioTrackSubscribed(track, document.body);
   });
 
   await room.connect(session.livekitUrl, session.accessToken);
