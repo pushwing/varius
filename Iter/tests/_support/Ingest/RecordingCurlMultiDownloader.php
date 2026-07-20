@@ -19,15 +19,20 @@ final class RecordingCurlMultiDownloader extends CurlMultiDownloader
      */
     public array $capturedJobs = [];
 
-    public function __construct(string $tempDir, private readonly bool $succeed = true, ?GoogleApiUsageTracker $tracker = null)
-    {
+    public function __construct(
+        string $tempDir,
+        private readonly bool $succeed = true,
+        ?GoogleApiUsageTracker $tracker = null,
+        private readonly int $failureHttpCode = 403,
+        private readonly string $failureCurlError = '',
+    ) {
         parent::__construct($tempDir, 30, $tracker);
     }
 
     /**
      * @param array<string, array{url: string, headers: list<string>, tmpPath: string}> $jobs
      *
-     * @return array<string, bool>
+     * @return array<string, array{httpCode: int, curlError: string}>
      */
     protected function executeBatch(array $jobs): array
     {
@@ -37,9 +42,9 @@ final class RecordingCurlMultiDownloader extends CurlMultiDownloader
         foreach ($jobs as $id => $job) {
             if ($this->succeed) {
                 file_put_contents($job['tmpPath'], 'bytes-of-' . $id);
-                $results[$id] = true;
+                $results[$id] = ['httpCode' => 200, 'curlError' => ''];
             } else {
-                $results[$id] = false;
+                $results[$id] = ['httpCode' => $this->failureHttpCode, 'curlError' => $this->failureCurlError];
             }
         }
 

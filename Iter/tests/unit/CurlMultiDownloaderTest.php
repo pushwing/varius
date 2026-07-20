@@ -85,9 +85,25 @@ final class CurlMultiDownloaderTest extends CIUnitTestCase
     public function testRecordsUsageForFailedDownload(): void
     {
         $tracker = $this->createMock(GoogleApiUsageTracker::class);
-        $tracker->expects($this->once())->method('record')->with(GoogleApiName::MediaDownload, 0);
+        // 실제 curl 실패 시 httpCode(예: 403)를 그대로 기록해 쿼터 초과 여부까지 추적한다.
+        $tracker->expects($this->once())->method('record')->with(GoogleApiName::MediaDownload, 403);
 
         $downloader = new RecordingCurlMultiDownloader(sys_get_temp_dir(), false, $tracker);
         $downloader->download([['id' => 'a', 'baseUrl' => 'https://base/a']], 'token123');
+    }
+
+    public function testFailedDownloadIsLoggedWithHttpCodeAndCurlError(): void
+    {
+        $downloader = new RecordingCurlMultiDownloader(
+            sys_get_temp_dir(),
+            succeed: false,
+            failureHttpCode: 403,
+            failureCurlError: 'SSL certificate problem',
+        );
+
+        // log_message 호출 자체가 예외 없이 완료되고, 실패 항목은 여전히 제외됨을 확인한다.
+        $paths = $downloader->download([['id' => 'a', 'baseUrl' => 'https://base/a']], 'token123');
+
+        $this->assertSame([], $paths);
     }
 }
