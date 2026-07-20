@@ -21,7 +21,7 @@ use RuntimeException;
  * refresh/access token 의 암호화 저장·복호화를 담당한다.
  * refresh/access token 원문은 이 클래스 밖으로 노출하지 않는다(응답·로그 금지).
  */
-final class GooglePhotosAuthService
+class GooglePhotosAuthService
 {
     public function __construct(
         private readonly Google $provider,

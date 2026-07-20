@@ -18,7 +18,7 @@ use RuntimeException;
  * access token 은 상태로 보관하지 않고 매 메서드 인자로 받는다(향후 큐 워커 분리 대비).
  * 액세스 토큰 원문은 예외·로그로 노출하지 않는다.
  */
-final class PhotoPickerService
+class PhotoPickerService
 {
     private const BASE_URL = 'https://photospicker.googleapis.com/v1';
 
