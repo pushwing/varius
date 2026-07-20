@@ -17,8 +17,8 @@ class ExifToolExtractor implements ExifExtractorInterface
     {
         $raw = $this->runExiftool($filePath);
         if ($raw === null) {
-            log_message('info', 'exiftool 폴백 미사용(바이너리 없음 또는 실행 실패): file={file}', [
-                'file' => basename($filePath),
+            log_message('info', 'exiftool 폴백 미사용(바이너리 없음 또는 실행 실패): path={path}', [
+                'path' => basename($filePath),
             ]);
 
             return null;
@@ -26,7 +26,7 @@ class ExifToolExtractor implements ExifExtractorInterface
 
         $decoded = json_decode($raw, true);
         if (! is_array($decoded) || ! isset($decoded[0]) || ! is_array($decoded[0])) {
-            log_message('info', 'exiftool 출력 파싱 실패: file={file}', ['file' => basename($filePath)]);
+            log_message('info', 'exiftool 출력 파싱 실패: path={path}', ['path' => basename($filePath)]);
 
             return null;
         }
@@ -35,7 +35,7 @@ class ExifToolExtractor implements ExifExtractorInterface
         $lat = $data['GPSLatitude'] ?? null;
         $lng = $data['GPSLongitude'] ?? null;
         if (! is_numeric($lat) || ! is_numeric($lng)) {
-            log_message('info', 'exiftool 결과에 GPS 없음: file={file}', ['file' => basename($filePath)]);
+            log_message('info', 'exiftool 결과에 GPS 없음: path={path}', ['path' => basename($filePath)]);
 
             return null;
         }

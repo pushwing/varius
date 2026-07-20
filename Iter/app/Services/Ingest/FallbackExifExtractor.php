@@ -26,8 +26,8 @@ final class FallbackExifExtractor implements ExifExtractorInterface
 
         $result = $this->secondary->extract($filePath);
         if ($result === null) {
-            log_message('warning', 'EXIF 추출 완전 실패(1차·2차 모두): file={file}', [
-                'file' => basename($filePath),
+            log_message('warning', 'EXIF 추출 완전 실패(1차·2차 모두): path={path}', [
+                'path' => basename($filePath),
             ]);
         }
 
