@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
+use App\Enums\GoogleApiName;
+use App\Services\GoogleApiUsageTracker;
 use CodeIgniter\Test\CIUnitTestCase;
 use Tests\Support\Ingest\RecordingCurlMultiDownloader;
 
@@ -63,5 +65,29 @@ final class CurlMultiDownloaderTest extends CIUnitTestCase
         // 실패한 임시 파일은 남지 않는다.
         $tmpPath = $downloader->capturedJobs['a']['tmpPath'];
         $this->assertFileDoesNotExist($tmpPath);
+    }
+
+    public function testRecordsUsageForEachSuccessfulDownload(): void
+    {
+        $tracker = $this->createMock(GoogleApiUsageTracker::class);
+        $tracker->expects($this->once())->method('record')->with(GoogleApiName::MediaDownload, 200);
+
+        $downloader = new RecordingCurlMultiDownloader(sys_get_temp_dir(), true, $tracker);
+        $paths = $downloader->download([['id' => 'a', 'baseUrl' => 'https://base/a']], 'token123');
+
+        foreach ($paths as $p) {
+            if (is_file($p)) {
+                unlink($p);
+            }
+        }
+    }
+
+    public function testRecordsUsageForFailedDownload(): void
+    {
+        $tracker = $this->createMock(GoogleApiUsageTracker::class);
+        $tracker->expects($this->once())->method('record')->with(GoogleApiName::MediaDownload, 0);
+
+        $downloader = new RecordingCurlMultiDownloader(sys_get_temp_dir(), false, $tracker);
+        $downloader->download([['id' => 'a', 'baseUrl' => 'https://base/a']], 'token123');
     }
 }

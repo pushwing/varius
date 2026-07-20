@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\GoogleApiName;
 use Closure;
 use CodeIgniter\HTTP\CURLRequest;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -36,12 +37,14 @@ class PhotoPickerService
      * @param int          $maxItems        요청당 반환 상한(10장 제한).
      * @param Closure(int): void|null $sleeper 대기 함수. null 이면 실제 sleep 사용.
      * @param int          $maxPollAttempts 폴링 최대 시도 횟수(무한 루프 방지).
+     * @param GoogleApiUsageTracker|null $usageTracker 호출 시마다 쿼터 모니터링 카운터를 남긴다(선택).
      */
     public function __construct(
         private readonly CURLRequest $client,
         private readonly int $maxItems = 10,
         ?Closure $sleeper = null,
         private readonly int $maxPollAttempts = 60,
+        private readonly ?GoogleApiUsageTracker $usageTracker = null,
     ) {
         $this->sleeper = $sleeper ?? static function (int $seconds): void {
             sleep($seconds);
@@ -157,6 +160,8 @@ class PhotoPickerService
     private function handle(ResponseInterface $response, string $method, string $url): array
     {
         $status = $response->getStatusCode();
+        $this->usageTracker?->record(GoogleApiName::Picker, $status);
+
         if ($status < 200 || $status >= 300) {
             throw new RuntimeException(sprintf(
                 'Picker API 요청 실패: %s %s (status=%d)',

@@ -7,6 +7,7 @@ namespace Config;
 use App\Models\OAuthTokenModel;
 use App\Models\PhotoLocationModel;
 use App\Models\UserModel;
+use App\Services\GoogleApiUsageTracker;
 use App\Services\GooglePhotosAuthService;
 use App\Services\Ingest\CurlMultiDownloader;
 use App\Services\Ingest\ExifToolExtractor;
@@ -76,7 +77,7 @@ class Services extends BaseService
             return static::getSharedInstance('photoPicker');
         }
 
-        return new PhotoPickerService(static::curlrequest());
+        return new PhotoPickerService(static::curlrequest(), 10, null, 60, static::googleApiUsageTracker());
     }
 
     /**
@@ -93,8 +94,24 @@ class Services extends BaseService
 
         $extractor = new FallbackExifExtractor(new NativeExifExtractor(), new ExifToolExtractor());
         $thumbnailer = new GdThumbnailGenerator(WRITEPATH . 'uploads/thumbnails');
+        $downloader = new CurlMultiDownloader(usageTracker: static::googleApiUsageTracker());
 
-        return new PhotoIngestService(new CurlMultiDownloader(), $extractor, 200.0, $thumbnailer);
+        return new PhotoIngestService($downloader, $extractor, 200.0, $thumbnailer);
+    }
+
+    /**
+     * Google API 쿼터 사용량 추적기.
+     *
+     * PhotoPickerService·CurlMultiDownloader 의 호출마다 일 단위 카운터를 남겨
+     * 프로젝트 쿼터 소진 속도를 로그로 모니터링할 수 있게 한다.
+     */
+    public static function googleApiUsageTracker(bool $getShared = true): GoogleApiUsageTracker
+    {
+        if ($getShared) {
+            return static::getSharedInstance('googleApiUsageTracker');
+        }
+
+        return new GoogleApiUsageTracker(static::cache());
     }
 
     /**

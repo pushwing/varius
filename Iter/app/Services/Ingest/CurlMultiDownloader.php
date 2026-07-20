@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Ingest;
 
+use App\Enums\GoogleApiName;
+use App\Services\GoogleApiUsageTracker;
 use RuntimeException;
 
 /**
@@ -20,9 +22,13 @@ class CurlMultiDownloader implements MediaItemDownloaderInterface
 {
     private readonly string $tempDir;
 
+    /**
+     * @param GoogleApiUsageTracker|null $usageTracker 다운로드 시도마다 쿼터 모니터링 카운터를 남긴다(선택).
+     */
     public function __construct(
         ?string $tempDir = null,
         private readonly int $timeoutSeconds = 30,
+        private readonly ?GoogleApiUsageTracker $usageTracker = null,
     ) {
         $this->tempDir = $tempDir ?? WRITEPATH . 'uploads';
     }
@@ -39,7 +45,11 @@ class CurlMultiDownloader implements MediaItemDownloaderInterface
         $paths = [];
         foreach ($jobs as $id => $job) {
             $tmpPath = $job['tmpPath'];
-            if (($results[$id] ?? false) === true && is_file($tmpPath) && filesize($tmpPath) > 0) {
+            $success = ($results[$id] ?? false) === true && is_file($tmpPath) && filesize($tmpPath) > 0;
+            // 정확한 HTTP 상태는 executeBatch 내부에서 소비되므로, 여기선 성공/실패만 200/0 으로 집계한다.
+            $this->usageTracker?->record(GoogleApiName::MediaDownload, $success ? 200 : 0);
+
+            if ($success) {
                 $paths[$id] = $tmpPath;
 
                 continue;

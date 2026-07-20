@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
+use App\Enums\GoogleApiName;
+use App\Services\GoogleApiUsageTracker;
 use App\Services\PhotoPickerService;
 use CodeIgniter\HTTP\CURLRequest;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -166,5 +168,30 @@ final class PhotoPickerServiceTest extends CIUnitTestCase
         $result = $this->makeService($client, $noSleep)->listPickedMediaItems('ya29.token', 'sess-1');
 
         $this->assertSame([], $result);
+    }
+
+    public function testRecordsUsageOnSuccessfulCall(): void
+    {
+        $client = $this->createMock(CURLRequest::class);
+        $client->method('request')->willReturn($this->makeResponse(200, ['id' => 'sess-1']));
+
+        $tracker = $this->createMock(GoogleApiUsageTracker::class);
+        $tracker->expects($this->once())->method('record')->with(GoogleApiName::Picker, 200);
+
+        (new PhotoPickerService($client, 10, null, 60, $tracker))->createSession('ya29.token');
+    }
+
+    public function testRecordsUsageEvenWhenCallFails(): void
+    {
+        $client = $this->createMock(CURLRequest::class);
+        $client->method('request')->willReturn($this->makeResponse(429, ['error' => ['message' => 'quota']]));
+
+        $tracker = $this->createMock(GoogleApiUsageTracker::class);
+        $tracker->expects($this->once())->method('record')->with(GoogleApiName::Picker, 429);
+
+        $service = new PhotoPickerService($client, 10, null, 60, $tracker);
+
+        $this->expectException(RuntimeException::class);
+        $service->createSession('ya29.token');
     }
 }

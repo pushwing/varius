@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Support\Ingest;
 
+use App\Services\GoogleApiUsageTracker;
 use App\Services\Ingest\CurlMultiDownloader;
 
 /**
@@ -18,9 +19,9 @@ final class RecordingCurlMultiDownloader extends CurlMultiDownloader
      */
     public array $capturedJobs = [];
 
-    public function __construct(string $tempDir, private readonly bool $succeed = true)
+    public function __construct(string $tempDir, private readonly bool $succeed = true, ?GoogleApiUsageTracker $tracker = null)
     {
-        parent::__construct($tempDir);
+        parent::__construct($tempDir, 30, $tracker);
     }
 
     /**
