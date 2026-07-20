@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace Config;
 
+use App\Models\OAuthTokenModel;
+use App\Models\UserModel;
+use App\Services\GooglePhotosAuthService;
 use CodeIgniter\Config\BaseService;
+use League\OAuth2\Client\Provider\Google;
 
 /**
  * Services Configuration file.
@@ -21,14 +25,33 @@ use CodeIgniter\Config\BaseService;
  */
 class Services extends BaseService
 {
-    /*
-     * public static function example($getShared = true)
-     * {
-     *     if ($getShared) {
-     *         return static::getSharedInstance('example');
-     *     }
+    /**
+     * Google OAuth2 인증 서비스.
      *
-     *     return new \CodeIgniter\Example();
-     * }
+     * 시크릿은 Config\GoogleOAuth(.env)에서만 로드하고, league Google 프로바이더·모델·
+     * 암호화기를 조립해 GooglePhotosAuthService 를 구성한다.
      */
+    public static function googlePhotosAuth(bool $getShared = true): GooglePhotosAuthService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('googlePhotosAuth');
+        }
+
+        /** @var GoogleOAuth $config */
+        $config = config(GoogleOAuth::class);
+
+        $provider = new Google([
+            'clientId' => $config->clientId,
+            'clientSecret' => $config->clientSecret,
+            'redirectUri' => $config->redirectUri,
+            'scopes' => $config->scopes,
+        ]);
+
+        return new GooglePhotosAuthService(
+            $provider,
+            new OAuthTokenModel(),
+            new UserModel(),
+            static::encrypter(),
+        );
+    }
 }

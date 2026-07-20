@@ -67,3 +67,13 @@
 #--------------------------------------------------------------------
 
 # logger.threshold = 4
+
+#--------------------------------------------------------------------
+# ITER — GOOGLE OAUTH2
+#--------------------------------------------------------------------
+# Google Cloud Console 에서 발급한 OAuth 클라이언트 값. .env 에만 채우고 커밋 금지.
+# refresh token 암호화에는 위 encryption.key 가 반드시 설정돼 있어야 한다(php spark key:generate).
+
+# google.oauth.clientId = ''
+# google.oauth.clientSecret = ''
+# google.oauth.redirectUri = 'http://localhost:8080/auth/google/callback'
