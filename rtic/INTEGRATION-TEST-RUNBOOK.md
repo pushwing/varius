@@ -91,7 +91,19 @@
 `livekitwebrtcsink`(수신용 `livekitwebrtcsrc`와 동일한 gst-plugins-rs
 `--features livekit` 빌드에 포함)와 캡처 디바이스를 확인·설정한다.
 
+> ⚠️ **`GST_PLUGIN_PATH`를 먼저 export 해야 한다.** `livekitwebrtcsrc`/
+> `livekitwebrtcsink`는 소스 빌드해 `~/.local/lib/gstreamer-1.0/`에 둔
+> `libgstrswebrtc.so`에 들어 있는데, 이 경로는 GStreamer 기본 스캔 경로가
+> **아니다**. 수동으로 `gst-inspect`/`gst-launch`를 돌릴 때 이 변수를
+> 설정하지 않으면 요소가 빌드에 있어도 `No such element or plugin
+> 'livekitwebrtcsink'`로 실패한다(데몬은 systemd 유닛의
+> `Environment=GST_PLUGIN_PATH=...`로 이미 설정돼 있어 영향받지 않는다).
+> 경로는 데몬 유닛과 동일하게 맞춘다: `systemctl cat rtic-daemon | grep GST_PLUGIN_PATH`.
+
 ```bash
+# 0) 플러그인 경로 설정 (데몬 유닛의 GST_PLUGIN_PATH와 동일하게)
+export GST_PLUGIN_PATH="$HOME/.local/lib/gstreamer-1.0"
+
 # 1) sink 요소가 설치돼 있는지 확인 (없으면 daemon/README.md의 소스 빌드 절차)
 gst-inspect-1.0 livekitwebrtcsink >/dev/null && echo "OK: livekitwebrtcsink 있음"
 
@@ -105,7 +117,7 @@ arecord -l
 sudo systemctl restart rtic-daemon
 ```
 
-- [ ] `gst-inspect-1.0 livekitwebrtcsink` 존재 확인
+- [ ] `GST_PLUGIN_PATH` export 후 `gst-inspect-1.0 livekitwebrtcsink` 존재 확인
 - [ ] `arecord -l`로 확인한 캡처 디바이스: `plughw:____,____`
 - [ ] `/etc/rtic-daemon/env`에 `RTIC_MIC_ENABLED=true` + `RTIC_AUDIO_SOURCE` 반영
 
