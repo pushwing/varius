@@ -28,7 +28,7 @@ final class SessionRateLimitFilterTest extends CIUnitTestCase
         $result = (new SessionRateLimitFilter())->before(Services::request());
 
         // 첫 요청은 한도 내이므로 통과(응답 반환 없음). 예약문자 키였다면 예외로 실패한다.
-        // (429 차단 의미는 throttler 를 Mock 한 PickerControllerTest 가 커버한다.)
+        // (429 차단 의미는 throttler 를 Mock 한 TakeoutControllerTest 가 커버한다.)
         $this->assertNull($result);
     }
 }
