@@ -21,7 +21,7 @@ class PhotoLocationModel extends Model
      */
     protected $allowedFields = [
         'user_id',
-        'google_media_item_id',
+        'source_item_id',
         'lat',
         'lng',
         'thumbnail_path',
@@ -36,7 +36,7 @@ class PhotoLocationModel extends Model
     public function findByUserOrdered(int $userId): array
     {
         /** @var list<array<string, mixed>> $rows */
-        $rows = $this->select('google_media_item_id, lat, lng, thumbnail_path, taken_at')
+        $rows = $this->select('source_item_id, lat, lng, thumbnail_path, taken_at')
             ->where('user_id', $userId)
             ->orderBy('taken_at', 'ASC')
             ->findAll();
@@ -45,7 +45,7 @@ class PhotoLocationModel extends Model
     }
 
     /**
-     * 동선 좌표들을 저장한다. 사용자당 이미 적재된 media_item_id 는 건너뛴다(idempotent).
+     * 동선 좌표들을 저장한다. 사용자당 이미 적재된 source_item_id 는 건너뛴다(idempotent).
      *
      * @param list<PhotoLocation> $locations
      *
@@ -57,7 +57,7 @@ class PhotoLocationModel extends Model
             return 0;
         }
 
-        $existing = $this->existingMediaItemIds($userId, array_map(
+        $existing = $this->existingSourceItemIds($userId, array_map(
             static fn (PhotoLocation $l): string => $l->mediaItemId,
             $locations,
         ));
@@ -72,7 +72,7 @@ class PhotoLocationModel extends Model
 
             $rows[] = [
                 'user_id' => $userId,
-                'google_media_item_id' => $location->mediaItemId,
+                'source_item_id' => $location->mediaItemId,
                 'lat' => $location->lat,
                 'lng' => $location->lng,
                 'thumbnail_path' => $location->thumbnailPath,
@@ -88,27 +88,27 @@ class PhotoLocationModel extends Model
     }
 
     /**
-     * 주어진 media_item_id 중 이미 저장된 것을 집합(키=id)으로 반환한다.
+     * 주어진 source_item_id 중 이미 저장된 것을 집합(키=id)으로 반환한다.
      *
-     * @param list<string> $mediaItemIds
+     * @param list<string> $sourceItemIds
      *
      * @return array<string, true>
      */
-    private function existingMediaItemIds(int $userId, array $mediaItemIds): array
+    private function existingSourceItemIds(int $userId, array $sourceItemIds): array
     {
-        if ($mediaItemIds === []) {
+        if ($sourceItemIds === []) {
             return [];
         }
 
         /** @var list<array<string, mixed>> $rows */
-        $rows = $this->select('google_media_item_id')
+        $rows = $this->select('source_item_id')
             ->where('user_id', $userId)
-            ->whereIn('google_media_item_id', array_values(array_unique($mediaItemIds)))
+            ->whereIn('source_item_id', array_values(array_unique($sourceItemIds)))
             ->findAll();
 
         $set = [];
         foreach ($rows as $row) {
-            $set[(string) $row['google_media_item_id']] = true;
+            $set[(string) $row['source_item_id']] = true;
         }
 
         return $set;

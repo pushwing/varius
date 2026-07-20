@@ -29,9 +29,9 @@ final class RouteVisualizationServiceTest extends CIUnitTestCase
     public function testGroupsPointsByDateWithDistinctColors(): void
     {
         $service = $this->serviceWithRows([
-            ['google_media_item_id' => 'm1', 'lat' => '37.5000000', 'lng' => '127.0000000', 'taken_at' => '2024-03-15 09:00:00'],
-            ['google_media_item_id' => 'm2', 'lat' => '37.6000000', 'lng' => '127.1000000', 'taken_at' => '2024-03-15 12:00:00'],
-            ['google_media_item_id' => 'm3', 'lat' => '35.1000000', 'lng' => '129.0000000', 'taken_at' => '2024-03-16 08:00:00'],
+            ['source_item_id' => 'm1', 'lat' => '37.5000000', 'lng' => '127.0000000', 'taken_at' => '2024-03-15 09:00:00'],
+            ['source_item_id' => 'm2', 'lat' => '37.6000000', 'lng' => '127.1000000', 'taken_at' => '2024-03-15 12:00:00'],
+            ['source_item_id' => 'm3', 'lat' => '35.1000000', 'lng' => '129.0000000', 'taken_at' => '2024-03-16 08:00:00'],
         ]);
 
         $result = $service->buildForUser(1);
@@ -49,7 +49,7 @@ final class RouteVisualizationServiceTest extends CIUnitTestCase
     public function testPointShapeHasFloatCoordsAndMediaItemId(): void
     {
         $service = $this->serviceWithRows([
-            ['google_media_item_id' => 'm1', 'lat' => '37.5000000', 'lng' => '127.0000000', 'taken_at' => '2024-03-15 09:00:00'],
+            ['source_item_id' => 'm1', 'lat' => '37.5000000', 'lng' => '127.0000000', 'taken_at' => '2024-03-15 09:00:00'],
         ]);
 
         $point = $service->buildForUser(1)['dates'][0]['points'][0];
@@ -64,8 +64,8 @@ final class RouteVisualizationServiceTest extends CIUnitTestCase
     public function testPointsWithinDateKeepChronologicalOrder(): void
     {
         $service = $this->serviceWithRows([
-            ['google_media_item_id' => 'early', 'lat' => '37.5', 'lng' => '127.0', 'taken_at' => '2024-03-15 09:00:00'],
-            ['google_media_item_id' => 'late', 'lat' => '37.6', 'lng' => '127.1', 'taken_at' => '2024-03-15 18:00:00'],
+            ['source_item_id' => 'early', 'lat' => '37.5', 'lng' => '127.0', 'taken_at' => '2024-03-15 09:00:00'],
+            ['source_item_id' => 'late', 'lat' => '37.6', 'lng' => '127.1', 'taken_at' => '2024-03-15 18:00:00'],
         ]);
 
         $points = $service->buildForUser(1)['dates'][0]['points'];

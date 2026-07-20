@@ -39,11 +39,11 @@ final class PhotoLocationModelTest extends CIUnitTestCase
         $this->assertSame(2, $saved);
         $this->seeInDatabase('photo_locations', [
             'user_id' => $this->userId,
-            'google_media_item_id' => 'media-1',
+            'source_item_id' => 'media-1',
         ]);
         $this->seeInDatabase('photo_locations', [
             'user_id' => $this->userId,
-            'google_media_item_id' => 'media-2',
+            'source_item_id' => 'media-2',
         ]);
     }
 
@@ -54,7 +54,7 @@ final class PhotoLocationModelTest extends CIUnitTestCase
         ]);
 
         $this->seeInDatabase('photo_locations', [
-            'google_media_item_id' => 'media-thumb',
+            'source_item_id' => 'media-thumb',
             'thumbnail_path' => '/thumbs/media-thumb.jpg',
         ]);
     }
@@ -64,14 +64,14 @@ final class PhotoLocationModelTest extends CIUnitTestCase
         $model = new PhotoLocationModel();
         $model->saveMany($this->userId, [new PhotoLocation('dup', 37.5, 127.0, '2024-03-15 09:00:00')]);
 
-        // 같은 media_item_id 재적재는 건너뛴다(idempotent).
+        // 같은 source_item_id 재적재는 건너뛴다(idempotent).
         $saved = $model->saveMany($this->userId, [
             new PhotoLocation('dup', 38.0, 128.0, '2024-03-16 09:00:00'),
             new PhotoLocation('fresh', 37.7, 127.2, '2024-03-16 10:00:00'),
         ]);
 
         $this->assertSame(1, $saved);
-        $this->assertSame(1, $model->where('google_media_item_id', 'dup')->countAllResults());
-        $this->seeInDatabase('photo_locations', ['google_media_item_id' => 'fresh']);
+        $this->assertSame(1, $model->where('source_item_id', 'dup')->countAllResults());
+        $this->seeInDatabase('photo_locations', ['source_item_id' => 'fresh']);
     }
 }
