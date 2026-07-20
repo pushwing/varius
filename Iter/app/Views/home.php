@@ -25,6 +25,9 @@ declare(strict_types=1);
         nav { display: flex; gap: 16px; padding: 12px 20px; border-bottom: 1px solid #ddd; align-items: center; }
         nav a { color: #222; text-decoration: none; font-size: 14px; }
         nav a:hover { text-decoration: underline; }
+        nav .spacer { flex: 1; }
+        nav .legal { display: flex; gap: 16px; }
+        nav .legal a { color: #777; font-size: 13px; }
         main { padding: 40px 20px; max-width: 480px; margin: 0 auto; text-align: center; }
         .btn {
             display: inline-block; padding: 10px 20px; border-radius: 6px; border: none;
@@ -33,6 +36,8 @@ declare(strict_types=1);
         .btn:disabled { background: #9db8e8; cursor: not-allowed; }
         #status { margin-top: 20px; font-size: 14px; color: #555; }
         #error { margin-top: 20px; font-size: 14px; color: #c0392b; }
+        .legal-footer { margin-top: 24px; font-size: 13px; }
+        .legal-footer a { color: #777; }
     </style>
 </head>
 <body>
@@ -41,12 +46,21 @@ declare(strict_types=1);
         <h1>Iter</h1>
         <p>구글 포토에서 사진을 선택하면 촬영 위치를 지도 위 동선으로 보여줍니다.</p>
         <a class="btn" href="<?= esc($loginUrl, 'attr') ?>">Google로 로그인</a>
+        <p class="legal-footer">
+            <a href="/privacy-policy.html">개인정보처리방침</a> ·
+            <a href="/terms-of-service.html">서비스 이용약관</a>
+        </p>
     </main>
 <?php else: ?>
     <nav>
         <a href="/">홈</a>
         <a href="<?= esc($mapUrl, 'attr') ?>">지도 보기</a>
         <a href="<?= esc($logoutUrl, 'attr') ?>">로그아웃</a>
+        <span class="spacer"></span>
+        <span class="legal">
+            <a href="/privacy-policy.html">개인정보처리방침</a>
+            <a href="/terms-of-service.html">서비스 이용약관</a>
+        </span>
     </nav>
     <main
         id="picker-flow"
