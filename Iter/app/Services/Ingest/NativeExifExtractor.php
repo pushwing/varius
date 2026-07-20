@@ -34,8 +34,19 @@ final class NativeExifExtractor implements ExifExtractorInterface
         }
 
         if (! is_array($exif)) {
+            log_message('info', 'EXIF 네이티브 파싱 실패(비이미지·손상 파일 등): file={file}', [
+                'file' => basename($filePath),
+            ]);
+
             return null;
         }
+
+        $hasGpsSection = isset($exif['GPS']) && is_array($exif['GPS']) && $exif['GPS'] !== [];
+        log_message('info', 'EXIF 네이티브 파싱 성공: file={file} sections=[{sections}] gps_section={gps}', [
+            'file' => basename($filePath),
+            'sections' => implode(',', array_keys($exif)),
+            'gps' => $hasGpsSection ? '있음' : '없음',
+        ]);
 
         return $this->parser->parse($exif);
     }
