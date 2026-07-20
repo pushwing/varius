@@ -12,6 +12,7 @@ use App\Services\PhotoPickerService;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
 use CodeIgniter\Test\FeatureTestTrait;
+use CodeIgniter\Throttle\ThrottlerInterface;
 use Config\Services;
 
 /**
@@ -24,6 +25,23 @@ final class PickerControllerTest extends CIUnitTestCase
 
     protected $refresh = true;
     protected $namespace = 'App';
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // 기본은 통과하는 레이트 리미터(개별 테스트가 필요 시 재주입).
+        $this->injectThrottler(true);
+    }
+
+    /**
+     * throttler->check 결과를 고정한 목을 주입한다.
+     */
+    private function injectThrottler(bool $allowed): void
+    {
+        $throttler = $this->createMock(ThrottlerInterface::class);
+        $throttler->method('check')->willReturn($allowed);
+        Services::injectMock('throttler', $throttler);
+    }
 
     /**
      * getValidAccessToken 을 스텁한 인증 서비스 목을 서비스 컨테이너에 주입한다.
@@ -154,6 +172,16 @@ final class PickerControllerTest extends CIUnitTestCase
         $result = $this->post('picker/ingest');
 
         $result->assertStatus(401);
+    }
+
+    public function testExceedingSessionRateLimitReturns429(): void
+    {
+        $this->injectThrottler(false); // 한도 초과
+        $this->injectAuth();
+
+        $result = $this->withSession(['user_id' => 1])->post('picker/sessions');
+
+        $result->assertStatus(429);
     }
 
     public function testIngestSavesPickedLocationsAndReturnsCount(): void

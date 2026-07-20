@@ -12,7 +12,7 @@ $routes->get('auth/google', 'AuthController::redirect');
 $routes->get('auth/google/callback', 'AuthController::callback');
 
 // Google Photos Picker 세션
-$routes->post('picker/sessions', 'PickerController::create');
+$routes->post('picker/sessions', 'PickerController::create', ['filter' => 'sessionRateLimit']);
 $routes->get('picker/sessions/status', 'PickerController::status');
 $routes->get('picker/media-items', 'PickerController::items');
 $routes->post('picker/ingest', 'PickerController::ingest');
