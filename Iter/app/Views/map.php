@@ -131,11 +131,33 @@ declare(strict_types=1);
                 if (evt.target === layerEl) { closeLayer(); }
             });
 
-            // 팝업은 매번 새로 DOM 에 그려지므로 이벤트 위임으로 "더보기" 클릭을 잡는다.
+            // 팝업/사이드바 모두 매번 새로 DOM 에 그려지므로 이벤트 위임으로 클릭을 잡는다.
             document.body.addEventListener('click', function (evt) {
                 var btn = evt.target.closest('.popup-more-btn');
-                if (btn) { openLayer(Number(btn.dataset.clusterIndex)); }
+                if (btn) { openLayer(Number(btn.dataset.clusterIndex)); return; }
+
+                var monthHeader = evt.target.closest('.month-header');
+                if (monthHeader) { toggleMonth(monthHeader); return; }
+
+                var dayItem = evt.target.closest('.day-item');
+                if (dayItem) { selectDay(dayItem); return; }
             });
+
+            function toggleMonth(headerEl) {
+                var listEl = headerEl.nextElementSibling;
+                listEl.hidden = !listEl.hidden;
+            }
+
+            function selectDay(itemEl) {
+                var entry = dateIndex[itemEl.dataset.date];
+                if (!entry) { return; }
+
+                if (entry.latlngs.length) { map.fitBounds(entry.latlngs, { padding: [40, 40] }); }
+                if (entry.firstClusterIndex !== null) { openLayer(entry.firstClusterIndex); }
+
+                document.querySelectorAll('.day-item.active').forEach(function (el) { el.classList.remove('active'); });
+                itemEl.classList.add('active');
+            }
 
             fetch(mapEl.dataset.routesUrl, { headers: { Accept: 'application/json' } })
                 .then(function (res) { return res.json(); })
