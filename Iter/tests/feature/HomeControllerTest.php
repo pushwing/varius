@@ -43,12 +43,17 @@ final class HomeControllerTest extends CIUnitTestCase
         $this->assertStringNotContainsString('id="start-picker"', $body);
     }
 
-    public function testRedirectsToUploadWhenLoggedIn(): void
+    public function testShowsLandingPageWhenLoggedIn(): void
     {
+        // '/' 는 로그인 여부와 무관하게 항상 랜딩 페이지를 보여준다 —
+        // 로그인 후 업로드 화면은 별도 경로(GET /upload)에서만 제공된다.
         $userId = (new UserModel())->upsertByGoogleSub('sub-home', 'home@example.com', 'Home');
 
         $result = $this->withSession(['user_id' => $userId])->get('/');
 
-        $result->assertRedirectTo('/upload');
+        $result->assertStatus(200);
+        $body = $this->decodedBody($result);
+        $this->assertStringContainsString('Google로 로그인', $body);
+        $this->assertStringNotContainsString('id="takeout-form"', $body);
     }
 }
