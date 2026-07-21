@@ -58,7 +58,7 @@ class AuthController extends BaseController
 
         session()->set('user_id', $userId);
 
-        return redirect()->to('/')->with('message', '로그인이 완료되었습니다.');
+        return redirect()->to('/upload')->with('message', '로그인이 완료되었습니다.');
     }
 
     /**

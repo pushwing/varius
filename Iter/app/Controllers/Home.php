@@ -4,19 +4,14 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use CodeIgniter\HTTP\RedirectResponse;
-
 /**
- * 랜딩 페이지 — 비로그인 사용자 전용(GET /). 로그인 사용자는 /upload 로 리다이렉트한다.
+ * 랜딩 페이지 — 로그인 여부와 무관하게 항상 렌더된다(GET /).
+ * 로그인 후 업로드 화면은 GET /upload(TakeoutController::form)에서 별도로 제공한다.
  */
 class Home extends BaseController
 {
-    public function index(): RedirectResponse|string
+    public function index(): string
     {
-        if ($this->currentUserId() !== null) {
-            return redirect()->to('/upload');
-        }
-
         helper('url');
 
         return view('landing', [
