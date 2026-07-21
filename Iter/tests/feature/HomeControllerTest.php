@@ -40,20 +40,26 @@ final class HomeControllerTest extends CIUnitTestCase
         $body = $this->decodedBody($result);
         $this->assertStringContainsString('Google로 로그인', $body);
         $this->assertStringContainsString('/auth/google', $body);
+        $this->assertStringNotContainsString('class="brand"', $body);
         $this->assertStringNotContainsString('id="start-picker"', $body);
     }
 
-    public function testShowsLandingPageWhenLoggedIn(): void
+    public function testShowsMenuAndHidesLoginCtaWhenLoggedIn(): void
     {
-        // '/' 는 로그인 여부와 무관하게 항상 랜딩 페이지를 보여준다 —
-        // 로그인 후 업로드 화면은 별도 경로(GET /upload)에서만 제공된다.
+        // '/' 는 로그인 여부와 무관하게 항상 렌더되지만, 로그인 사용자에게는 로그인 CTA 대신
+        // 상단 메뉴와 "사진 가져오기" 버튼을 보여준다 — 업로드 폼 자체는 GET /upload 에서 제공된다.
         $userId = (new UserModel())->upsertByGoogleSub('sub-home', 'home@example.com', 'Home');
 
         $result = $this->withSession(['user_id' => $userId])->get('/');
 
         $result->assertStatus(200);
         $body = $this->decodedBody($result);
-        $this->assertStringContainsString('Google로 로그인', $body);
+        $this->assertStringContainsString('class="brand"', $body);
+        $this->assertStringContainsString('/upload', $body);
+        $this->assertStringContainsString('지도 보기', $body);
+        $this->assertStringContainsString('로그아웃', $body);
+        $this->assertStringContainsString('/auth/logout', $body);
+        $this->assertStringNotContainsString('Google로 로그인', $body);
         $this->assertStringNotContainsString('id="takeout-form"', $body);
     }
 }

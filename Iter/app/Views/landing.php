@@ -3,9 +3,14 @@
 declare(strict_types=1);
 
 /**
- * 랜딩 화면 — 비로그인 사용자에게만 노출된다(로그인 사용자는 /upload 로 리다이렉트).
+ * 랜딩 화면 — 로그인 여부와 무관하게 '/'에서 항상 렌더된다.
+ * 로그인 사용자에게는 상단 메뉴를 보여주고, 로그인 CTA 대신 업로드 화면으로 가는 버튼을 보여준다.
  *
- * @var string $loginUrl
+ * @var int|null $userId    로그인 사용자 id(비로그인 시 null)
+ * @var string   $loginUrl
+ * @var string   $uploadUrl
+ * @var string   $mapUrl
+ * @var string   $logoutUrl
  */
 ?>
 <!DOCTYPE html>
@@ -21,6 +26,7 @@ declare(strict_types=1);
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+    <link rel="stylesheet" href="/assets/nav.css">
     <style>
         html, body { margin: 0; font-family: system-ui, sans-serif; color: #222; }
         main { padding: 40px 20px; max-width: 480px; margin: 0 auto; text-align: center; }
@@ -65,6 +71,9 @@ declare(strict_types=1);
     </style>
 </head>
 <body>
+<?php if ($userId !== null): ?>
+    <?= view('partials/nav', ['uploadUrl' => $uploadUrl, 'mapUrl' => $mapUrl, 'logoutUrl' => $logoutUrl]) ?>
+<?php endif; ?>
     <main class="landing">
         <img class="logo" src="/assets/logo-wordmark.png" alt="Iter">
         <h1 class="sr-only">Iter</h1>
@@ -89,17 +98,23 @@ declare(strict_types=1);
             </li>
         </ul>
 
-        <a class="btn" href="<?= esc($loginUrl, 'attr') ?>">Google로 로그인</a>
+        <?php if ($userId !== null): ?>
+            <a class="btn" href="<?= esc($uploadUrl, 'attr') ?>">사진 가져오기</a>
+        <?php else: ?>
+            <a class="btn" href="<?= esc($loginUrl, 'attr') ?>">Google로 로그인</a>
+        <?php endif; ?>
 
         <p class="privacy-note">
             업로드된 zip은 위치·시각 정보 추출이 끝나는 즉시 서버에서 삭제됩니다.
             원본 사진 파일은 저장하지 않습니다.
         </p>
 
-        <p class="legal-footer">
-            <a href="/privacy-policy.html">개인정보처리방침</a> ·
-            <a href="/terms-of-service.html">서비스 이용약관</a>
-        </p>
+        <?php if ($userId === null): ?>
+            <p class="legal-footer">
+                <a href="/privacy-policy.html">개인정보처리방침</a> ·
+                <a href="/terms-of-service.html">서비스 이용약관</a>
+            </p>
+        <?php endif; ?>
     </main>
 </body>
 </html>
