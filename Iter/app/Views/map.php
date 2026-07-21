@@ -36,12 +36,47 @@ declare(strict_types=1);
             align-items: center; justify-content: center;
             font-size: 15px; color: #555; background: #f4f4f4;
         }
+        .popup-more-btn {
+            margin-top: 4px; padding: 5px 12px; font-size: 13px; border: none;
+            border-radius: 6px; background: #1a73e8; color: #fff; cursor: pointer;
+        }
+        #photo-layer {
+            position: fixed; inset: 0; z-index: 2000; background: rgba(0, 0, 0, 0.75);
+            display: flex; align-items: center; justify-content: center; padding: 20px;
+        }
+        #photo-layer-panel {
+            background: #fff; border-radius: 10px; max-width: 720px; width: 100%;
+            max-height: 85vh; display: flex; flex-direction: column; overflow: hidden;
+        }
+        #photo-layer-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 18px; border-bottom: 1px solid #eee;
+        }
+        #photo-layer-header h3 { margin: 0; font-size: 15px; }
+        #photo-layer-close {
+            border: none; background: none; font-size: 20px; cursor: pointer; color: #666; line-height: 1;
+        }
+        #photo-layer-grid {
+            padding: 14px 18px; overflow-y: auto;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px;
+        }
+        #photo-layer-grid img { width: 100%; border-radius: 8px; display: block; object-fit: cover; }
     </style>
 </head>
 <body>
     <div id="map" data-routes-url="<?= esc($routesUrl, 'attr') ?>"></div>
     <div id="legend" hidden><h4>날짜별 동선</h4><div id="legend-body"></div></div>
     <div id="empty">표시할 동선이 없습니다. 사진을 선택해 좌표를 적재하세요.</div>
+
+    <div id="photo-layer" hidden>
+        <div id="photo-layer-panel">
+            <div id="photo-layer-header">
+                <h3 id="photo-layer-title"></h3>
+                <button type="button" id="photo-layer-close" aria-label="닫기">&times;</button>
+            </div>
+            <div id="photo-layer-grid"></div>
+        </div>
+    </div>
 
     <script
         src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -55,6 +90,23 @@ declare(strict_types=1);
                 maxZoom: 19,
                 attribution: '&copy; OpenStreetMap contributors'
             }).addTo(map);
+
+            var clusterRegistry = []; // 인덱스 → { date, photos } — 팝업의 "더보기" 클릭 시 조회용.
+
+            var layerEl = document.getElementById('photo-layer');
+            var layerTitleEl = document.getElementById('photo-layer-title');
+            var layerGridEl = document.getElementById('photo-layer-grid');
+
+            document.getElementById('photo-layer-close').addEventListener('click', closeLayer);
+            layerEl.addEventListener('click', function (evt) {
+                if (evt.target === layerEl) { closeLayer(); }
+            });
+
+            // 팝업은 매번 새로 DOM 에 그려지므로 이벤트 위임으로 "더보기" 클릭을 잡는다.
+            document.body.addEventListener('click', function (evt) {
+                var btn = evt.target.closest('.popup-more-btn');
+                if (btn) { openLayer(Number(btn.dataset.clusterIndex)); }
+            });
 
             fetch(mapEl.dataset.routesUrl, { headers: { Accept: 'application/json' } })
                 .then(function (res) { return res.json(); })
@@ -78,24 +130,16 @@ declare(strict_types=1);
 
                     // 마커 — 같은 장소(GPS 오차 감안 약 30m 이내) 사진은 클러스터 하나로 묶인다.
                     (group.clusters || []).forEach(function (c) {
-                        var popupHtml = '<div style="font-size:12px;color:#333;margin-bottom:6px;">' +
-                            group.date + ' · ' + c.photos.length + '장</div>';
+                        var clusterIndex = clusterRegistry.length;
+                        clusterRegistry.push({ date: group.date, photos: c.photos });
 
-                        var thumbs = c.photos.filter(function (p) { return p.thumbnail_url; });
-                        if (thumbs.length) {
-                            popupHtml += '<div style="display:flex;gap:6px;overflow-x:auto;max-width:240px;padding-bottom:2px;">';
-                            thumbs.forEach(function (p) {
-                                popupHtml += '<img src="' + p.thumbnail_url + '" alt="" title="' + p.taken_at + '" ' +
-                                    'style="height:120px;border-radius:6px;flex:none;">';
-                            });
-                            popupHtml += '</div>';
-                        } else {
-                            popupHtml += c.photos[0].taken_at;
-                        }
+                        var popupHtml = '<div style="font-size:12px;color:#333;">' +
+                            group.date + ' · ' + c.photos.length + '장</div>' +
+                            '<button type="button" class="popup-more-btn" data-cluster-index="' + clusterIndex + '">더보기</button>';
 
                         L.circleMarker([c.lat, c.lng], {
                             radius: 6, color: group.color, fillColor: group.color, fillOpacity: 0.9
-                        }).addTo(map).bindPopup(popupHtml, { maxWidth: 260 });
+                        }).addTo(map).bindPopup(popupHtml, { maxWidth: 180 });
                     });
 
                     var row = document.createElement('div');
@@ -107,6 +151,28 @@ declare(strict_types=1);
 
                 document.getElementById('legend').hidden = false;
                 if (bounds.length) { map.fitBounds(bounds, { padding: [40, 40] }); }
+            }
+
+            function openLayer(clusterIndex) {
+                var cluster = clusterRegistry[clusterIndex];
+                if (!cluster) { return; }
+
+                layerTitleEl.textContent = cluster.date + ' · ' + cluster.photos.length + '장';
+                layerGridEl.innerHTML = '';
+                cluster.photos.forEach(function (p) {
+                    if (!p.thumbnail_url) { return; }
+                    var img = document.createElement('img');
+                    img.src = p.thumbnail_url;
+                    img.alt = '';
+                    img.title = p.taken_at;
+                    layerGridEl.appendChild(img);
+                });
+
+                layerEl.hidden = false;
+            }
+
+            function closeLayer() {
+                layerEl.hidden = true;
             }
 
             function showEmpty() {
