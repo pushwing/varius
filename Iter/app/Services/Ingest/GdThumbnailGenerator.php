@@ -26,11 +26,15 @@ class GdThumbnailGenerator implements ThumbnailGeneratorInterface
             return null;
         }
 
-        [$srcWidth, $srcHeight, $type] = $info;
+        [, , $type] = $info;
         $source = $this->readImage($sourcePath, $type);
         if ($source === null) {
             return null;
         }
+
+        $source = $this->applyExifOrientation($source, $sourcePath, $type);
+        $srcWidth = imagesx($source);
+        $srcHeight = imagesy($source);
 
         $targetWidth = min(self::TARGET_WIDTH, $srcWidth); // 확대하지 않는다.
         $targetHeight = (int) round($srcHeight * ($targetWidth / $srcWidth));
@@ -44,6 +48,31 @@ class GdThumbnailGenerator implements ThumbnailGeneratorInterface
         $saved = imagejpeg($thumb, $path, 82);
 
         return $saved ? $path : null;
+    }
+
+    /**
+     * EXIF Orientation 태그에 맞춰 회전을 보정한다(휴대폰 사진은 픽셀은 그대로 두고
+     * 태그로만 회전 방향을 표기하는 경우가 많아, 보정하지 않으면 썸네일이 옆으로 눕거나
+     * 뒤집혀 보인다). 카메라·폰이 실제로 내보내는 1·3·6·8 만 다룬다(2·4·5·7 은 미러링
+     * 조합으로 실사용 사례가 사실상 없어 범위에서 제외).
+     */
+    private function applyExifOrientation(\GdImage $image, string $sourcePath, int $type): \GdImage
+    {
+        if ($type !== IMAGETYPE_JPEG) {
+            return $image;
+        }
+
+        $exif = @exif_read_data($sourcePath);
+        $orientation = is_array($exif) && is_numeric($exif['Orientation'] ?? null) ? (int) $exif['Orientation'] : 1;
+
+        $rotated = match ($orientation) {
+            3 => imagerotate($image, 180, 0),
+            6 => imagerotate($image, -90, 0),
+            8 => imagerotate($image, 90, 0),
+            default => $image,
+        };
+
+        return $rotated instanceof \GdImage ? $rotated : $image;
     }
 
     /**
