@@ -124,28 +124,21 @@ final class GdThumbnailGeneratorTest extends CIUnitTestCase
         $this->assertNull($result);
     }
 
-    public function testCorrectsOrientation6By90DegreesSwappingDimensions(): void
+    public function testDoesNotRotateBasedOnExifOrientationTag(): void
     {
+        // Google Takeout 으로 재내보낸 사진은 픽셀 자체가 이미 올바른 방향으로
+        // 구워져 있는데 Orientation 태그만 예전 값으로 남아있는 경우가 있다(실사용
+        // 리포트로 확인 — 가로 사진이 태그 기반 보정 후 전부 세로로 바뀜). 그래서
+        // Orientation 태그를 신뢰해 추가 회전을 적용하지 않는다 — 디코딩된 픽셀
+        // 그대로 리사이즈만 한다.
         $source = $this->makeJpegFixtureWithOrientation(40, 60, 6);
 
         $path = (new GdThumbnailGenerator($this->outputDir))->generate($source, 'media-o6', 1);
 
         $this->assertNotNull($path);
         [$width, $height] = getimagesize($path);
-        $this->assertSame(60, $width);
-        $this->assertSame(40, $height);
-    }
-
-    public function testCorrectsOrientation8By90DegreesSwappingDimensions(): void
-    {
-        $source = $this->makeJpegFixtureWithOrientation(40, 60, 8);
-
-        $path = (new GdThumbnailGenerator($this->outputDir))->generate($source, 'media-o8', 1);
-
-        $this->assertNotNull($path);
-        [$width, $height] = getimagesize($path);
-        $this->assertSame(60, $width);
-        $this->assertSame(40, $height);
+        $this->assertSame(40, $width);
+        $this->assertSame(60, $height);
     }
 
     public function testOrientation1DoesNotChangeDimensions(): void
