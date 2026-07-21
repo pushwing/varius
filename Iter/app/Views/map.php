@@ -6,6 +6,8 @@ declare(strict_types=1);
  * 날짜별 동선 지도(Leaflet).
  *
  * @var string $routesUrl 동선 JSON API URL(GET /routes)
+ * @var string $mapUrl
+ * @var string $logoutUrl
  */
 ?>
 <!DOCTYPE html>
@@ -18,6 +20,7 @@ declare(strict_types=1);
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+    <link rel="stylesheet" href="/assets/nav.css">
     <link
         rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -25,6 +28,8 @@ declare(strict_types=1);
         crossorigin="">
     <style>
         html, body { margin: 0; height: 100%; font-family: system-ui, sans-serif; }
+        body { display: flex; flex-direction: column; }
+        #map-container { position: relative; flex: 1; min-height: 0; }
         #map { position: absolute; inset: 0; }
         #legend {
             position: absolute; top: 12px; right: 12px; z-index: 1000;
@@ -68,9 +73,12 @@ declare(strict_types=1);
     </style>
 </head>
 <body>
-    <div id="map" data-routes-url="<?= esc($routesUrl, 'attr') ?>"></div>
-    <div id="legend" hidden><h4>날짜별 동선</h4><div id="legend-body"></div></div>
-    <div id="empty">표시할 동선이 없습니다. 사진을 선택해 좌표를 적재하세요.</div>
+    <?= view('partials/nav', ['mapUrl' => $mapUrl, 'logoutUrl' => $logoutUrl]) ?>
+    <div id="map-container">
+        <div id="map" data-routes-url="<?= esc($routesUrl, 'attr') ?>"></div>
+        <div id="legend" hidden><h4>날짜별 동선</h4><div id="legend-body"></div></div>
+        <div id="empty">표시할 동선이 없습니다. 사진을 선택해 좌표를 적재하세요.</div>
+    </div>
 
     <div id="photo-layer" hidden>
         <div id="photo-layer-panel">
