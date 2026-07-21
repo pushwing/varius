@@ -44,6 +44,7 @@ declare(strict_types=1);
             position: fixed; inset: 0; z-index: 2000; background: rgba(0, 0, 0, 0.75);
             display: flex; align-items: center; justify-content: center; padding: 20px;
         }
+        #photo-layer[hidden] { display: none; }
         #photo-layer-panel {
             background: #fff; border-radius: 10px; max-width: 720px; width: 100%;
             max-height: 85vh; display: flex; flex-direction: column; overflow: hidden;
