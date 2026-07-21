@@ -30,16 +30,28 @@ declare(strict_types=1);
         html, body { margin: 0; height: 100%; font-family: system-ui, sans-serif; }
         body { display: flex; flex-direction: column; }
         #map-container { position: relative; flex: 1; min-height: 0; }
-        #map { position: absolute; inset: 0; }
-        #legend {
-            position: absolute; top: 12px; right: 12px; z-index: 1000;
-            background: rgba(255, 255, 255, 0.92); padding: 10px 12px;
-            border-radius: 8px; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
-            max-height: 60%; overflow-y: auto; font-size: 13px;
+        #map { position: absolute; top: 0; right: 0; bottom: 0; left: 280px; }
+        #route-sidebar {
+            position: absolute; top: 0; left: 0; bottom: 0; width: 280px; z-index: 1000;
+            background: #fff; box-shadow: 2px 0 6px rgba(0, 0, 0, 0.15);
+            overflow-y: auto; font-size: 13px;
         }
-        #legend h4 { margin: 0 0 6px; font-size: 13px; }
-        .legend-row { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
-        .legend-swatch { width: 12px; height: 12px; border-radius: 2px; flex: none; }
+        #route-sidebar-header {
+            padding: 14px 16px; font-weight: 600; font-size: 14px; border-bottom: 1px solid #eee;
+        }
+        .month-group { border-bottom: 1px solid #eee; }
+        .month-header {
+            display: block; width: 100%; text-align: left; padding: 10px 16px;
+            border: none; background: #f7f7f7; cursor: pointer; font-size: 13px; font-weight: 600;
+        }
+        .month-header:hover { background: #eee; }
+        .day-list[hidden] { display: none; }
+        .day-item {
+            display: block; width: 100%; text-align: left; padding: 8px 16px 8px 24px;
+            border: none; background: none; cursor: pointer; font-size: 13px; color: #333;
+        }
+        .day-item:hover { background: #f0f4ff; }
+        .day-item.active { background: #e3edff; font-weight: 600; }
         #empty {
             position: absolute; inset: 0; display: none; z-index: 1000;
             align-items: center; justify-content: center;
@@ -76,8 +88,11 @@ declare(strict_types=1);
 <body>
     <?= view('partials/nav', ['mapUrl' => $mapUrl, 'logoutUrl' => $logoutUrl]) ?>
     <div id="map-container">
+        <div id="route-sidebar">
+            <div id="route-sidebar-header">동선 목록</div>
+            <div id="route-sidebar-body"></div>
+        </div>
         <div id="map" data-routes-url="<?= esc($routesUrl, 'attr') ?>"></div>
-        <div id="legend" hidden><h4>날짜별 동선</h4><div id="legend-body"></div></div>
         <div id="empty">표시할 동선이 없습니다. 사진을 선택해 좌표를 적재하세요.</div>
     </div>
 
@@ -130,7 +145,6 @@ declare(strict_types=1);
                 if (!dates.length) { showEmpty(); return; }
 
                 var bounds = [];
-                var legendBody = document.getElementById('legend-body');
 
                 dates.forEach(function (group) {
                     var latlngs = group.points.map(function (p) { return [p.lat, p.lng]; });
@@ -154,15 +168,8 @@ declare(strict_types=1);
                             radius: 6, color: group.color, fillColor: group.color, fillOpacity: 0.9
                         }).addTo(map).bindPopup(popupHtml, { maxWidth: 180 });
                     });
-
-                    var row = document.createElement('div');
-                    row.className = 'legend-row';
-                    row.innerHTML = '<span class="legend-swatch" style="background:' + group.color +
-                        '"></span><span>' + group.date + ' (' + group.points.length + ')</span>';
-                    legendBody.appendChild(row);
                 });
 
-                document.getElementById('legend').hidden = false;
                 if (bounds.length) { map.fitBounds(bounds, { padding: [40, 40] }); }
             }
 
