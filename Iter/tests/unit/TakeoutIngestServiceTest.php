@@ -244,6 +244,31 @@ final class TakeoutIngestServiceTest extends CIUnitTestCase
         $this->assertSame('/thumbs/2/IMG_0001.JPG', $resultB['locations'][0]->thumbnailPath);
     }
 
+    public function testDoesNotGenerateThumbnailsForOutlierFilteredLocations(): void
+    {
+        // 이상치로 걸러질 사진(busan)에는 썸네일을 만들지 않아야 한다 — 지도에 남지 않는데
+        // 썸네일만 디스크에 고아로 남는 것을 방지한다. seoul 만 통과하므로 generate 는 1회.
+        $zipPath = $this->makeZip([
+            'seoul.jpg' => $this->jpegBytes(),
+            'seoul.jpg.json' => $this->geoJson(37.5665, 126.9780, '1000000000'),
+            'busan.jpg' => $this->jpegBytes(),
+            'busan.jpg.json' => $this->geoJson(35.1796, 129.0756, '1000000300'),
+        ]);
+
+        $thumbnailer = $this->createMock(ThumbnailGeneratorInterface::class);
+        $thumbnailer->expects($this->once())
+            ->method('generate')
+            ->with($this->stringContains('seoul.jpg'), 'seoul.jpg', 7)
+            ->willReturn('/thumbs/7/seoul.jpg');
+
+        $service = new TakeoutIngestService(new TakeoutMetadataParser(), $thumbnailer);
+        $result = $service->ingest($zipPath, 7);
+
+        $this->assertCount(1, $result['locations']);
+        $this->assertSame('seoul.jpg', $result['locations'][0]->mediaItemId);
+        $this->assertSame('/thumbs/7/seoul.jpg', $result['locations'][0]->thumbnailPath);
+    }
+
     public function testExtractedTempDirectoryIsRemovedAfterIngest(): void
     {
         $zipPath = $this->makeZip([

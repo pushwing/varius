@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Services\GooglePhotosAuthService;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
 use CodeIgniter\Test\FeatureTestTrait;
+use Config\Services;
 
 /**
  * @internal
@@ -43,6 +45,23 @@ final class AuthControllerTest extends CIUnitTestCase
             ->get('/auth/google/callback?state=matching-state');
 
         $result->assertStatus(400);
+    }
+
+    public function testCallbackWithValidStateAuthenticatesUser(): void
+    {
+        // Google 토큰 교환은 목으로 대체하고, state 검증 통과 후 인증이 성립하는지만 확인한다.
+        $auth = $this->createMock(GooglePhotosAuthService::class);
+        $auth->method('handleCallback')->willReturn(7);
+        Services::injectMock('googlePhotosAuth', $auth);
+
+        $result = $this->withSession(['oauth_state' => 'matching-state'])
+            ->get('/auth/google/callback?state=matching-state&code=auth-code');
+
+        // 세션 ID 재발급(세션 고정 방어) 후에도 인증 흐름이 정상 완료돼야 한다.
+        $result->assertRedirectTo('/upload');
+        $this->assertSame(7, session()->get('user_id'));
+
+        Services::reset();
     }
 
     public function testLogoutDestroysSessionAndRedirects(): void

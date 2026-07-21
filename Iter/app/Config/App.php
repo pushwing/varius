@@ -201,4 +201,17 @@ class App extends BaseConfig
      * @see http://www.w3.org/TR/CSP/
      */
     public bool $CSPEnabled = false;
+
+    public function __construct()
+    {
+        // 운영 환경에서는 모든 요청을 HTTPS 로 강제하고 HSTS 헤더를 내보낸다
+        // (required.before 의 forcehttps 필터는 이 값이 true 일 때만 실제로 동작한다).
+        // 로컬(http) 개발 환경은 그대로 두며, .env 의 `app.forceGlobalSecureRequests` 값이
+        // 있으면 그 값이 우선한다. TLS 종단이 리버스 프록시라면 $proxyIPs 설정도 함께 필요하다.
+        if (defined('ENVIRONMENT') && ENVIRONMENT === 'production') {
+            $this->forceGlobalSecureRequests = true;
+        }
+
+        parent::__construct();
+    }
 }

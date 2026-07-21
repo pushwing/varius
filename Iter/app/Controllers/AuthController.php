@@ -56,6 +56,9 @@ class AuthController extends BaseController
             return $this->response->setStatusCode(400, 'OAuth callback failed');
         }
 
+        // 세션 고정 방어: 인증(권한 승격) 직전에 세션 ID 를 재발급해,
+        // 로그인 전에 심어진 세션 ID 가 인증된 세션으로 이어지지 않게 한다.
+        session()->regenerate(true);
         session()->set('user_id', $userId);
 
         return redirect()->to('/upload')->with('message', '로그인이 완료되었습니다.');
@@ -70,6 +73,8 @@ class AuthController extends BaseController
     public function logout(): RedirectResponse
     {
         session()->remove('user_id');
+        // 인증 키 제거 후 세션 ID 를 재발급해, 로그아웃 이전 세션 ID 재사용을 막는다.
+        session()->regenerate(true);
 
         return redirect()->to('/');
     }

@@ -14,7 +14,9 @@
 # ENVIRONMENT
 #--------------------------------------------------------------------
 
-# CI_ENVIRONMENT = production
+# 로컬 개발은 development, 운영 배포는 production 으로 설정한다.
+# 미설정 시 CI4 기본값은 production 이다.
+# CI_ENVIRONMENT = development
 
 #--------------------------------------------------------------------
 # APP
@@ -23,7 +25,13 @@
 # app.baseURL = ''
 # If you have trouble with `.`, you could also use `_`.
 # app_baseURL = ''
+# 전송 보안: CI_ENVIRONMENT = production 이면 아래 두 값은 코드 기본값이
+# 자동으로 true 가 된다(Config\App::forceGlobalSecureRequests, Config\Cookie::secure).
+# 로컬(http) 개발에서만 명시적으로 false 로 내려 쓴다.
 # app.forceGlobalSecureRequests = false
+# cookie.secure = false
+# TLS 종단이 리버스 프록시라면 신뢰할 프록시 IP 를 지정해야 https 를 올바로 인식한다.
+# app.proxyIPs = '10.0.0.0/8:X-Forwarded-For'
 # app.CSPEnabled = false
 
 #--------------------------------------------------------------------

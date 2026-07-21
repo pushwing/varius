@@ -106,4 +106,17 @@ class Cookie extends BaseConfig
      * @see https://tools.ietf.org/html/rfc2616#section-2.2
      */
     public bool $raw = false;
+
+    public function __construct()
+    {
+        // 운영 환경에서는 세션·CSRF 쿠키에 Secure 플래그를 강제한다.
+        // 평문 HTTP 로 인증 쿠키가 전송돼 네트워크 도청·중간자에 탈취되는 것을 차단한다.
+        // 로컬(http) 개발 환경은 그대로 두며, .env 의 `cookie.secure` 값이 있으면 그 값이 우선한다
+        // (parent::__construct() 가 env 값을 나중에 덮어쓰기 때문).
+        if (defined('ENVIRONMENT') && ENVIRONMENT === 'production') {
+            $this->secure = true;
+        }
+
+        parent::__construct();
+    }
 }
