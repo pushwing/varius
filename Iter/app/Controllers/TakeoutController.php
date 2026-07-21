@@ -76,7 +76,13 @@ class TakeoutController extends BaseController
             }
         }
 
-        $saved = model(PhotoLocationModel::class)->saveMany($userId, $result['locations']);
+        try {
+            $saved = model(PhotoLocationModel::class)->saveMany($userId, $result['locations']);
+        } catch (Throwable $e) {
+            log_message('error', 'Takeout 좌표 저장 실패: {msg}', ['msg' => $e->getMessage()]);
+
+            return $this->response->setStatusCode(500)->setJSON(['error' => '좌표 저장에 실패했습니다.']);
+        }
 
         return $this->response->setJSON([
             'saved' => $saved,
