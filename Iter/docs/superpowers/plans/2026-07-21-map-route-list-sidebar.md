@@ -18,6 +18,7 @@
 - 일자 클릭 시: 그 날짜 전체 좌표로 `fitBounds` + 그 날짜의 **첫 번째 클러스터**로 `openLayer` 호출 + 클릭한 항목만 활성 표시.
 - 이 저장소(varius 모노레포)는 PR 없이 `feature/* → dev` 직접 머지 정책이다(리뷰 절차만 생략, 브랜치 전략은 유지). 커밋 메시지는 이모지 + Conventional Commits + 한국어.
 - 로컬 개발 환경에 DB(`photo_locations`)·Google OAuth 자격증명이 설정돼 있지 않아(`.env`의 `database.*` 항목이 모두 주석 처리됨, 확인 완료) 실제 `/map` 라우트를 브라우저로 완주하는 건 불가능하다. 대신 스크래치패드에 **fetch를 스텁 처리한 정적 HTML 하네스**를 만들어 매 태스크마다 `app/Views/map.php`와 동일한 `<style>`/`<script>` 내용을 복사해 넣고 브라우저로 시각 확인한다. 하네스는 저장소에 커밋하지 않는다.
+- **(실행 중 갱신)** Task 1 실행 시점에 `origin/dev`에 내비게이션 바 병합분(`feature/persistent-nav`)이 먼저 들어와 있어 `dev`를 병합했다. 그 결과 `app/Views/map.php`에 `<div id="map-container">` 래퍼가 새로 생겼고 `#map`/`#legend`/`#empty`가 그 안에 중첩됐다(상단 `<nav>` 아래로 지도 영역을 배치하기 위함). 인라인 `<script>` 블록 내용은 이 병합으로 전혀 바뀌지 않았다 — Task 2·4·5의 스크립트 관련 old_string/new_string은 원래 계획 그대로 유효하다. **Task 2의 하네스 마크업과 Task 3의 body 마크업 교체 지점만** 이 새 `#map-container` 래퍼를 반영하도록 아래에서 갱신했다.
 
 ---
 
@@ -70,7 +71,22 @@ Expected: `feature/map-route-list-sidebar`
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin="">
     <style>
+        /* public/assets/nav.css 인라인 사본 — file:// 로 여는 하네스는 절대경로 /assets/nav.css 를 못 불러오므로 직접 포함한다. */
+        nav {
+            display: flex; gap: 16px; padding: 12px 20px; border-bottom: 1px solid #ddd;
+            align-items: center; font-family: system-ui, sans-serif;
+        }
+        nav a { color: #222; text-decoration: none; font-size: 14px; }
+        nav a:hover { text-decoration: underline; }
+        nav .brand { display: inline-flex; }
+        nav .brand img { height: 24px; }
+        nav .spacer { flex: 1; }
+        nav .legal { display: flex; gap: 16px; }
+        nav .legal a { color: #777; font-size: 13px; }
+
         html, body { margin: 0; height: 100%; font-family: system-ui, sans-serif; }
+        body { display: flex; flex-direction: column; }
+        #map-container { position: relative; flex: 1; min-height: 0; }
         #map { position: absolute; inset: 0; }
         #legend {
             position: absolute; top: 12px; right: 12px; z-index: 1000;
@@ -115,9 +131,22 @@ Expected: `feature/map-route-list-sidebar`
     </style>
 </head>
 <body>
-    <div id="map" data-routes-url="/mock-routes"></div>
-    <div id="legend" hidden><h4>날짜별 동선</h4><div id="legend-body"></div></div>
-    <div id="empty">표시할 동선이 없습니다. 사진을 선택해 좌표를 적재하세요.</div>
+    <nav>
+        <a href="#" class="brand"><img src="https://placehold.co/24x24?text=I" alt="Iter"></a>
+        <a href="#">홈</a>
+        <a href="#">지도 보기</a>
+        <a href="#">로그아웃</a>
+        <span class="spacer"></span>
+        <span class="legal">
+            <a href="#">개인정보처리방침</a>
+            <a href="#">서비스 이용약관</a>
+        </span>
+    </nav>
+    <div id="map-container">
+        <div id="map" data-routes-url="/mock-routes"></div>
+        <div id="legend" hidden><h4>날짜별 동선</h4><div id="legend-body"></div></div>
+        <div id="empty">표시할 동선이 없습니다. 사진을 선택해 좌표를 적재하세요.</div>
+    </div>
 
     <div id="photo-layer" hidden>
         <div id="photo-layer-panel">
@@ -297,6 +326,7 @@ Expected: `feature/map-route-list-sidebar`
 Browser 프리뷰 도구로 `file:///private/tmp/claude-501/-Users-jongwonbyun-claude-works-varius-Iter/f2d46610-8ff3-4ab6-9286-fe50f95ce42f/scratchpad/map-harness.html` 을 연다.
 
 Expected:
+- 상단에 내비게이션 바(홈·지도 보기·로그아웃 링크)가 보이고, 그 아래 `#map-container`가 나머지 화면 높이를 채운다(지도가 내비게이션 바를 가리거나 그 뒤로 밀려 들어가지 않는다).
 - 지도가 서울/부산 좌표 쪽으로 확대되어 표시된다(3개 날짜의 bounds).
 - 우상단에 `#legend`가 "2026-06-05 (2)", "2026-06-18 (4)", "2026-07-02 (1)" 3행으로 보인다.
 - 지도 위 원형 마커가 총 4개(06-05 1개, 06-18 2개, 07-02 1개) 보인다.
@@ -317,7 +347,7 @@ Expected:
 
 - [ ] **Step 1: `app/Views/map.php`의 `<style>` 블록에서 legend 관련 규칙을 사이드바 규칙으로 교체**
 
-`app/Views/map.php:29-37`의 아래 블록을 찾는다.
+`app/Views/map.php:34-42`의 아래 블록을 찾는다.
 
 ```css
         #legend {
@@ -357,7 +387,7 @@ Expected:
         .day-item.active { background: #e3edff; font-weight: 600; }
 ```
 
-또한 같은 블록 위에 있는 `#map` 규칙(`app/Views/map.php:28`)도 사이드바 폭만큼 좌측을 밀어내도록 바꾼다.
+또한 같은 블록 위에 있는 `#map` 규칙(`app/Views/map.php:33`)도 사이드바 폭만큼 좌측을 밀어내도록 바꾼다. (`#map`의 컨테이닝 블록은 `#map-container`다 — 내비게이션 바 병합으로 새로 생긴 `position: relative; flex: 1;` 래퍼로, 내비 바 아래 남은 영역 전체를 차지한다. `#map`을 그 안에서 `left: 280px`로 밀어내면 자동으로 내비 바 아래·사이드바 옆 영역만 차지하게 된다.)
 
 ```css
         #map { position: absolute; inset: 0; }
@@ -371,21 +401,27 @@ Expected:
 
 - [ ] **Step 2: body 마크업에서 legend div를 사이드바로 교체**
 
-`app/Views/map.php:72-73`의 아래 블록을 찾는다.
+`app/Views/map.php:78-81`의 아래 블록을 찾는다(내비게이션 바 병합으로 `#map`/`#legend`/`#empty`가 `#map-container` 안에 중첩돼 있다).
 
 ```html
-    <div id="map" data-routes-url="<?= esc($routesUrl, 'attr') ?>"></div>
-    <div id="legend" hidden><h4>날짜별 동선</h4><div id="legend-body"></div></div>
+    <div id="map-container">
+        <div id="map" data-routes-url="<?= esc($routesUrl, 'attr') ?>"></div>
+        <div id="legend" hidden><h4>날짜별 동선</h4><div id="legend-body"></div></div>
+        <div id="empty">표시할 동선이 없습니다. 사진을 선택해 좌표를 적재하세요.</div>
+    </div>
 ```
 
 다음으로 교체한다.
 
 ```html
-    <div id="route-sidebar">
-        <div id="route-sidebar-header">동선 목록</div>
-        <div id="route-sidebar-body"></div>
+    <div id="map-container">
+        <div id="route-sidebar">
+            <div id="route-sidebar-header">동선 목록</div>
+            <div id="route-sidebar-body"></div>
+        </div>
+        <div id="map" data-routes-url="<?= esc($routesUrl, 'attr') ?>"></div>
+        <div id="empty">표시할 동선이 없습니다. 사진을 선택해 좌표를 적재하세요.</div>
     </div>
-    <div id="map" data-routes-url="<?= esc($routesUrl, 'attr') ?>"></div>
 ```
 
 - [ ] **Step 3: 인라인 스크립트의 legend 참조 제거(임시)**
