@@ -87,6 +87,37 @@ final class TakeoutIngestServiceTest extends CIUnitTestCase
         $this->assertSame('2019-07-18 22:55:29', $result['locations'][0]->takenAt);
     }
 
+    public function testExtractsLocationsFromSupplementalMetadataJsonSuffix(): void
+    {
+        // 최신 Google Takeout 은 "<파일명>.json" 대신
+        // "<파일명>.supplemental-metadata.json" 로 사이드카를 내보낸다.
+        $zipPath = $this->makeZip([
+            'IMG_3475.JPG' => $this->jpegBytes(),
+            'IMG_3475.JPG.supplemental-metadata.json' => $this->geoJson(37.5665, 126.9780, '1563490529'),
+        ]);
+
+        $service = new TakeoutIngestService(new TakeoutMetadataParser());
+        $result = $service->ingest($zipPath);
+
+        $this->assertCount(1, $result['locations']);
+        $this->assertSame(1, $result['totalCandidates']);
+        $this->assertSame('IMG_3475.JPG', $result['locations'][0]->mediaItemId);
+    }
+
+    public function testSkipsVideoSidecarsEvenWhenMatched(): void
+    {
+        $zipPath = $this->makeZip([
+            'IMG_3477.MOV' => 'not-a-real-video',
+            'IMG_3477.MOV.supplemental-metadata.json' => $this->geoJson(37.5665, 126.9780, '1563490529'),
+        ]);
+
+        $service = new TakeoutIngestService(new TakeoutMetadataParser());
+        $result = $service->ingest($zipPath);
+
+        $this->assertSame([], $result['locations']);
+        $this->assertSame(1, $result['totalCandidates']);
+    }
+
     public function testSkipsJsonWithoutMatchingPhoto(): void
     {
         $zipPath = $this->makeZip([

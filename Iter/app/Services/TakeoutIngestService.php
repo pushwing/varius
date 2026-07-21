@@ -24,6 +24,18 @@ class TakeoutIngestService
     private const DEFAULT_MAX_ITEMS = 200;
     private const EARTH_RADIUS_KM = 6371.0;
 
+    /** @var list<string> 사이드카 매칭 대상 사진 확장자(동영상 제외) */
+    private const PHOTO_EXTENSIONS = ['jpg', 'jpeg', 'png', 'heic', 'heif', 'webp', 'gif'];
+
+    /**
+     * 사이드카 파일명에서 순서대로 시도할 접미사.
+     * 최신 Google Takeout 은 ".supplemental-metadata.json" 을 쓰고,
+     * 과거/일부 항목은 여전히 ".json" 만 붙는다.
+     *
+     * @var list<string>
+     */
+    private const SIDECAR_SUFFIXES = ['.supplemental-metadata.json', '.json'];
+
     public function __construct(
         private readonly TakeoutMetadataParser $parser,
         private readonly ?ThumbnailGeneratorInterface $thumbnailGenerator = null,
@@ -66,9 +78,9 @@ class TakeoutIngestService
 
         $locations = [];
         foreach (array_slice($jsonFiles, 0, $this->maxItems) as $jsonPath) {
-            $mediaPath = pathinfo($jsonPath, PATHINFO_DIRNAME) . '/' . pathinfo($jsonPath, PATHINFO_FILENAME);
-            if (! is_file($mediaPath)) {
-                continue; // 짝이 되는 사진 파일 없음
+            $mediaPath = $this->mediaPathFor($jsonPath);
+            if ($mediaPath === null) {
+                continue; // 짝이 되는 사진 파일 없음(또는 사진이 아님)
             }
 
             $decoded = json_decode((string) file_get_contents($jsonPath), true);
@@ -91,6 +103,36 @@ class TakeoutIngestService
             'locations' => $this->filterOutliers($locations),
             'totalCandidates' => $totalCandidates,
         ];
+    }
+
+    /**
+     * 사이드카 JSON 경로에서 짝이 되는 사진 파일 경로를 찾는다.
+     * ".supplemental-metadata.json" → ".json" 순으로 접미사를 시도하고,
+     * 사진 확장자가 아니거나(예: 동영상) 실제 파일이 없으면 null.
+     */
+    private function mediaPathFor(string $jsonPath): ?string
+    {
+        $dir = pathinfo($jsonPath, PATHINFO_DIRNAME);
+        $jsonName = pathinfo($jsonPath, PATHINFO_BASENAME);
+
+        foreach (self::SIDECAR_SUFFIXES as $suffix) {
+            if (! str_ends_with($jsonName, $suffix)) {
+                continue;
+            }
+
+            $mediaName = substr($jsonName, 0, -strlen($suffix));
+            $extension = strtolower(pathinfo($mediaName, PATHINFO_EXTENSION));
+            if (! in_array($extension, self::PHOTO_EXTENSIONS, true)) {
+                continue;
+            }
+
+            $candidate = $dir . '/' . $mediaName;
+            if (is_file($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return null;
     }
 
     /**
