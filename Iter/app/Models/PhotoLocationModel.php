@@ -36,12 +36,29 @@ class PhotoLocationModel extends Model
     public function findByUserOrdered(int $userId): array
     {
         /** @var list<array<string, mixed>> $rows */
-        $rows = $this->select('source_item_id, lat, lng, thumbnail_path, taken_at')
+        $rows = $this->select('id, source_item_id, lat, lng, thumbnail_path, taken_at')
             ->where('user_id', $userId)
             ->orderBy('taken_at', 'ASC')
             ->findAll();
 
         return $rows;
+    }
+
+    /**
+     * 좌표 레코드가 이 사용자 소유일 때만 썸네일 경로를 반환한다(다른 사용자 열람 방지).
+     */
+    public function thumbnailPathFor(int $id, int $userId): ?string
+    {
+        $row = $this->select('thumbnail_path')
+            ->where('id', $id)
+            ->where('user_id', $userId)
+            ->first();
+
+        if ($row === null || $row['thumbnail_path'] === null) {
+            return null;
+        }
+
+        return (string) $row['thumbnail_path'];
     }
 
     /**

@@ -49,7 +49,7 @@ final class RouteVisualizationServiceTest extends CIUnitTestCase
     public function testPointShapeHasFloatCoordsAndMediaItemId(): void
     {
         $service = $this->serviceWithRows([
-            ['source_item_id' => 'm1', 'lat' => '37.5000000', 'lng' => '127.0000000', 'taken_at' => '2024-03-15 09:00:00'],
+            ['id' => 1, 'source_item_id' => 'm1', 'lat' => '37.5000000', 'lng' => '127.0000000', 'taken_at' => '2024-03-15 09:00:00'],
         ]);
 
         $point = $service->buildForUser(1)['dates'][0]['points'][0];
@@ -59,6 +59,28 @@ final class RouteVisualizationServiceTest extends CIUnitTestCase
         $this->assertIsFloat($point['lng']);
         $this->assertEqualsWithDelta(37.5, $point['lat'], 0.0001);
         $this->assertSame('2024-03-15 09:00:00', $point['taken_at']);
+    }
+
+    public function testPointHasThumbnailUrlWhenThumbnailPathPresent(): void
+    {
+        $service = $this->serviceWithRows([
+            ['id' => 42, 'source_item_id' => 'm1', 'lat' => '37.5', 'lng' => '127.0', 'taken_at' => '2024-03-15 09:00:00', 'thumbnail_path' => '/writable/uploads/thumbnails/m1.jpg'],
+        ]);
+
+        $point = $service->buildForUser(1)['dates'][0]['points'][0];
+
+        $this->assertSame('/thumbnails/42', $point['thumbnail_url']);
+    }
+
+    public function testPointHasNullThumbnailUrlWhenNoThumbnailPath(): void
+    {
+        $service = $this->serviceWithRows([
+            ['id' => 1, 'source_item_id' => 'm1', 'lat' => '37.5', 'lng' => '127.0', 'taken_at' => '2024-03-15 09:00:00', 'thumbnail_path' => null],
+        ]);
+
+        $point = $service->buildForUser(1)['dates'][0]['points'][0];
+
+        $this->assertNull($point['thumbnail_url']);
     }
 
     public function testPointsWithinDateKeepChronologicalOrder(): void
