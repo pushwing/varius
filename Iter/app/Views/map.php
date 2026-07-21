@@ -52,11 +52,13 @@ declare(strict_types=1);
         .month-header:hover { background: #eee; }
         .day-list[hidden] { display: none; }
         .day-item {
-            display: block; width: 100%; text-align: left; padding: 8px 16px 8px 24px;
-            border: none; background: none; cursor: pointer; font-size: 13px; color: #333;
+            display: flex; align-items: center; gap: 6px; width: 100%; text-align: left;
+            padding: 8px 16px 8px 24px; border: none; background: none; cursor: pointer;
+            font-size: 13px; color: #333;
         }
         .day-item:hover { background: #f0f4ff; }
         .day-item.active { background: #e3edff; font-weight: 600; }
+        .day-swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
         #empty {
             position: absolute; inset: 0; display: none; z-index: 1000;
             align-items: center; justify-content: center;
@@ -212,7 +214,7 @@ declare(strict_types=1);
                     });
 
                     dateIndex[group.date] = { latlngs: latlngs, firstClusterIndex: firstClusterIndex };
-                    dateOrder.push({ date: group.date, count: group.points.length });
+                    dateOrder.push({ date: group.date, count: group.points.length, color: group.color });
                 });
 
                 renderSidebar(dateOrder);
@@ -220,7 +222,7 @@ declare(strict_types=1);
             }
 
             function renderSidebar(dateOrder) {
-                var monthMap = {}; // 'YYYY-MM' → list<{date, count}>
+                var monthMap = {}; // 'YYYY-MM' → list<{date, count, color}>
                 var monthOrder = [];
 
                 dateOrder.forEach(function (entry) {
@@ -262,7 +264,16 @@ declare(strict_types=1);
                         itemEl.type = 'button';
                         itemEl.className = 'day-item';
                         itemEl.dataset.date = entry.date;
-                        itemEl.textContent = monthNum + '월 ' + dayNum + '일 (' + entry.count + '장)';
+
+                        var swatchEl = document.createElement('span');
+                        swatchEl.className = 'day-swatch';
+                        swatchEl.style.background = entry.color;
+                        itemEl.appendChild(swatchEl);
+
+                        var labelEl = document.createElement('span');
+                        labelEl.textContent = monthNum + '월 ' + dayNum + '일 (' + entry.count + '장)';
+                        itemEl.appendChild(labelEl);
+
                         listEl.appendChild(itemEl);
                     });
 
