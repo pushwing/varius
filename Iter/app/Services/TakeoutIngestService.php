@@ -47,7 +47,7 @@ class TakeoutIngestService
     /**
      * @return array{locations: list<PhotoLocation>, totalCandidates: int, capped: bool}
      */
-    public function ingest(string $zipPath): array
+    public function ingest(string $zipPath, int $userId): array
     {
         $extractDir = WRITEPATH . 'uploads/takeout_' . uniqid('', true);
         if (! mkdir($extractDir, 0755, true) && ! is_dir($extractDir)) {
@@ -62,7 +62,7 @@ class TakeoutIngestService
             $zip->extractTo($extractDir);
             $zip->close();
 
-            return $this->processExtracted($extractDir);
+            return $this->processExtracted($extractDir, $userId);
         } finally {
             $this->removeDirectory($extractDir);
         }
@@ -71,7 +71,7 @@ class TakeoutIngestService
     /**
      * @return array{locations: list<PhotoLocation>, totalCandidates: int, capped: bool}
      */
-    private function processExtracted(string $dir): array
+    private function processExtracted(string $dir, int $userId): array
     {
         $jsonFiles = $this->findJsonFiles($dir);
         $totalCandidates = count($jsonFiles);
@@ -94,7 +94,7 @@ class TakeoutIngestService
             }
 
             $sourceItemId = basename($mediaPath);
-            $thumbnailPath = $this->thumbnailGenerator?->generate($mediaPath, $sourceItemId);
+            $thumbnailPath = $this->thumbnailGenerator?->generate($mediaPath, $sourceItemId, $userId);
 
             $locations[] = new PhotoLocation($sourceItemId, $parsed->lat, $parsed->lng, $parsed->takenAt, $thumbnailPath);
         }

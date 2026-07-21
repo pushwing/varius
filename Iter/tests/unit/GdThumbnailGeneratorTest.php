@@ -30,11 +30,26 @@ final class GdThumbnailGeneratorTest extends CIUnitTestCase
                 unlink($file);
             }
         }
-        if (is_dir($this->outputDir)) {
-            array_map('unlink', glob($this->outputDir . '/*') ?: []);
-            rmdir($this->outputDir);
-        }
+        $this->removeDirectory($this->outputDir);
         parent::tearDown();
+    }
+
+    private function removeDirectory(string $dir): void
+    {
+        if (! is_dir($dir)) {
+            return;
+        }
+
+        foreach (scandir($dir) ?: [] as $entry) {
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
+
+            $path = $dir . '/' . $entry;
+            is_dir($path) ? $this->removeDirectory($path) : unlink($path);
+        }
+
+        rmdir($dir);
     }
 
     /**
@@ -77,7 +92,7 @@ final class GdThumbnailGeneratorTest extends CIUnitTestCase
     {
         $source = $this->makeJpegFixture(1200, 600); // 2:1
 
-        $path = (new GdThumbnailGenerator($this->outputDir))->generate($source, 'media-1');
+        $path = (new GdThumbnailGenerator($this->outputDir))->generate($source, 'media-1', 1);
 
         $this->assertNotNull($path);
         $this->assertFileExists($path);
@@ -91,7 +106,7 @@ final class GdThumbnailGeneratorTest extends CIUnitTestCase
     {
         $source = $this->makeJpegFixture(150, 100);
 
-        $path = (new GdThumbnailGenerator($this->outputDir))->generate($source, 'media-2');
+        $path = (new GdThumbnailGenerator($this->outputDir))->generate($source, 'media-2', 1);
 
         $this->assertNotNull($path);
         [$width] = getimagesize($path);
@@ -104,7 +119,7 @@ final class GdThumbnailGeneratorTest extends CIUnitTestCase
         file_put_contents($path, 'not an image');
         $this->tempFiles[] = $path;
 
-        $result = (new GdThumbnailGenerator($this->outputDir))->generate($path, 'media-3');
+        $result = (new GdThumbnailGenerator($this->outputDir))->generate($path, 'media-3', 1);
 
         $this->assertNull($result);
     }
@@ -113,7 +128,7 @@ final class GdThumbnailGeneratorTest extends CIUnitTestCase
     {
         $source = $this->makeJpegFixtureWithOrientation(40, 60, 6);
 
-        $path = (new GdThumbnailGenerator($this->outputDir))->generate($source, 'media-o6');
+        $path = (new GdThumbnailGenerator($this->outputDir))->generate($source, 'media-o6', 1);
 
         $this->assertNotNull($path);
         [$width, $height] = getimagesize($path);
@@ -125,7 +140,7 @@ final class GdThumbnailGeneratorTest extends CIUnitTestCase
     {
         $source = $this->makeJpegFixtureWithOrientation(40, 60, 8);
 
-        $path = (new GdThumbnailGenerator($this->outputDir))->generate($source, 'media-o8');
+        $path = (new GdThumbnailGenerator($this->outputDir))->generate($source, 'media-o8', 1);
 
         $this->assertNotNull($path);
         [$width, $height] = getimagesize($path);
@@ -137,7 +152,7 @@ final class GdThumbnailGeneratorTest extends CIUnitTestCase
     {
         $source = $this->makeJpegFixtureWithOrientation(40, 60, 1);
 
-        $path = (new GdThumbnailGenerator($this->outputDir))->generate($source, 'media-o1');
+        $path = (new GdThumbnailGenerator($this->outputDir))->generate($source, 'media-o1', 1);
 
         $this->assertNotNull($path);
         [$width, $height] = getimagesize($path);
@@ -149,10 +164,41 @@ final class GdThumbnailGeneratorTest extends CIUnitTestCase
     {
         $source = $this->makeJpegFixture(400, 400);
 
-        $path = (new GdThumbnailGenerator($this->outputDir))->generate($source, 'weird/id:1');
+        $path = (new GdThumbnailGenerator($this->outputDir))->generate($source, 'weird/id:1', 1);
 
         $this->assertNotNull($path);
         // 예약문자가 섞인 media_item_id 도 안전한 파일명으로 정리돼야 한다.
         $this->assertMatchesRegularExpression('/^[A-Za-z0-9_.-]+$/', basename($path));
+    }
+
+    public function testOutputPathIsNamespacedByUserId(): void
+    {
+        $source = $this->makeJpegFixture(400, 400);
+
+        $path = (new GdThumbnailGenerator($this->outputDir))->generate($source, 'IMG_0001.JPG', 7);
+
+        $this->assertNotNull($path);
+        $this->assertSame($this->outputDir . '/7/IMG_0001.JPG.jpg', $path);
+    }
+
+    public function testDifferentUsersWithSameSourceItemIdDoNotOverwriteEachOther(): void
+    {
+        // 흔한 카메라 기본 파일명(IMG_0001.JPG)이 사용자 간 충돌하는 상황 재현.
+        $sourceA = $this->makeJpegFixture(400, 400);
+        $sourceB = $this->makeJpegFixture(200, 200);
+
+        $generator = new GdThumbnailGenerator($this->outputDir);
+        $pathA = $generator->generate($sourceA, 'IMG_0001.JPG', 1);
+        $pathB = $generator->generate($sourceB, 'IMG_0001.JPG', 2);
+
+        $this->assertNotNull($pathA);
+        $this->assertNotNull($pathB);
+        $this->assertNotSame($pathA, $pathB);
+
+        // 사용자 A의 썸네일이 사용자 B의 업로드로 덮어써지지 않아야 한다.
+        [$widthA] = getimagesize($pathA);
+        [$widthB] = getimagesize($pathB);
+        $this->assertSame(300, $widthA);
+        $this->assertSame(200, $widthB);
     }
 }
