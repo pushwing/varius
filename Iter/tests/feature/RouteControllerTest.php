@@ -72,8 +72,8 @@ final class RouteControllerTest extends CIUnitTestCase
 
     public function testMapPageIncludesLoggedInNav(): void
     {
-        // 로그인 후 상단 메뉴(홈·지도 보기·로그아웃)는 홈뿐 아니라 지도 페이지에서도
-        // 동일하게 보여야 한다.
+        // 로그인 후 상단 메뉴(사진 가져오기·지도 보기·로그아웃)는 업로드 페이지뿐 아니라
+        // 지도 페이지에서도 동일하게 보여야 한다.
         $userId = (new UserModel())->upsertByGoogleSub('sub-map-nav', 'mapnav@example.com', 'MapNav');
 
         $result = $this->withSession(['user_id' => $userId])->get('map');

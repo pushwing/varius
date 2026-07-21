@@ -3,13 +3,12 @@
 declare(strict_types=1);
 
 /**
- * 홈 화면 — 비로그인 시 랜딩, 로그인 시 상단 메뉴 + Takeout zip 업로드 폼.
+ * 사진 가져오기 화면 — Takeout zip 업로드 폼(로그인 사용자 전용, GET /upload).
  *
- * @var int|null $userId    로그인 사용자 id(비로그인 시 null)
- * @var string   $loginUrl
- * @var string   $logoutUrl
- * @var string   $mapUrl
- * @var string   $uploadUrl
+ * @var string $loginUrl
+ * @var string $logoutUrl
+ * @var string $mapUrl
+ * @var string $uploadUrl
  */
 ?>
 <!DOCTYPE html>
@@ -17,10 +16,7 @@ declare(strict_types=1);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Google Takeout으로 내보낸 사진의 GPS·촬영 시각을 추출해 날짜별 이동 동선을 지도 위에 시각화하는 서비스입니다.">
-    <meta property="og:site_name" content="Iter">
-    <meta property="og:image" content="/assets/logo-mark-512.png">
-    <title>Iter</title>
+    <title>사진 가져오기 — Iter</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
@@ -39,8 +35,6 @@ declare(strict_types=1);
         .btn-block { display: block; width: 100%; box-sizing: border-box; }
         .btn-secondary { background: #fff; color: #1a73e8; border-color: #c7d2e0; }
         .btn-secondary:hover { background: #f0f4ff; border-color: #1a73e8; }
-        .legal-footer { margin-top: 24px; font-size: 13px; }
-        .legal-footer a { color: #777; }
         .help { font-size: 13px; color: #666; text-align: left; line-height: 1.6; }
         .help a { color: #1a73e8; }
         .sr-only {
@@ -48,7 +42,6 @@ declare(strict_types=1);
             overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
         }
 
-        /* 로그인 후 zip 업로드 카드 */
         .upload-card {
             margin-top: 24px; background: #fff; border: 1px solid #eee; border-radius: 14px;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); padding: 28px 24px; text-align: left;
@@ -85,74 +78,10 @@ declare(strict_types=1);
         .error-box { background: #fdecea; color: #c0392b; }
         .status-box[hidden], .error-box[hidden] { display: none; }
         .status-box .action, .error-box .action { margin-top: 10px; }
-
-        main.landing { max-width: 560px; }
-        .landing .logo { height: 40px; margin-bottom: 16px; }
-        .landing .lead { font-size: 16px; color: #444; margin-bottom: 8px; }
-        .landing .sub { font-size: 14px; color: #777; margin-bottom: 32px; }
-        .landing .btn { padding: 12px 28px; font-size: 16px; }
-        .steps {
-            list-style: none; margin: 32px 0; padding: 0;
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; text-align: left;
-        }
-        .steps li { background: #f7f8fa; border-radius: 10px; padding: 16px; }
-        .steps .num {
-            display: inline-flex; align-items: center; justify-content: center;
-            width: 22px; height: 22px; border-radius: 50%;
-            background: #1a73e8; color: #fff; font-size: 12px; font-weight: 700;
-            margin-bottom: 8px;
-        }
-        .steps .title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
-        .steps .desc { font-size: 13px; color: #666; line-height: 1.5; }
-        .privacy-note {
-            margin-top: 28px; padding: 14px 16px; border-radius: 10px;
-            background: #eef4ff; color: #3a5a9c; font-size: 13px; text-align: left; line-height: 1.6;
-        }
-        @media (max-width: 520px) {
-            .steps { grid-template-columns: 1fr; }
-        }
     </style>
 </head>
 <body>
-<?php if ($userId === null): ?>
-    <main class="landing">
-        <img class="logo" src="/assets/logo-wordmark.png" alt="Iter">
-        <h1 class="sr-only">Iter</h1>
-        <p class="lead">내가 찍은 사진 속 GPS로, 여행의 동선을 지도 위에 그려드립니다.</p>
-        <p class="sub">Google Takeout에서 내보낸 사진 zip을 업로드하면, 언제 어디를 다녀왔는지 날짜별 경로로 한눈에 확인할 수 있어요.</p>
-
-        <ul class="steps">
-            <li>
-                <span class="num">1</span>
-                <div class="title">Takeout 내보내기</div>
-                <div class="desc">Google 계정에서 사진(Google Photos)만 선택해 zip으로 내보냅니다.</div>
-            </li>
-            <li>
-                <span class="num">2</span>
-                <div class="title">zip 업로드</div>
-                <div class="desc">받은 zip 파일을 그대로 업로드하면 위치·시간을 자동으로 읽어옵니다.</div>
-            </li>
-            <li>
-                <span class="num">3</span>
-                <div class="title">동선 확인</div>
-                <div class="desc">날짜별 색으로 구분된 마커와 경로선으로 지도 위에서 동선을 확인합니다.</div>
-            </li>
-        </ul>
-
-        <a class="btn" href="<?= esc($loginUrl, 'attr') ?>">Google로 로그인</a>
-
-        <p class="privacy-note">
-            업로드된 zip은 위치·시각 정보 추출이 끝나는 즉시 서버에서 삭제됩니다.
-            원본 사진 파일은 저장하지 않습니다.
-        </p>
-
-        <p class="legal-footer">
-            <a href="/privacy-policy.html">개인정보처리방침</a> ·
-            <a href="/terms-of-service.html">서비스 이용약관</a>
-        </p>
-    </main>
-<?php else: ?>
-    <?= view('partials/nav', ['mapUrl' => $mapUrl, 'logoutUrl' => $logoutUrl]) ?>
+    <?= view('partials/nav', ['uploadUrl' => $uploadUrl, 'mapUrl' => $mapUrl, 'logoutUrl' => $logoutUrl]) ?>
     <main id="takeout-flow">
         <div class="upload-card">
             <h1>사진 가져오기</h1>
@@ -303,6 +232,5 @@ declare(strict_types=1);
             }
         })();
     </script>
-<?php endif; ?>
 </body>
 </html>
