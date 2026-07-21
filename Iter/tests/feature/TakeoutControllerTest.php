@@ -46,6 +46,33 @@ final class TakeoutControllerTest extends CIUnitTestCase
         $result->assertStatus(422);
     }
 
+    public function testUploadRejectsFileExceedingServerIniLimitWithClear413(): void
+    {
+        $userId = (new UserModel())->upsertByGoogleSub('sub-takeout-3', 't3@example.com', 'T3');
+
+        // PHP 가 upload_max_filesize 를 초과한 업로드를 감지하면 tmp_name 없이
+        // error=UPLOAD_ERR_INI_SIZE 로 $_FILES 를 채운다 — 이 상태를 재현한다.
+        service('superglobals')->setFilesArray([
+            'file' => [
+                'name' => 'takeout.zip',
+                'type' => '',
+                'tmp_name' => '',
+                'error' => UPLOAD_ERR_INI_SIZE,
+                'size' => 0,
+            ],
+        ]);
+
+        try {
+            $result = $this->withSession(['user_id' => $userId])->post('takeout/upload');
+
+            $result->assertStatus(413);
+            $data = json_decode($result->getJSON() ?? '', true);
+            $this->assertStringContainsString('너무 큽니다', $data['error']);
+        } finally {
+            service('superglobals')->setFilesArray([]);
+        }
+    }
+
     public function testUploadSavesLocationsAndReturnsCount(): void
     {
         $userId = (new UserModel())->upsertByGoogleSub('sub-takeout-2', 't2@example.com', 'T2');
