@@ -87,7 +87,7 @@ final class TakeoutControllerTest extends CIUnitTestCase
         $ingest = $this->createMock(TakeoutIngestService::class);
         $ingest->expects($this->once())
             ->method('ingest')
-            ->with('/fake/takeout.zip')
+            ->with('/fake/takeout.zip', $userId)
             ->willReturn([
                 'locations' => [new PhotoLocation('photo1.jpg', 37.5665, 126.9780, '2024-03-15 09:00:00')],
                 'totalCandidates' => 1,

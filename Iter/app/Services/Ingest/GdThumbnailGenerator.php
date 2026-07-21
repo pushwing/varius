@@ -19,7 +19,7 @@ class GdThumbnailGenerator implements ThumbnailGeneratorInterface
     ) {
     }
 
-    public function generate(string $sourcePath, string $mediaItemId): ?string
+    public function generate(string $sourcePath, string $mediaItemId, int $userId): ?string
     {
         $info = @getimagesize($sourcePath);
         if ($info === false) {
@@ -42,8 +42,9 @@ class GdThumbnailGenerator implements ThumbnailGeneratorInterface
         $thumb = imagecreatetruecolor($targetWidth, $targetHeight);
         imagecopyresampled($thumb, $source, 0, 0, 0, 0, $targetWidth, $targetHeight, $srcWidth, $srcHeight);
 
-        $this->ensureOutputDir();
-        $path = $this->outputDir . '/' . $this->safeFileName($mediaItemId) . '.jpg';
+        $userDir = $this->outputDir . '/' . $userId;
+        $this->ensureOutputDir($userDir);
+        $path = $userDir . '/' . $this->safeFileName($mediaItemId) . '.jpg';
 
         $saved = imagejpeg($thumb, $path, 82);
 
@@ -99,10 +100,10 @@ class GdThumbnailGenerator implements ThumbnailGeneratorInterface
         return $safe === '' || $safe === null ? 'unknown' : $safe;
     }
 
-    private function ensureOutputDir(): void
+    private function ensureOutputDir(string $dir): void
     {
-        if (! is_dir($this->outputDir) && ! mkdir($this->outputDir, 0755, true) && ! is_dir($this->outputDir)) {
-            throw new RuntimeException('썸네일 디렉토리를 만들 수 없습니다: ' . $this->outputDir);
+        if (! is_dir($dir) && ! mkdir($dir, 0755, true) && ! is_dir($dir)) {
+            throw new RuntimeException('썸네일 디렉토리를 만들 수 없습니다: ' . $dir);
         }
     }
 }
