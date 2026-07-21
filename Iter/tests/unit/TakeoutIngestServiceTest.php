@@ -82,6 +82,7 @@ final class TakeoutIngestServiceTest extends CIUnitTestCase
 
         $this->assertCount(1, $result['locations']);
         $this->assertSame(1, $result['totalCandidates']);
+        $this->assertFalse($result['capped']);
         $this->assertSame('photo1.jpg', $result['locations'][0]->mediaItemId);
         $this->assertEqualsWithDelta(37.5665, $result['locations'][0]->lat, 0.0001);
         $this->assertSame('2019-07-18 22:55:29', $result['locations'][0]->takenAt);
@@ -159,6 +160,26 @@ final class TakeoutIngestServiceTest extends CIUnitTestCase
 
         $this->assertCount(2, $result['locations']);
         $this->assertSame(3, $result['totalCandidates']);
+        $this->assertTrue($result['capped']);
+    }
+
+    public function testNotCappedWhenSomeCandidatesLackGpsButUnderMaxItems(): void
+    {
+        // 상한(200장)보다 훨씬 적은 3개 중 1개만 GPS 가 없어 제외되는 경우 —
+        // "상한까지만 처리됨"이 아니라 단순히 위치를 못 찾은 것으로 구분돼야 한다.
+        $zipPath = $this->makeZip([
+            'photo1.jpg' => $this->jpegBytes(),
+            'photo1.jpg.json' => $this->geoJson(37.5665, 126.9780, '1563490529'),
+            'photo2.jpg' => $this->jpegBytes(),
+            'photo2.jpg.json' => (string) json_encode(['photoTakenTime' => ['timestamp' => '1563490529']]),
+        ]);
+
+        $service = new TakeoutIngestService(new TakeoutMetadataParser());
+        $result = $service->ingest($zipPath);
+
+        $this->assertCount(1, $result['locations']);
+        $this->assertSame(2, $result['totalCandidates']);
+        $this->assertFalse($result['capped']);
     }
 
     public function testFiltersOutliersByImpossibleSpeed(): void

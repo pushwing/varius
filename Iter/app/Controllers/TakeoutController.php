@@ -87,6 +87,7 @@ class TakeoutController extends BaseController
         return $this->response->setJSON([
             'saved' => $saved,
             'totalCandidates' => $result['totalCandidates'],
+            'capped' => $result['capped'],
         ]);
     }
 }

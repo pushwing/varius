@@ -18,3 +18,4 @@ $routes->post('takeout/upload', 'TakeoutController::upload', ['filter' => 'sessi
 // 동선 시각화
 $routes->get('routes', 'RouteController::data');
 $routes->get('map', 'RouteController::map');
+$routes->get('thumbnails/(:num)', 'RouteController::thumbnail/$1');

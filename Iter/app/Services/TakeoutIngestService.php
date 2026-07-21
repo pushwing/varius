@@ -45,7 +45,7 @@ class TakeoutIngestService
     }
 
     /**
-     * @return array{locations: list<PhotoLocation>, totalCandidates: int}
+     * @return array{locations: list<PhotoLocation>, totalCandidates: int, capped: bool}
      */
     public function ingest(string $zipPath): array
     {
@@ -69,7 +69,7 @@ class TakeoutIngestService
     }
 
     /**
-     * @return array{locations: list<PhotoLocation>, totalCandidates: int}
+     * @return array{locations: list<PhotoLocation>, totalCandidates: int, capped: bool}
      */
     private function processExtracted(string $dir): array
     {
@@ -102,6 +102,7 @@ class TakeoutIngestService
         return [
             'locations' => $this->filterOutliers($locations),
             'totalCandidates' => $totalCandidates,
+            'capped' => $totalCandidates > $this->maxItems,
         ];
     }
 

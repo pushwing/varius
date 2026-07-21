@@ -32,7 +32,7 @@ final class RouteVisualizationService
     /**
      * 사용자의 좌표를 날짜별 동선으로 조합한다.
      *
-     * @return array{dates: list<array{date: string, color: string, points: list<array{lat: float, lng: float, taken_at: string, media_item_id: string}>}>}
+     * @return array{dates: list<array{date: string, color: string, points: list<array{lat: float, lng: float, taken_at: string, media_item_id: string, thumbnail_url: string|null}>}>}
      */
     public function buildForUser(int $userId): array
     {
@@ -52,6 +52,7 @@ final class RouteVisualizationService
                 'lng' => (float) ($row['lng'] ?? 0),
                 'taken_at' => $takenAt,
                 'media_item_id' => (string) ($row['source_item_id'] ?? ''),
+                'thumbnail_url' => empty($row['thumbnail_path']) ? null : '/thumbnails/' . (int) ($row['id'] ?? 0),
             ];
         }
 

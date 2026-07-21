@@ -78,9 +78,16 @@ declare(strict_types=1);
 
                     // 마커 — 각 촬영 지점.
                     group.points.forEach(function (p) {
+                        var popupHtml = '';
+                        if (p.thumbnail_url) {
+                            popupHtml += '<img src="' + p.thumbnail_url + '" alt="" ' +
+                                'style="display:block;max-width:200px;border-radius:6px;margin-bottom:6px;">';
+                        }
+                        popupHtml += group.date + '<br>' + p.taken_at;
+
                         L.circleMarker([p.lat, p.lng], {
                             radius: 6, color: group.color, fillColor: group.color, fillOpacity: 0.9
-                        }).addTo(map).bindPopup(group.date + '<br>' + p.taken_at);
+                        }).addTo(map).bindPopup(popupHtml);
                     });
 
                     var row = document.createElement('div');

@@ -74,4 +74,35 @@ final class PhotoLocationModelTest extends CIUnitTestCase
         $this->assertSame(1, $model->where('source_item_id', 'dup')->countAllResults());
         $this->seeInDatabase('photo_locations', ['source_item_id' => 'fresh']);
     }
+
+    public function testThumbnailPathForReturnsPathWhenOwnedByUser(): void
+    {
+        $model = new PhotoLocationModel();
+        $model->saveMany($this->userId, [
+            new PhotoLocation('media-thumb', 37.5, 127.0, '2024-03-15 09:00:00', '/thumbs/media-thumb.jpg'),
+        ]);
+        $id = (int) $model->where('source_item_id', 'media-thumb')->first()['id'];
+
+        $this->assertSame('/thumbs/media-thumb.jpg', $model->thumbnailPathFor($id, $this->userId));
+    }
+
+    public function testThumbnailPathForReturnsNullWhenOwnedByAnotherUser(): void
+    {
+        $otherUserId = (new UserModel())->upsertByGoogleSub('sub-loc-other', 'other@example.com', 'Other');
+
+        $model = new PhotoLocationModel();
+        $model->saveMany($this->userId, [
+            new PhotoLocation('media-thumb', 37.5, 127.0, '2024-03-15 09:00:00', '/thumbs/media-thumb.jpg'),
+        ]);
+        $id = (int) $model->where('source_item_id', 'media-thumb')->first()['id'];
+
+        $this->assertNull($model->thumbnailPathFor($id, $otherUserId));
+    }
+
+    public function testThumbnailPathForReturnsNullWhenIdDoesNotExist(): void
+    {
+        $model = new PhotoLocationModel();
+
+        $this->assertNull($model->thumbnailPathFor(999999, $this->userId));
+    }
 }

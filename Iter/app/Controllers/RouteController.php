@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Models\PhotoLocationModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
@@ -42,5 +43,28 @@ class RouteController extends BaseController
         helper('url');
 
         return view('map', ['routesUrl' => site_url('routes')]);
+    }
+
+    /**
+     * 좌표 지점의 썸네일 이미지 바이트를 반환한다(GET /thumbnails/{id}).
+     * 요청자 소유의 좌표가 아니면 404(존재 노출 방지 목적으로 403 대신 404).
+     */
+    public function thumbnail(int $id): ResponseInterface
+    {
+        $userId = $this->currentUserId();
+        if ($userId === null) {
+            return $this->response->setStatusCode(401)->setJSON(['error' => '로그인이 필요합니다.']);
+        }
+
+        $path = model(PhotoLocationModel::class)->thumbnailPathFor($id, $userId);
+        if ($path === null || ! is_file($path)) {
+            return $this->response->setStatusCode(404);
+        }
+
+        return $this->response
+            ->removeHeader('Cache-Control')
+            ->setHeader('Cache-Control', 'private, max-age=86400')
+            ->setContentType('image/jpeg')
+            ->setBody((string) file_get_contents($path));
     }
 }

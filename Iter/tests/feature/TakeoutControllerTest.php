@@ -91,6 +91,7 @@ final class TakeoutControllerTest extends CIUnitTestCase
             ->willReturn([
                 'locations' => [new PhotoLocation('photo1.jpg', 37.5665, 126.9780, '2024-03-15 09:00:00')],
                 'totalCandidates' => 1,
+                'capped' => false,
             ]);
         Services::injectMock('takeoutIngest', $ingest);
 
@@ -115,6 +116,7 @@ final class TakeoutControllerTest extends CIUnitTestCase
             $data = json_decode($result->getJSON() ?? '', true);
             $this->assertSame(1, $data['saved']);
             $this->assertSame(1, $data['totalCandidates']);
+            $this->assertFalse($data['capped']);
             $this->seeInDatabase('photo_locations', [
                 'user_id' => $userId,
                 'source_item_id' => 'photo1.jpg',
