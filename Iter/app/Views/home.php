@@ -19,11 +19,18 @@ declare(strict_types=1);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Google Takeout으로 내보낸 사진의 GPS·촬영 시각을 추출해 날짜별 이동 동선을 지도 위에 시각화하는 서비스입니다.">
     <meta property="og:site_name" content="Iter">
+    <meta property="og:image" content="/assets/logo-mark-512.png">
     <title>Iter</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
     <style>
         html, body { margin: 0; font-family: system-ui, sans-serif; color: #222; }
         nav { display: flex; gap: 16px; padding: 12px 20px; border-bottom: 1px solid #ddd; align-items: center; }
         nav a { color: #222; text-decoration: none; font-size: 14px; }
+        nav .brand { display: inline-flex; }
+        nav .brand img { height: 24px; }
         nav a:hover { text-decoration: underline; }
         nav .spacer { flex: 1; }
         nav .legal { display: flex; gap: 16px; }
@@ -41,8 +48,13 @@ declare(strict_types=1);
         .help { margin-top: 16px; font-size: 13px; color: #666; text-align: left; line-height: 1.6; }
         .help a { color: #1a73e8; }
         input[type="file"] { margin-top: 20px; }
+        .sr-only {
+            position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+            overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+        }
 
         main.landing { max-width: 560px; }
+        .landing .logo { height: 40px; margin-bottom: 16px; }
         .landing .lead { font-size: 16px; color: #444; margin-bottom: 8px; }
         .landing .sub { font-size: 14px; color: #777; margin-bottom: 32px; }
         .landing .btn { padding: 12px 28px; font-size: 16px; }
@@ -71,7 +83,8 @@ declare(strict_types=1);
 <body>
 <?php if ($userId === null): ?>
     <main class="landing">
-        <h1>Iter</h1>
+        <img class="logo" src="/assets/logo-wordmark.png" alt="Iter">
+        <h1 class="sr-only">Iter</h1>
         <p class="lead">내가 찍은 사진 속 GPS로, 여행의 동선을 지도 위에 그려드립니다.</p>
         <p class="sub">Google Takeout에서 내보낸 사진 zip을 업로드하면, 언제 어디를 다녀왔는지 날짜별 경로로 한눈에 확인할 수 있어요.</p>
 
@@ -107,6 +120,7 @@ declare(strict_types=1);
     </main>
 <?php else: ?>
     <nav>
+        <a href="/" class="brand"><img src="/assets/logo-mark-512.png" alt="Iter"></a>
         <a href="/">홈</a>
         <a href="<?= esc($mapUrl, 'attr') ?>">지도 보기</a>
         <a href="<?= esc($logoutUrl, 'attr') ?>">로그아웃</a>
