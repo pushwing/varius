@@ -19,6 +19,7 @@
 - 이 저장소(varius 모노레포)는 PR 없이 `feature/* → dev` 직접 머지 정책이다(리뷰 절차만 생략, 브랜치 전략은 유지). 커밋 메시지는 이모지 + Conventional Commits + 한국어.
 - 로컬 개발 환경에 DB(`photo_locations`)·Google OAuth 자격증명이 설정돼 있지 않아(`.env`의 `database.*` 항목이 모두 주석 처리됨, 확인 완료) 실제 `/map` 라우트를 브라우저로 완주하는 건 불가능하다. 대신 스크래치패드에 **fetch를 스텁 처리한 정적 HTML 하네스**를 만들어 매 태스크마다 `app/Views/map.php`와 동일한 `<style>`/`<script>` 내용을 복사해 넣고 브라우저로 시각 확인한다. 하네스는 저장소에 커밋하지 않는다.
 - **(실행 중 갱신)** Task 1 실행 시점에 `origin/dev`에 내비게이션 바 병합분(`feature/persistent-nav`)이 먼저 들어와 있어 `dev`를 병합했다. 그 결과 `app/Views/map.php`에 `<div id="map-container">` 래퍼가 새로 생겼고 `#map`/`#legend`/`#empty`가 그 안에 중첩됐다(상단 `<nav>` 아래로 지도 영역을 배치하기 위함). 인라인 `<script>` 블록 내용은 이 병합으로 전혀 바뀌지 않았다 — Task 2·4·5의 스크립트 관련 old_string/new_string은 원래 계획 그대로 유효하다. **Task 2의 하네스 마크업과 Task 3의 body 마크업 교체 지점만** 이 새 `#map-container` 래퍼를 반영하도록 아래에서 갱신했다.
+- **(실행 중 갱신)** Browser 프리뷰 도구는 프로젝트 폴더 밖의 `file://` 경로(스크래치패드 포함)를 상호작용 불가능한 정적 스냅샷으로만 연다는 게 Task 2 실행 중 확인됐다. 그래서 하네스 파일은 스크래치패드 대신 **프로젝트 루트의 `Iter/_map-harness.html`**(커밋 대상 아님, `git add` 시 이 파일명을 포함하지 않도록 매번 확인)에 두고, `.claude/launch.json`에 정적 서버 설정(`static-harness-serve`, `php -S localhost:8300 -t .`, `.claude/`도 커밋 대상 아님)을 추가해 `preview_start`로 띄운 뒤 `http://localhost:8300/_map-harness.html`로 접속해 확인한다. 이하 태스크의 "하네스" 경로는 모두 이 경로를 가리킨다.
 
 ---
 
@@ -49,7 +50,8 @@ Expected: `feature/map-route-list-sidebar`
 이후 모든 태스크는 이 하네스에 변경 내용을 동기화해 브라우저로 검증한다. 이 태스크에서는 **현재(변경 전) `app/Views/map.php`** 내용을 그대로 옮겨 하네스 자체가 신뢰할 수 있는지부터 확인한다.
 
 **Files:**
-- Create: `/private/tmp/claude-501/-Users-jongwonbyun-claude-works-varius-Iter/f2d46610-8ff3-4ab6-9286-fe50f95ce42f/scratchpad/map-harness.html` (저장소 밖 스크래치패드, 커밋 안 함)
+- Create: `Iter/_map-harness.html`(프로젝트 루트, 커밋 안 함 — Browser 프리뷰 도구가 프로젝트 폴더 밖 파일은 상호작용 불가능한 정적 스냅샷으로만 열기 때문에 스크래치패드 대신 여기 둔다)
+- Create: `.claude/launch.json`에 `static-harness-serve` 설정 추가(이미 커밋 대상 아닌 `.claude/` 디렉터리)
 
 **Interfaces:**
 - Produces: 하네스 HTML — 이후 태스크에서 `<style>`·`<script>` 블록만 교체해가며 재사용한다. 목(mock) 데이터 스키마는 `/routes` API와 동일한 `{ dates: [{ date, color, points, clusters }] }` 형태를 그대로 따른다.
@@ -323,7 +325,7 @@ Expected: `feature/map-route-list-sidebar`
 
 - [ ] **Step 2: 기준선(baseline) 브라우저 확인**
 
-Browser 프리뷰 도구로 `file:///private/tmp/claude-501/-Users-jongwonbyun-claude-works-varius-Iter/f2d46610-8ff3-4ab6-9286-fe50f95ce42f/scratchpad/map-harness.html` 을 연다.
+`preview_start`로 `static-harness-serve`(`php -S localhost:8300 -t .`)를 띄운 뒤 `http://localhost:8300/_map-harness.html` 을 연다.
 
 Expected:
 - 상단에 내비게이션 바(홈·지도 보기·로그아웃 링크)가 보이고, 그 아래 `#map-container`가 나머지 화면 높이를 채운다(지도가 내비게이션 바를 가리거나 그 뒤로 밀려 들어가지 않는다).
