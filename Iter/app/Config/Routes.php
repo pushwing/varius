@@ -20,3 +20,6 @@ $routes->post('takeout/upload', 'TakeoutController::upload', ['filter' => 'sessi
 $routes->get('routes', 'RouteController::data');
 $routes->get('map', 'RouteController::map');
 $routes->get('thumbnails/(:num)', 'RouteController::thumbnail/$1');
+
+// 계정·데이터 삭제
+$routes->post('account/delete', 'AccountController::deleteData', ['filter' => 'sessionRateLimit']);

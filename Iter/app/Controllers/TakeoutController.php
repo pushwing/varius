@@ -35,6 +35,7 @@ class TakeoutController extends BaseController
             'logoutUrl' => site_url('auth/logout'),
             'mapUrl' => site_url('map'),
             'uploadUrl' => site_url('takeout/upload'),
+            'deleteUrl' => site_url('account/delete'),
         ]);
     }
 
@@ -100,6 +101,8 @@ class TakeoutController extends BaseController
             $saved = model(PhotoLocationModel::class)->saveMany($userId, $result['locations']);
         } catch (Throwable $e) {
             log_message('error', 'Takeout 좌표 저장 실패: {msg}', ['msg' => $e->getMessage()]);
+            // 저장이 실패하면 방금 만든 썸네일은 DB 참조가 없는 고아가 되므로 즉시 정리한다.
+            $this->deleteThumbnails($result['locations']);
 
             return $this->response->setStatusCode(500)->setJSON(['error' => '좌표 저장에 실패했습니다.']);
         }
@@ -109,5 +112,19 @@ class TakeoutController extends BaseController
             'totalCandidates' => $result['totalCandidates'],
             'capped' => $result['capped'],
         ]);
+    }
+
+    /**
+     * 좌표에 딸린 썸네일 파일을 삭제한다(저장 실패 롤백용, best-effort).
+     *
+     * @param list<\App\Services\Ingest\PhotoLocation> $locations
+     */
+    private function deleteThumbnails(array $locations): void
+    {
+        foreach ($locations as $location) {
+            if ($location->thumbnailPath !== null && is_file($location->thumbnailPath)) {
+                unlink($location->thumbnailPath);
+            }
+        }
     }
 }

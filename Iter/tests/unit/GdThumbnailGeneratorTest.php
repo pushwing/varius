@@ -174,6 +174,28 @@ final class GdThumbnailGeneratorTest extends CIUnitTestCase
         $this->assertSame($this->outputDir . '/7/IMG_0001.JPG.jpg', $path);
     }
 
+    public function testReturnsNullWhenSourceExceedsPixelCap(): void
+    {
+        // 픽셀 상한을 넘는 초대형 이미지는 디코딩하지 않는다(OOM 예방). 상한을 작게 주입해
+        // 100x100(10,000px)이 5,000px 상한을 넘는 상황을 재현한다.
+        $source = $this->makeJpegFixture(100, 100);
+
+        $result = (new GdThumbnailGenerator($this->outputDir, 5_000))->generate($source, 'huge', 1);
+
+        $this->assertNull($result);
+        $this->assertSame([], glob($this->outputDir . '/1/*') ?: []);
+    }
+
+    public function testGeneratesThumbnailWhenSourceIsWithinPixelCap(): void
+    {
+        $source = $this->makeJpegFixture(100, 100); // 10,000px
+
+        $result = (new GdThumbnailGenerator($this->outputDir, 20_000))->generate($source, 'ok', 1);
+
+        $this->assertNotNull($result);
+        $this->assertFileExists($result);
+    }
+
     public function testDifferentUsersWithSameSourceItemIdDoNotOverwriteEachOther(): void
     {
         // 흔한 카메라 기본 파일명(IMG_0001.JPG)이 사용자 간 충돌하는 상황 재현.

@@ -7,12 +7,15 @@ namespace Config;
 use App\Models\OAuthTokenModel;
 use App\Models\PhotoLocationModel;
 use App\Models\UserModel;
+use App\Services\AccountDeletionService;
+use App\Services\Auth\GoogleTokenRevoker;
 use App\Services\GooglePhotosAuthService;
 use App\Services\Ingest\GdThumbnailGenerator;
 use App\Services\Ingest\NativeUploadedZipHandler;
 use App\Services\Ingest\TakeoutMetadataParser;
 use App\Services\Ingest\UploadedZipHandlerInterface;
 use App\Services\RouteVisualizationService;
+use App\Services\StorageMaintenanceService;
 use App\Services\TakeoutIngestService;
 use CodeIgniter\Config\BaseService;
 use League\OAuth2\Client\Provider\Google;
@@ -59,6 +62,28 @@ class Services extends BaseService
             new OAuthTokenModel(),
             new UserModel(),
             static::encrypter(),
+            60,
+            new GoogleTokenRevoker(static::curlrequest()),
+        );
+    }
+
+    /**
+     * 사용자 데이터·계정 삭제 서비스.
+     *
+     * Google 토큰 폐기 + 좌표·토큰·사용자 트랜잭션 삭제 + 썸네일 디렉터리 삭제를 조립한다.
+     */
+    public static function accountDeletion(bool $getShared = true): AccountDeletionService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('accountDeletion');
+        }
+
+        return new AccountDeletionService(
+            new PhotoLocationModel(),
+            new OAuthTokenModel(),
+            new UserModel(),
+            static::googlePhotosAuth(),
+            WRITEPATH . 'uploads/thumbnails',
         );
     }
 
@@ -102,6 +127,22 @@ class Services extends BaseService
         return new TakeoutIngestService(
             new TakeoutMetadataParser(),
             new GdThumbnailGenerator(WRITEPATH . 'uploads/thumbnails'),
+        );
+    }
+
+    /**
+     * 업로드 잔존물 정리 서비스(iter:cleanup 커맨드에서 사용).
+     */
+    public static function storageMaintenance(bool $getShared = true): StorageMaintenanceService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('storageMaintenance');
+        }
+
+        return new StorageMaintenanceService(
+            new PhotoLocationModel(),
+            WRITEPATH . 'uploads',
+            WRITEPATH . 'uploads/thumbnails',
         );
     }
 }

@@ -45,6 +45,22 @@ class PhotoLocationModel extends Model
     }
 
     /**
+     * DB 에 저장된 모든(비어있지 않은) 썸네일 경로를 반환한다(고아 썸네일 정리용).
+     *
+     * @return list<string>
+     */
+    public function allThumbnailPaths(): array
+    {
+        /** @var list<array<string, mixed>> $rows */
+        $rows = $this->select('thumbnail_path')
+            ->where('thumbnail_path IS NOT NULL')
+            ->where('thumbnail_path !=', '')
+            ->findAll();
+
+        return array_values(array_map(static fn (array $row): string => (string) $row['thumbnail_path'], $rows));
+    }
+
+    /**
      * 좌표 레코드가 이 사용자 소유일 때만 썸네일 경로를 반환한다(다른 사용자 열람 방지).
      */
     public function thumbnailPathFor(int $id, int $userId): ?string

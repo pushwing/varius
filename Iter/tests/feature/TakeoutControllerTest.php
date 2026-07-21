@@ -67,6 +67,9 @@ final class TakeoutControllerTest extends CIUnitTestCase
         $this->assertStringContainsString('id="takeout-form"', $body);
         $this->assertStringContainsString('/takeout/upload', $body);
         $this->assertStringContainsString('takeout.google.com', $body);
+        // 내 데이터 전체 삭제 UI(POST /account/delete)가 함께 노출돼야 한다.
+        $this->assertStringContainsString('id="delete-form"', $body);
+        $this->assertStringContainsString('/account/delete', $body);
     }
 
     public function testUploadRequiresLogin(): void

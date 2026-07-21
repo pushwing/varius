@@ -9,6 +9,7 @@ declare(strict_types=1);
  * @var string $logoutUrl
  * @var string $mapUrl
  * @var string $uploadUrl
+ * @var string $deleteUrl
  */
 ?>
 <!DOCTYPE html>
@@ -78,11 +79,31 @@ declare(strict_types=1);
         .error-box { background: #fdecea; color: #c0392b; }
         .status-box[hidden], .error-box[hidden] { display: none; }
         .status-box .action, .error-box .action { margin-top: 10px; }
+
+        .danger-zone {
+            margin-top: 20px; background: #fff; border: 1px solid #f3d6d3; border-radius: 14px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); padding: 20px 24px; text-align: left;
+        }
+        .danger-zone h2 { font-size: 15px; margin: 0 0 8px; color: #c0392b; }
+        .danger-zone p { margin: 0 0 14px; font-size: 13px; color: #666; line-height: 1.6; }
+        .btn-danger { background: #fff; color: #c0392b; border-color: #e6b8b3; }
+        .btn-danger:hover { background: #fdecea; border-color: #c0392b; }
+        .flash-box {
+            margin-top: 18px; padding: 14px 16px; border-radius: 10px; font-size: 14px; line-height: 1.5;
+        }
+        .flash-message { background: #eaf6ec; color: #1e7e34; }
+        .flash-error { background: #fdecea; color: #c0392b; }
     </style>
 </head>
 <body>
     <?= view('partials/nav', ['uploadUrl' => $uploadUrl, 'mapUrl' => $mapUrl, 'logoutUrl' => $logoutUrl]) ?>
     <main id="takeout-flow">
+        <?php if (session()->getFlashdata('message')) : ?>
+            <div class="flash-box flash-message"><?= esc(session()->getFlashdata('message')) ?></div>
+        <?php endif; ?>
+        <?php if (session()->getFlashdata('error')) : ?>
+            <div class="flash-box flash-error"><?= esc(session()->getFlashdata('error')) ?></div>
+        <?php endif; ?>
         <div class="upload-card">
             <h1>사진 가져오기</h1>
             <p class="lead-text">
@@ -110,6 +131,17 @@ declare(strict_types=1);
                 <li>위치 정보가 없는 사진은 지도에 표시되지 않으며, 업로드는 시간당 일정 횟수로 제한됩니다.</li>
             </ul>
         </div>
+
+        <section class="danger-zone">
+            <h2>내 데이터 삭제</h2>
+            <p>
+                지금까지 업로드해 저장된 GPS 좌표·동선과 썸네일, 그리고 Google 계정 연동 토큰을
+                모두 영구 삭제합니다. 이 작업은 되돌릴 수 없습니다.
+            </p>
+            <form id="delete-form" method="post" action="<?= esc($deleteUrl, 'attr') ?>">
+                <button type="submit" class="btn btn-block btn-danger">내 데이터 전체 삭제</button>
+            </form>
+        </section>
     </main>
 
     <script>
@@ -229,6 +261,15 @@ declare(strict_types=1);
                 errorEl.hidden = true;
                 errorEl.innerHTML = '';
                 setBusy(false);
+            }
+
+            var deleteForm = document.getElementById('delete-form');
+            if (deleteForm) {
+                deleteForm.addEventListener('submit', function (evt) {
+                    if (!window.confirm('저장된 GPS 좌표·동선·썸네일과 Google 연동을 모두 삭제합니다. 되돌릴 수 없습니다. 계속할까요?')) {
+                        evt.preventDefault();
+                    }
+                });
             }
         })();
     </script>

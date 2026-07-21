@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Models\OAuthTokenModel;
 use App\Models\UserModel;
+use App\Services\Auth\TokenRevokerInterface;
 use CodeIgniter\Encryption\EncrypterInterface;
 use CodeIgniter\I18n\Time;
 use League\OAuth2\Client\Provider\Google;
@@ -29,6 +30,7 @@ class GooglePhotosAuthService
         private readonly UserModel $userModel,
         private readonly EncrypterInterface $encrypter,
         private readonly int $expiryMarginSeconds = 60,
+        private readonly ?TokenRevokerInterface $tokenRevoker = null,
     ) {
     }
 
@@ -101,6 +103,32 @@ class GooglePhotosAuthService
         }
 
         $this->tokenModel->upsertByUserId($userId, $data);
+    }
+
+    /**
+     * 사용자의 저장된 토큰을 발급자(Google)에서 폐기한다(계정 삭제 시 오프라인 접근 회수).
+     *
+     * refresh token 폐기는 연결된 access token 까지 함께 무효화한다. 저장된 토큰이 없거나
+     * revoker 가 주입되지 않았으면 아무것도 하지 않는다. 폐기 호출 실패는 예외로 전파한다
+     * (호출측이 best-effort 로 로깅 후 로컬 삭제를 계속 진행).
+     */
+    public function revokeTokens(int $userId): void
+    {
+        if ($this->tokenRevoker === null) {
+            return;
+        }
+
+        $row = $this->tokenModel->findByUserId($userId);
+        if ($row === null) {
+            return;
+        }
+
+        $encrypted = $row['refresh_token_encrypted'] ?? $row['access_token_encrypted'] ?? null;
+        if ($encrypted === null || $encrypted === '') {
+            return;
+        }
+
+        $this->tokenRevoker->revoke($this->decrypt((string) $encrypted));
     }
 
     /**

@@ -14,8 +14,19 @@ class GdThumbnailGenerator implements ThumbnailGeneratorInterface
 {
     private const TARGET_WIDTH = 300;
 
+    /**
+     * 디코딩을 허용하는 원본 이미지의 최대 픽셀 수(약 40MP).
+     *
+     * imagecreatefrom*() 는 원본을 비압축 비트맵으로 메모리에 올리므로(픽셀당 약 4바이트),
+     * 초고해상도 이미지 한 장이 memory_limit 을 넘겨 치명적 오류(OOM)를 낼 수 있다.
+     * 그 경우 요청 자체가 중단돼 압축 해제된 원본이 임시 디렉터리에 잔존하므로,
+     * 상한을 넘는 이미지는 디코딩하지 않고 썸네일을 생략한다(원본은 이후 정리 대상).
+     */
+    private const MAX_SOURCE_PIXELS = 40_000_000;
+
     public function __construct(
         private readonly string $outputDir,
+        private readonly int $maxSourcePixels = self::MAX_SOURCE_PIXELS,
     ) {
     }
 
@@ -27,6 +38,10 @@ class GdThumbnailGenerator implements ThumbnailGeneratorInterface
         }
 
         [$srcWidth, $srcHeight, $type] = $info;
+        if ($srcWidth <= 0 || $srcHeight <= 0 || $srcWidth * $srcHeight > $this->maxSourcePixels) {
+            return null; // 손상됐거나 OOM 위험이 큰 초대형 이미지 — 디코딩하지 않는다.
+        }
+
         $source = $this->readImage($sourcePath, $type);
         if ($source === null) {
             return null;

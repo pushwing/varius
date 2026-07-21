@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Services\Ingest\PhotoLocation;
 use App\Services\Ingest\TakeoutMetadataParser;
 use App\Services\Ingest\ThumbnailGeneratorInterface;
+use App\Support\Filesystem;
 use FilesystemIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -63,7 +64,7 @@ class TakeoutIngestService
 
             return $this->processExtracted($extractDir, $userId);
         } finally {
-            $this->removeDirectory($extractDir);
+            Filesystem::removeDirectory($extractDir);
         }
     }
 
@@ -75,7 +76,8 @@ class TakeoutIngestService
         $jsonFiles = $this->findJsonFiles($dir);
         $totalCandidates = count($jsonFiles);
 
-        $locations = [];
+        $candidates = [];   // 썸네일 없는 좌표 후보(list<PhotoLocation>)
+        $mediaPaths = [];   // source_item_id => 원본 사진 경로(썸네일 생성용)
         foreach (array_slice($jsonFiles, 0, $this->maxItems) as $jsonPath) {
             $mediaPath = $this->mediaPathFor($jsonPath);
             if ($mediaPath === null) {
@@ -93,16 +95,54 @@ class TakeoutIngestService
             }
 
             $sourceItemId = basename($mediaPath);
-            $thumbnailPath = $this->thumbnailGenerator?->generate($mediaPath, $sourceItemId, $userId);
-
-            $locations[] = new PhotoLocation($sourceItemId, $parsed->lat, $parsed->lng, $parsed->takenAt, $thumbnailPath);
+            $candidates[] = new PhotoLocation($sourceItemId, $parsed->lat, $parsed->lng, $parsed->takenAt);
+            $mediaPaths[$sourceItemId] = $mediaPath;
         }
 
+        // 이상치를 먼저 걸러, 지도에 실제로 남는 좌표에 대해서만 썸네일을 만든다.
+        // (필터링돼 사라질 사진의 썸네일이 디스크에 고아로 남는 것을 방지)
+        $kept = $this->filterOutliers($candidates);
+
         return [
-            'locations' => $this->filterOutliers($locations),
+            'locations' => $this->attachThumbnails($kept, $mediaPaths, $userId),
             'totalCandidates' => $totalCandidates,
             'capped' => $totalCandidates > $this->maxItems,
         ];
+    }
+
+    /**
+     * 이상치 필터를 통과한 좌표에 대해서만 썸네일을 생성해 경로를 채운다.
+     *
+     * @param list<PhotoLocation>   $locations
+     * @param array<string, string> $mediaPaths source_item_id => 원본 사진 경로
+     *
+     * @return list<PhotoLocation>
+     */
+    private function attachThumbnails(array $locations, array $mediaPaths, int $userId): array
+    {
+        if ($this->thumbnailGenerator === null) {
+            return $locations;
+        }
+
+        $withThumbnails = [];
+        foreach ($locations as $location) {
+            $mediaPath = $mediaPaths[$location->mediaItemId] ?? null;
+            $thumbnailPath = $mediaPath === null
+                ? null
+                : $this->thumbnailGenerator->generate($mediaPath, $location->mediaItemId, $userId);
+
+            $withThumbnails[] = $thumbnailPath === null
+                ? $location
+                : new PhotoLocation(
+                    $location->mediaItemId,
+                    $location->lat,
+                    $location->lng,
+                    $location->takenAt,
+                    $thumbnailPath,
+                );
+        }
+
+        return $withThumbnails;
     }
 
     /**
@@ -154,24 +194,6 @@ class TakeoutIngestService
         sort($found);
 
         return $found;
-    }
-
-    private function removeDirectory(string $dir): void
-    {
-        if (! is_dir($dir)) {
-            return;
-        }
-
-        $items = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::CHILD_FIRST,
-        );
-
-        foreach ($items as $item) {
-            $item->isDir() ? rmdir($item->getPathname()) : unlink($item->getPathname());
-        }
-
-        rmdir($dir);
     }
 
     /**
