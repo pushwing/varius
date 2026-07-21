@@ -175,7 +175,7 @@ final class TakeoutIngestServiceTest extends CIUnitTestCase
         ]);
 
         $service = new TakeoutIngestService(new TakeoutMetadataParser());
-        $result = $service->ingest($zipPath);
+        $result = $service->ingest($zipPath, 1);
 
         $this->assertCount(1, $result['locations']);
         $this->assertSame(2, $result['totalCandidates']);

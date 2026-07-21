@@ -128,7 +128,7 @@ final class GdThumbnailGeneratorTest extends CIUnitTestCase
     {
         $source = $this->makeJpegFixtureWithOrientation(40, 60, 6);
 
-        $path = (new GdThumbnailGenerator($this->outputDir))->generate($source, 'media-o6');
+        $path = (new GdThumbnailGenerator($this->outputDir))->generate($source, 'media-o6', 1);
 
         $this->assertNotNull($path);
         [$width, $height] = getimagesize($path);
@@ -140,7 +140,7 @@ final class GdThumbnailGeneratorTest extends CIUnitTestCase
     {
         $source = $this->makeJpegFixtureWithOrientation(40, 60, 8);
 
-        $path = (new GdThumbnailGenerator($this->outputDir))->generate($source, 'media-o8');
+        $path = (new GdThumbnailGenerator($this->outputDir))->generate($source, 'media-o8', 1);
 
         $this->assertNotNull($path);
         [$width, $height] = getimagesize($path);
@@ -152,7 +152,7 @@ final class GdThumbnailGeneratorTest extends CIUnitTestCase
     {
         $source = $this->makeJpegFixtureWithOrientation(40, 60, 1);
 
-        $path = (new GdThumbnailGenerator($this->outputDir))->generate($source, 'media-o1');
+        $path = (new GdThumbnailGenerator($this->outputDir))->generate($source, 'media-o1', 1);
 
         $this->assertNotNull($path);
         [$width, $height] = getimagesize($path);
