@@ -14,9 +14,10 @@ interface ThumbnailGeneratorInterface
 {
     /**
      * @param string $sourcePath   원본(임시) 이미지 파일 경로
-     * @param string $mediaItemId  파일명 생성에 쓰이는 식별자
+     * @param string $mediaItemId  파일명 생성에 쓰이는 식별자(사용자당 유니크하지 않을 수 있음 — 예: 카메라 기본 파일명)
+     * @param int    $userId       저장 경로를 사용자별로 네임스페이스하기 위한 소유자 식별자
      *
      * @return string|null 생성된 썸네일 경로, 실패(비이미지 등) 시 null
      */
-    public function generate(string $sourcePath, string $mediaItemId): ?string;
+    public function generate(string $sourcePath, string $mediaItemId, int $userId): ?string;
 }

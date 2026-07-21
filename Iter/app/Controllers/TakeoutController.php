@@ -65,7 +65,7 @@ class TakeoutController extends BaseController
         }
 
         try {
-            $result = service('takeoutIngest')->ingest($zipPath);
+            $result = service('takeoutIngest')->ingest($zipPath, $userId);
         } catch (Throwable $e) {
             log_message('error', 'Takeout 처리 실패: {msg}', ['msg' => $e->getMessage()]);
 

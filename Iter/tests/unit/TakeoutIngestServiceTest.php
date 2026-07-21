@@ -78,7 +78,7 @@ final class TakeoutIngestServiceTest extends CIUnitTestCase
         ]);
 
         $service = new TakeoutIngestService(new TakeoutMetadataParser());
-        $result = $service->ingest($zipPath);
+        $result = $service->ingest($zipPath, 1);
 
         $this->assertCount(1, $result['locations']);
         $this->assertSame(1, $result['totalCandidates']);
@@ -98,7 +98,7 @@ final class TakeoutIngestServiceTest extends CIUnitTestCase
         ]);
 
         $service = new TakeoutIngestService(new TakeoutMetadataParser());
-        $result = $service->ingest($zipPath);
+        $result = $service->ingest($zipPath, 1);
 
         $this->assertCount(1, $result['locations']);
         $this->assertSame(1, $result['totalCandidates']);
@@ -113,7 +113,7 @@ final class TakeoutIngestServiceTest extends CIUnitTestCase
         ]);
 
         $service = new TakeoutIngestService(new TakeoutMetadataParser());
-        $result = $service->ingest($zipPath);
+        $result = $service->ingest($zipPath, 1);
 
         $this->assertSame([], $result['locations']);
         $this->assertSame(1, $result['totalCandidates']);
@@ -126,7 +126,7 @@ final class TakeoutIngestServiceTest extends CIUnitTestCase
         ]);
 
         $service = new TakeoutIngestService(new TakeoutMetadataParser());
-        $result = $service->ingest($zipPath);
+        $result = $service->ingest($zipPath, 1);
 
         $this->assertSame([], $result['locations']);
         $this->assertSame(1, $result['totalCandidates']);
@@ -140,7 +140,7 @@ final class TakeoutIngestServiceTest extends CIUnitTestCase
         ]);
 
         $service = new TakeoutIngestService(new TakeoutMetadataParser());
-        $result = $service->ingest($zipPath);
+        $result = $service->ingest($zipPath, 1);
 
         $this->assertSame([], $result['locations']);
     }
@@ -156,7 +156,7 @@ final class TakeoutIngestServiceTest extends CIUnitTestCase
         $zipPath = $this->makeZip($entries);
 
         $service = new TakeoutIngestService(new TakeoutMetadataParser(), null, 200.0, maxItems: 2);
-        $result = $service->ingest($zipPath);
+        $result = $service->ingest($zipPath, 1);
 
         $this->assertCount(2, $result['locations']);
         $this->assertSame(3, $result['totalCandidates']);
@@ -175,7 +175,7 @@ final class TakeoutIngestServiceTest extends CIUnitTestCase
         ]);
 
         $service = new TakeoutIngestService(new TakeoutMetadataParser());
-        $result = $service->ingest($zipPath);
+        $result = $service->ingest($zipPath, 1);
 
         $this->assertCount(1, $result['locations']);
         $this->assertSame(2, $result['totalCandidates']);
@@ -193,7 +193,7 @@ final class TakeoutIngestServiceTest extends CIUnitTestCase
         ]);
 
         $service = new TakeoutIngestService(new TakeoutMetadataParser());
-        $result = $service->ingest($zipPath);
+        $result = $service->ingest($zipPath, 1);
 
         $this->assertCount(1, $result['locations']);
         $this->assertSame('seoul.jpg', $result['locations'][0]->mediaItemId);
@@ -209,13 +209,39 @@ final class TakeoutIngestServiceTest extends CIUnitTestCase
         $thumbnailer = $this->createMock(ThumbnailGeneratorInterface::class);
         $thumbnailer->expects($this->once())
             ->method('generate')
-            ->with($this->stringContains('photo1.jpg'), 'photo1.jpg')
-            ->willReturn('/thumbs/photo1.jpg');
+            ->with($this->stringContains('photo1.jpg'), 'photo1.jpg', 42)
+            ->willReturn('/thumbs/42/photo1.jpg');
 
         $service = new TakeoutIngestService(new TakeoutMetadataParser(), $thumbnailer);
-        $result = $service->ingest($zipPath);
+        $result = $service->ingest($zipPath, 42);
 
-        $this->assertSame('/thumbs/photo1.jpg', $result['locations'][0]->thumbnailPath);
+        $this->assertSame('/thumbs/42/photo1.jpg', $result['locations'][0]->thumbnailPath);
+    }
+
+    public function testPassesUserIdToThumbnailGeneratorSoDifferentUsersDoNotShareAPath(): void
+    {
+        // 흔한 카메라 기본 파일명(source_item_id) 충돌 시에도 사용자별로 다른 경로에
+        // 저장되도록, ingest() 는 호출자가 넘긴 userId 를 썸네일 생성기에 그대로 전달해야 한다.
+        $zipPathUserA = $this->makeZip([
+            'IMG_0001.JPG' => $this->jpegBytes(),
+            'IMG_0001.JPG.json' => $this->geoJson(37.5665, 126.9780),
+        ]);
+        $zipPathUserB = $this->makeZip([
+            'IMG_0001.JPG' => $this->jpegBytes(),
+            'IMG_0001.JPG.json' => $this->geoJson(35.1796, 129.0756),
+        ]);
+
+        $thumbnailer = $this->createMock(ThumbnailGeneratorInterface::class);
+        $thumbnailer->expects($this->exactly(2))
+            ->method('generate')
+            ->willReturnCallback(fn (string $sourcePath, string $mediaItemId, int $userId): string => "/thumbs/{$userId}/{$mediaItemId}");
+
+        $service = new TakeoutIngestService(new TakeoutMetadataParser(), $thumbnailer);
+        $resultA = $service->ingest($zipPathUserA, 1);
+        $resultB = $service->ingest($zipPathUserB, 2);
+
+        $this->assertSame('/thumbs/1/IMG_0001.JPG', $resultA['locations'][0]->thumbnailPath);
+        $this->assertSame('/thumbs/2/IMG_0001.JPG', $resultB['locations'][0]->thumbnailPath);
     }
 
     public function testExtractedTempDirectoryIsRemovedAfterIngest(): void
@@ -226,7 +252,7 @@ final class TakeoutIngestServiceTest extends CIUnitTestCase
         ]);
 
         $service = new TakeoutIngestService(new TakeoutMetadataParser());
-        $service->ingest($zipPath);
+        $service->ingest($zipPath, 1);
 
         $leftover = glob(WRITEPATH . 'uploads/takeout_*');
         $this->assertSame([], $leftover, '압축 해제 임시 디렉터리가 정리되지 않았습니다.');

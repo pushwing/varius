@@ -19,18 +19,22 @@ class GdThumbnailGenerator implements ThumbnailGeneratorInterface
     ) {
     }
 
-    public function generate(string $sourcePath, string $mediaItemId): ?string
+    public function generate(string $sourcePath, string $mediaItemId, int $userId): ?string
     {
         $info = @getimagesize($sourcePath);
         if ($info === false) {
             return null;
         }
 
-        [$srcWidth, $srcHeight, $type] = $info;
+        [, , $type] = $info;
         $source = $this->readImage($sourcePath, $type);
         if ($source === null) {
             return null;
         }
+
+        $source = $this->applyExifOrientation($source, $sourcePath, $type);
+        $srcWidth = imagesx($source);
+        $srcHeight = imagesy($source);
 
         $targetWidth = min(self::TARGET_WIDTH, $srcWidth); // 확대하지 않는다.
         $targetHeight = (int) round($srcHeight * ($targetWidth / $srcWidth));
@@ -38,12 +42,38 @@ class GdThumbnailGenerator implements ThumbnailGeneratorInterface
         $thumb = imagecreatetruecolor($targetWidth, $targetHeight);
         imagecopyresampled($thumb, $source, 0, 0, 0, 0, $targetWidth, $targetHeight, $srcWidth, $srcHeight);
 
-        $this->ensureOutputDir();
-        $path = $this->outputDir . '/' . $this->safeFileName($mediaItemId) . '.jpg';
+        $userDir = $this->outputDir . '/' . $userId;
+        $this->ensureOutputDir($userDir);
+        $path = $userDir . '/' . $this->safeFileName($mediaItemId) . '.jpg';
 
         $saved = imagejpeg($thumb, $path, 82);
 
         return $saved ? $path : null;
+    }
+
+    /**
+     * EXIF Orientation 태그에 맞춰 회전을 보정한다(휴대폰 사진은 픽셀은 그대로 두고
+     * 태그로만 회전 방향을 표기하는 경우가 많아, 보정하지 않으면 썸네일이 옆으로 눕거나
+     * 뒤집혀 보인다). 카메라·폰이 실제로 내보내는 1·3·6·8 만 다룬다(2·4·5·7 은 미러링
+     * 조합으로 실사용 사례가 사실상 없어 범위에서 제외).
+     */
+    private function applyExifOrientation(\GdImage $image, string $sourcePath, int $type): \GdImage
+    {
+        if ($type !== IMAGETYPE_JPEG) {
+            return $image;
+        }
+
+        $exif = @exif_read_data($sourcePath);
+        $orientation = is_array($exif) && is_numeric($exif['Orientation'] ?? null) ? (int) $exif['Orientation'] : 1;
+
+        $rotated = match ($orientation) {
+            3 => imagerotate($image, 180, 0),
+            6 => imagerotate($image, -90, 0),
+            8 => imagerotate($image, 90, 0),
+            default => $image,
+        };
+
+        return $rotated instanceof \GdImage ? $rotated : $image;
     }
 
     /**
@@ -70,10 +100,10 @@ class GdThumbnailGenerator implements ThumbnailGeneratorInterface
         return $safe === '' || $safe === null ? 'unknown' : $safe;
     }
 
-    private function ensureOutputDir(): void
+    private function ensureOutputDir(string $dir): void
     {
-        if (! is_dir($this->outputDir) && ! mkdir($this->outputDir, 0755, true) && ! is_dir($this->outputDir)) {
-            throw new RuntimeException('썸네일 디렉토리를 만들 수 없습니다: ' . $this->outputDir);
+        if (! is_dir($dir) && ! mkdir($dir, 0755, true) && ! is_dir($dir)) {
+            throw new RuntimeException('썸네일 디렉토리를 만들 수 없습니다: ' . $dir);
         }
     }
 }
