@@ -120,6 +120,7 @@ declare(strict_types=1);
             }).addTo(map);
 
             var clusterRegistry = []; // 인덱스 → { date, photos } — 팝업의 "더보기" 클릭 시 조회용.
+            var dateIndex = {}; // 날짜(YYYY-MM-DD) → { latlngs, firstClusterIndex } — 사이드바 일자 클릭 시 조회용.
 
             var layerEl = document.getElementById('photo-layer');
             var layerTitleEl = document.getElementById('photo-layer-title');
@@ -145,6 +146,7 @@ declare(strict_types=1);
                 if (!dates.length) { showEmpty(); return; }
 
                 var bounds = [];
+                var dateOrder = []; // 화면에 보여줄 날짜 순서(원본 오름차순 유지) — 사이드바 정렬용.
 
                 dates.forEach(function (group) {
                     var latlngs = group.points.map(function (p) { return [p.lat, p.lng]; });
@@ -155,10 +157,13 @@ declare(strict_types=1);
                         L.polyline(latlngs, { color: group.color, weight: 3, opacity: 0.8 }).addTo(map);
                     }
 
+                    var firstClusterIndex = null;
+
                     // 마커 — 같은 장소(GPS 오차 감안 약 30m 이내) 사진은 클러스터 하나로 묶인다.
                     (group.clusters || []).forEach(function (c) {
                         var clusterIndex = clusterRegistry.length;
                         clusterRegistry.push({ date: group.date, photos: c.photos });
+                        if (firstClusterIndex === null) { firstClusterIndex = clusterIndex; }
 
                         var popupHtml = '<div style="font-size:12px;color:#333;">' +
                             group.date + ' · ' + c.photos.length + '장</div>' +
@@ -168,9 +173,66 @@ declare(strict_types=1);
                             radius: 6, color: group.color, fillColor: group.color, fillOpacity: 0.9
                         }).addTo(map).bindPopup(popupHtml, { maxWidth: 180 });
                     });
+
+                    dateIndex[group.date] = { latlngs: latlngs, firstClusterIndex: firstClusterIndex };
+                    dateOrder.push({ date: group.date, count: group.points.length });
                 });
 
+                renderSidebar(dateOrder);
                 if (bounds.length) { map.fitBounds(bounds, { padding: [40, 40] }); }
+            }
+
+            function renderSidebar(dateOrder) {
+                var monthMap = {}; // 'YYYY-MM' → list<{date, count}>
+                var monthOrder = [];
+
+                dateOrder.forEach(function (entry) {
+                    var monthKey = entry.date.slice(0, 7);
+                    if (!monthMap[monthKey]) {
+                        monthMap[monthKey] = [];
+                        monthOrder.push(monthKey);
+                    }
+                    monthMap[monthKey].push(entry);
+                });
+
+                var mostRecentMonthKey = monthOrder[monthOrder.length - 1];
+                var bodyEl = document.getElementById('route-sidebar-body');
+                bodyEl.innerHTML = '';
+
+                monthOrder.slice().reverse().forEach(function (monthKey) {
+                    var days = monthMap[monthKey].slice().reverse();
+                    var parts = monthKey.split('-');
+                    var label = parts[0] + '년 ' + Number(parts[1]) + '월';
+
+                    var groupEl = document.createElement('div');
+                    groupEl.className = 'month-group';
+
+                    var headerEl = document.createElement('button');
+                    headerEl.type = 'button';
+                    headerEl.className = 'month-header';
+                    headerEl.dataset.monthKey = monthKey;
+                    headerEl.textContent = label + ' (' + days.length + '일)';
+
+                    var listEl = document.createElement('div');
+                    listEl.className = 'day-list';
+                    listEl.hidden = monthKey !== mostRecentMonthKey;
+
+                    days.forEach(function (entry) {
+                        var monthNum = Number(entry.date.slice(5, 7));
+                        var dayNum = Number(entry.date.slice(8, 10));
+
+                        var itemEl = document.createElement('button');
+                        itemEl.type = 'button';
+                        itemEl.className = 'day-item';
+                        itemEl.dataset.date = entry.date;
+                        itemEl.textContent = monthNum + '월 ' + dayNum + '일 (' + entry.count + '장)';
+                        listEl.appendChild(itemEl);
+                    });
+
+                    groupEl.appendChild(headerEl);
+                    groupEl.appendChild(listEl);
+                    bodyEl.appendChild(groupEl);
+                });
             }
 
             function openLayer(clusterIndex) {
