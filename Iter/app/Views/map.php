@@ -34,10 +34,15 @@ declare(strict_types=1);
         #route-sidebar {
             position: absolute; top: 0; left: 0; bottom: 0; width: 280px; z-index: 1000;
             background: #fff; box-shadow: 2px 0 6px rgba(0, 0, 0, 0.15);
-            overflow-y: auto; font-size: 13px;
+            font-size: 13px; display: flex; flex-direction: column;
         }
         #route-sidebar-header {
             padding: 14px 16px; font-weight: 600; font-size: 14px; border-bottom: 1px solid #eee;
+        }
+        #route-sidebar-body { flex: 1; overflow-y: auto; }
+        #route-sidebar-footer {
+            padding: 10px 16px; font-size: 12px; color: #777;
+            border-top: 1px solid #eee; background: #fafafa;
         }
         .month-group { border-bottom: 1px solid #eee; }
         .month-header {
@@ -91,6 +96,7 @@ declare(strict_types=1);
         <div id="route-sidebar">
             <div id="route-sidebar-header">동선 목록</div>
             <div id="route-sidebar-body"></div>
+            <div id="route-sidebar-footer">날짜를 클릭하면 그 날의 첫 번째 장소로 이동합니다.</div>
         </div>
         <div id="map" data-routes-url="<?= esc($routesUrl, 'attr') ?>"></div>
         <div id="empty">표시할 동선이 없습니다. 사진을 선택해 좌표를 적재하세요.</div>
@@ -193,8 +199,11 @@ declare(strict_types=1);
                         clusterRegistry.push(registryEntry);
                         if (firstClusterIndex === null) { firstClusterIndex = clusterIndex; }
 
+                        // 클러스터의 첫 사진 촬영 시각(HH:MM) — 같은 장소에서 찍힌 사진들의 대표 시각으로 보여준다.
+                        var firstPhotoTime = c.photos.length ? c.photos[0].taken_at.slice(11, 16) : '';
+
                         var popupHtml = '<div style="font-size:12px;color:#333;">' +
-                            group.date + ' · ' + c.photos.length + '장</div>' +
+                            group.date + (firstPhotoTime ? ' ' + firstPhotoTime : '') + ' · ' + c.photos.length + '장</div>' +
                             '<button type="button" class="popup-more-btn" data-cluster-index="' + clusterIndex + '">더보기</button>';
 
                         registryEntry.marker = L.circleMarker([c.lat, c.lng], {
