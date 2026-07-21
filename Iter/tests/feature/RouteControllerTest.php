@@ -70,6 +70,22 @@ final class RouteControllerTest extends CIUnitTestCase
         $this->assertStringContainsString('leaflet', $body);
     }
 
+    public function testMapPageIncludesLoggedInNav(): void
+    {
+        // 로그인 후 상단 메뉴(홈·지도 보기·로그아웃)는 홈뿐 아니라 지도 페이지에서도
+        // 동일하게 보여야 한다.
+        $userId = (new UserModel())->upsertByGoogleSub('sub-map-nav', 'mapnav@example.com', 'MapNav');
+
+        $result = $this->withSession(['user_id' => $userId])->get('map');
+
+        $result->assertStatus(200);
+        $body = html_entity_decode((string) $result->getBody(), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $this->assertStringContainsString('class="brand"', $body);
+        $this->assertStringContainsString('지도 보기', $body);
+        $this->assertStringContainsString('로그아웃', $body);
+        $this->assertStringContainsString('/auth/logout', $body);
+    }
+
     public function testThumbnailRequiresLogin(): void
     {
         $result = $this->get('thumbnails/1');
