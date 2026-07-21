@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Models\PhotoLocationModel;
+use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 use Throwable;
 
@@ -17,6 +18,25 @@ use Throwable;
 class TakeoutController extends BaseController
 {
     private const MAX_UPLOAD_BYTES = 500 * 1024 * 1024; // 500MB
+
+    /**
+     * 사진 가져오기(업로드) 화면 — 로그인 사용자 전용(GET /upload).
+     */
+    public function form(): ResponseInterface|RedirectResponse|string
+    {
+        if ($this->currentUserId() === null) {
+            return redirect()->to('/auth/google');
+        }
+
+        helper('url');
+
+        return view('upload', [
+            'loginUrl' => site_url('auth/google'),
+            'logoutUrl' => site_url('auth/logout'),
+            'mapUrl' => site_url('map'),
+            'uploadUrl' => site_url('takeout/upload'),
+        ]);
+    }
 
     /**
      * zip 업로드 — 압축 해제해 동선 좌표를 추출·저장한다(POST /takeout/upload).

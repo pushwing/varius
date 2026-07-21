@@ -44,6 +44,7 @@ class RouteController extends BaseController
 
         return view('map', [
             'routesUrl' => site_url('routes'),
+            'uploadUrl' => site_url('upload'),
             'mapUrl' => site_url('map'),
             'logoutUrl' => site_url('auth/logout'),
         ]);

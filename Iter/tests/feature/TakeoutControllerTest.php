@@ -13,6 +13,7 @@ use CodeIgniter\Config\Factories;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
 use CodeIgniter\Test\FeatureTestTrait;
+use CodeIgniter\Test\TestResponse;
 use Config\Services;
 use RuntimeException;
 
@@ -31,6 +32,41 @@ final class TakeoutControllerTest extends CIUnitTestCase
     {
         parent::setUp();
         cache()->clean(); // 레이트 리밋 throttler 상태 초기화(테스트 격리)
+    }
+
+    /**
+     * FeatureTestTrait 로 시뮬레이션한 요청은 (CI4 testing 환경의 debug 뷰 래핑 경로 특성상)
+     * 응답 본문의 비ASCII 문자가 HTML 숫자 엔티티로 나올 수 있다 — 실제 브라우저·spark serve
+     * 응답에는 나타나지 않는 테스트 하네스 한정 현상(실사용자 영향 없음).
+     * 엔티티 디코딩 후 비교해 두 표현 모두 견고하게 통과시킨다.
+     */
+    private function decodedBody(TestResponse $result): string
+    {
+        return html_entity_decode((string) $result->getBody(), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
+
+    public function testFormRedirectsWhenNotLoggedIn(): void
+    {
+        $result = $this->get('upload');
+
+        $result->assertRedirect();
+    }
+
+    public function testFormRendersUploadPageWhenLoggedIn(): void
+    {
+        $userId = (new UserModel())->upsertByGoogleSub('sub-takeout-form', 'form@example.com', 'Form');
+
+        $result = $this->withSession(['user_id' => $userId])->get('upload');
+
+        $result->assertStatus(200);
+        $body = $this->decodedBody($result);
+        $this->assertStringContainsString('지도 보기', $body);
+        $this->assertStringContainsString('/map', $body);
+        $this->assertStringContainsString('로그아웃', $body);
+        $this->assertStringContainsString('/auth/logout', $body);
+        $this->assertStringContainsString('id="takeout-form"', $body);
+        $this->assertStringContainsString('/takeout/upload', $body);
+        $this->assertStringContainsString('takeout.google.com', $body);
     }
 
     public function testUploadRequiresLogin(): void
