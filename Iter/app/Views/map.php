@@ -14,6 +14,10 @@ declare(strict_types=1);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iter — 동선 지도</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
     <link
         rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -44,6 +48,7 @@ declare(strict_types=1);
             position: fixed; inset: 0; z-index: 2000; background: rgba(0, 0, 0, 0.75);
             display: flex; align-items: center; justify-content: center; padding: 20px;
         }
+        #photo-layer[hidden] { display: none; }
         #photo-layer-panel {
             background: #fff; border-radius: 10px; max-width: 720px; width: 100%;
             max-height: 85vh; display: flex; flex-direction: column; overflow: hidden;
