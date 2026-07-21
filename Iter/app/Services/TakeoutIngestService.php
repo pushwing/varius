@@ -22,7 +22,6 @@ use ZipArchive;
 class TakeoutIngestService
 {
     private const DEFAULT_MAX_ITEMS = 200;
-    private const EARTH_RADIUS_KM = 6371.0;
 
     /** @var list<string> 사이드카 매칭 대상 사진 확장자(동영상 제외) */
     private const PHOTO_EXTENSIONS = ['jpg', 'jpeg', 'png', 'heic', 'heif', 'webp', 'gif'];
@@ -206,23 +205,12 @@ class TakeoutIngestService
     private function isReachable(PhotoLocation $from, PhotoLocation $to): bool
     {
         $hours = (strtotime($to->takenAt) - strtotime($from->takenAt)) / 3600;
-        $distanceKm = $this->haversineKm($from->lat, $from->lng, $to->lat, $to->lng);
+        $distanceKm = GeoDistanceCalculator::kilometers($from->lat, $from->lng, $to->lat, $to->lng);
 
         if ($hours <= 0.0) {
             return $distanceKm < 0.001;
         }
 
         return ($distanceKm / $hours) <= $this->maxSpeedKmh;
-    }
-
-    private function haversineKm(float $lat1, float $lng1, float $lat2, float $lng2): float
-    {
-        $dLat = deg2rad($lat2 - $lat1);
-        $dLng = deg2rad($lng2 - $lng1);
-
-        $a = sin($dLat / 2) ** 2
-            + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
-
-        return self::EARTH_RADIUS_KM * 2 * asin(min(1.0, sqrt($a)));
     }
 }
