@@ -161,8 +161,10 @@ declare(strict_types=1);
                     .then(handleJson)
                     .then(function (data) {
                         var message = data.saved + '장 저장됨';
-                        if (data.totalCandidates > data.saved) {
+                        if (data.capped) {
                             message += '(' + data.totalCandidates + '장 중 상한까지만 처리됨)';
+                        } else if (data.totalCandidates > data.saved) {
+                            message += '(위치 정보를 찾지 못한 ' + (data.totalCandidates - data.saved) + '장 제외)';
                         }
                         statusEl.textContent = message;
 
