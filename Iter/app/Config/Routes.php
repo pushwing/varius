@@ -13,6 +13,7 @@ $routes->get('auth/google/callback', 'AuthController::callback');
 $routes->get('auth/logout', 'AuthController::logout');
 
 // Google Takeout zip 업로드
+$routes->get('upload', 'TakeoutController::form');
 $routes->post('takeout/upload', 'TakeoutController::upload', ['filter' => 'sessionRateLimit']);
 
 // 동선 시각화

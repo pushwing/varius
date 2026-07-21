@@ -6,6 +6,7 @@ declare(strict_types=1);
  * 날짜별 동선 지도(Leaflet).
  *
  * @var string $routesUrl 동선 JSON API URL(GET /routes)
+ * @var string $uploadUrl
  * @var string $mapUrl
  * @var string $logoutUrl
  */
@@ -93,7 +94,7 @@ declare(strict_types=1);
     </style>
 </head>
 <body>
-    <?= view('partials/nav', ['mapUrl' => $mapUrl, 'logoutUrl' => $logoutUrl]) ?>
+    <?= view('partials/nav', ['uploadUrl' => $uploadUrl, 'mapUrl' => $mapUrl, 'logoutUrl' => $logoutUrl]) ?>
     <div id="map-container">
         <div id="route-sidebar">
             <div id="route-sidebar-header">동선 목록</div>
