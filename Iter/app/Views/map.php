@@ -153,7 +153,12 @@ declare(strict_types=1);
                 if (!entry) { return; }
 
                 if (entry.latlngs.length) { map.fitBounds(entry.latlngs, { padding: [40, 40] }); }
-                if (entry.firstClusterIndex !== null) { openLayer(entry.firstClusterIndex); }
+                if (entry.firstClusterIndex !== null) {
+                    var cluster = clusterRegistry[entry.firstClusterIndex];
+                    // 레이어를 닫아도 어느 지점인지 알 수 있도록, 실제로 마커를 클릭한 것처럼 팝업도 함께 연다.
+                    if (cluster && cluster.marker) { cluster.marker.openPopup(); }
+                    openLayer(entry.firstClusterIndex);
+                }
 
                 document.querySelectorAll('.day-item.active').forEach(function (el) { el.classList.remove('active'); });
                 itemEl.classList.add('active');
@@ -184,14 +189,15 @@ declare(strict_types=1);
                     // 마커 — 같은 장소(GPS 오차 감안 약 30m 이내) 사진은 클러스터 하나로 묶인다.
                     (group.clusters || []).forEach(function (c) {
                         var clusterIndex = clusterRegistry.length;
-                        clusterRegistry.push({ date: group.date, photos: c.photos });
+                        var registryEntry = { date: group.date, photos: c.photos, marker: null };
+                        clusterRegistry.push(registryEntry);
                         if (firstClusterIndex === null) { firstClusterIndex = clusterIndex; }
 
                         var popupHtml = '<div style="font-size:12px;color:#333;">' +
                             group.date + ' · ' + c.photos.length + '장</div>' +
                             '<button type="button" class="popup-more-btn" data-cluster-index="' + clusterIndex + '">더보기</button>';
 
-                        L.circleMarker([c.lat, c.lng], {
+                        registryEntry.marker = L.circleMarker([c.lat, c.lng], {
                             radius: 6, color: group.color, fillColor: group.color, fillOpacity: 0.9
                         }).addTo(map).bindPopup(popupHtml, { maxWidth: 180 });
                     });
