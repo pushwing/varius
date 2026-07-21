@@ -42,7 +42,11 @@ class RouteController extends BaseController
 
         helper('url');
 
-        return view('map', ['routesUrl' => site_url('routes')]);
+        return view('map', [
+            'routesUrl' => site_url('routes'),
+            'mapUrl' => site_url('map'),
+            'logoutUrl' => site_url('auth/logout'),
+        ]);
     }
 
     /**

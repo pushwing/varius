@@ -25,16 +25,9 @@ declare(strict_types=1);
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+    <link rel="stylesheet" href="/assets/nav.css">
     <style>
         html, body { margin: 0; font-family: system-ui, sans-serif; color: #222; }
-        nav { display: flex; gap: 16px; padding: 12px 20px; border-bottom: 1px solid #ddd; align-items: center; }
-        nav a { color: #222; text-decoration: none; font-size: 14px; }
-        nav .brand { display: inline-flex; }
-        nav .brand img { height: 24px; }
-        nav a:hover { text-decoration: underline; }
-        nav .spacer { flex: 1; }
-        nav .legal { display: flex; gap: 16px; }
-        nav .legal a { color: #777; font-size: 13px; }
         main { padding: 40px 20px; max-width: 480px; margin: 0 auto; text-align: center; }
         .btn {
             display: inline-block; padding: 10px 20px; border-radius: 6px; border: none;
@@ -119,17 +112,7 @@ declare(strict_types=1);
         </p>
     </main>
 <?php else: ?>
-    <nav>
-        <a href="/" class="brand"><img src="/assets/logo-mark-512.png" alt="Iter"></a>
-        <a href="/">홈</a>
-        <a href="<?= esc($mapUrl, 'attr') ?>">지도 보기</a>
-        <a href="<?= esc($logoutUrl, 'attr') ?>">로그아웃</a>
-        <span class="spacer"></span>
-        <span class="legal">
-            <a href="/privacy-policy.html">개인정보처리방침</a>
-            <a href="/terms-of-service.html">서비스 이용약관</a>
-        </span>
-    </nav>
+    <?= view('partials/nav', ['mapUrl' => $mapUrl, 'logoutUrl' => $logoutUrl]) ?>
     <main id="takeout-flow">
         <h1>사진 가져오기</h1>
         <p class="help">

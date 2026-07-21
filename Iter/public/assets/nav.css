@@ -1,0 +1,11 @@
+nav {
+    display: flex; gap: 16px; padding: 12px 20px; border-bottom: 1px solid #ddd;
+    align-items: center; font-family: system-ui, sans-serif;
+}
+nav a { color: #222; text-decoration: none; font-size: 14px; }
+nav a:hover { text-decoration: underline; }
+nav .brand { display: inline-flex; }
+nav .brand img { height: 24px; }
+nav .spacer { flex: 1; }
+nav .legal { display: flex; gap: 16px; }
+nav .legal a { color: #777; font-size: 13px; }
