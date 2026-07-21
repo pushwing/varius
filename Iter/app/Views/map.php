@@ -76,18 +76,26 @@ declare(strict_types=1);
                         L.polyline(latlngs, { color: group.color, weight: 3, opacity: 0.8 }).addTo(map);
                     }
 
-                    // 마커 — 각 촬영 지점.
-                    group.points.forEach(function (p) {
-                        var popupHtml = '';
-                        if (p.thumbnail_url) {
-                            popupHtml += '<img src="' + p.thumbnail_url + '" alt="" ' +
-                                'style="display:block;max-width:200px;border-radius:6px;margin-bottom:6px;">';
-                        }
-                        popupHtml += group.date + '<br>' + p.taken_at;
+                    // 마커 — 같은 장소(GPS 오차 감안 약 30m 이내) 사진은 클러스터 하나로 묶인다.
+                    (group.clusters || []).forEach(function (c) {
+                        var popupHtml = '<div style="font-size:12px;color:#333;margin-bottom:6px;">' +
+                            group.date + ' · ' + c.photos.length + '장</div>';
 
-                        L.circleMarker([p.lat, p.lng], {
+                        var thumbs = c.photos.filter(function (p) { return p.thumbnail_url; });
+                        if (thumbs.length) {
+                            popupHtml += '<div style="display:flex;gap:6px;overflow-x:auto;max-width:240px;padding-bottom:2px;">';
+                            thumbs.forEach(function (p) {
+                                popupHtml += '<img src="' + p.thumbnail_url + '" alt="" title="' + p.taken_at + '" ' +
+                                    'style="height:120px;border-radius:6px;flex:none;">';
+                            });
+                            popupHtml += '</div>';
+                        } else {
+                            popupHtml += c.photos[0].taken_at;
+                        }
+
+                        L.circleMarker([c.lat, c.lng], {
                             radius: 6, color: group.color, fillColor: group.color, fillOpacity: 0.9
-                        }).addTo(map).bindPopup(popupHtml);
+                        }).addTo(map).bindPopup(popupHtml, { maxWidth: 260 });
                     });
 
                     var row = document.createElement('div');

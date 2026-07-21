@@ -102,4 +102,60 @@ final class RouteVisualizationServiceTest extends CIUnitTestCase
 
         $this->assertSame(['dates' => []], $service->buildForUser(1));
     }
+
+    public function testClustersNearbyPointsIntoOneGroup(): void
+    {
+        // 위도 0.0002도 차이 ≈ 22m — 같은 장소 연속촬영으로 묶여야 한다.
+        $service = $this->serviceWithRows([
+            ['id' => 1, 'source_item_id' => 'm1', 'lat' => '37.50000', 'lng' => '127.00000', 'taken_at' => '2024-03-15 09:00:00'],
+            ['id' => 2, 'source_item_id' => 'm2', 'lat' => '37.50020', 'lng' => '127.00000', 'taken_at' => '2024-03-15 09:00:05'],
+        ]);
+
+        $clusters = $service->buildForUser(1)['dates'][0]['clusters'];
+
+        $this->assertCount(1, $clusters);
+        $this->assertCount(2, $clusters[0]['photos']);
+        $this->assertSame('m1', $clusters[0]['photos'][0]['media_item_id']);
+        $this->assertSame('m2', $clusters[0]['photos'][1]['media_item_id']);
+    }
+
+    public function testKeepsFarApartPointsAsSeparateClusters(): void
+    {
+        // 위도 0.01도 차이 ≈ 1.1km — 같은 장소로 보기엔 너무 멀다.
+        $service = $this->serviceWithRows([
+            ['id' => 1, 'source_item_id' => 'm1', 'lat' => '37.5000', 'lng' => '127.0000', 'taken_at' => '2024-03-15 09:00:00'],
+            ['id' => 2, 'source_item_id' => 'm2', 'lat' => '37.5100', 'lng' => '127.0000', 'taken_at' => '2024-03-15 09:05:00'],
+        ]);
+
+        $clusters = $service->buildForUser(1)['dates'][0]['clusters'];
+
+        $this->assertCount(2, $clusters);
+        $this->assertCount(1, $clusters[0]['photos']);
+        $this->assertCount(1, $clusters[1]['photos']);
+    }
+
+    public function testClusterPhotoCarriesTakenAtAndThumbnailUrl(): void
+    {
+        $service = $this->serviceWithRows([
+            ['id' => 42, 'source_item_id' => 'm1', 'lat' => '37.5', 'lng' => '127.0', 'taken_at' => '2024-03-15 09:00:00', 'thumbnail_path' => '/thumbs/m1.jpg'],
+        ]);
+
+        $photo = $service->buildForUser(1)['dates'][0]['clusters'][0]['photos'][0];
+
+        $this->assertSame('2024-03-15 09:00:00', $photo['taken_at']);
+        $this->assertSame('/thumbnails/42', $photo['thumbnail_url']);
+    }
+
+    public function testClusterCoordinatesAreFloats(): void
+    {
+        $service = $this->serviceWithRows([
+            ['id' => 1, 'source_item_id' => 'm1', 'lat' => '37.5000000', 'lng' => '127.0000000', 'taken_at' => '2024-03-15 09:00:00'],
+        ]);
+
+        $cluster = $service->buildForUser(1)['dates'][0]['clusters'][0];
+
+        $this->assertIsFloat($cluster['lat']);
+        $this->assertIsFloat($cluster['lng']);
+        $this->assertEqualsWithDelta(37.5, $cluster['lat'], 0.0001);
+    }
 }

@@ -24,6 +24,9 @@ final class RouteVisualizationService
         '#f032e6', '#bcf60c', '#fabebe', '#008080', '#9a6324', '#800000',
     ];
 
+    /** 이 거리(km) 이내 지점은 "같은 장소 연속촬영"으로 묶는다(GPS 오차 감안, 약 30m). */
+    private const CLUSTER_RADIUS_KM = 0.03;
+
     public function __construct(
         private readonly PhotoLocationModel $model,
     ) {
@@ -32,7 +35,15 @@ final class RouteVisualizationService
     /**
      * 사용자의 좌표를 날짜별 동선으로 조합한다.
      *
-     * @return array{dates: list<array{date: string, color: string, points: list<array{lat: float, lng: float, taken_at: string, media_item_id: string, thumbnail_url: string|null}>}>}
+     * points 는 경로선(polyline)용 전체 좌표를 시간순 그대로 담고, clusters 는 같은
+     * 장소에서 찍힌 사진들을 마커 하나로 묶어 보여주기 위한 그룹이다.
+     *
+     * @return array{dates: list<array{
+     *     date: string,
+     *     color: string,
+     *     points: list<array{lat: float, lng: float, taken_at: string, media_item_id: string, thumbnail_url: string|null}>,
+     *     clusters: list<array{lat: float, lng: float, photos: list<array{media_item_id: string, taken_at: string, thumbnail_url: string|null}>}>
+     * }>}
      */
     public function buildForUser(int $userId): array
     {
@@ -63,10 +74,53 @@ final class RouteVisualizationService
                 'date' => $date,
                 'color' => self::PALETTE[$index % count(self::PALETTE)],
                 'points' => $points,
+                'clusters' => $this->clusterByProximity($points),
             ];
             $index++;
         }
 
         return ['dates' => $dates];
+    }
+
+    /**
+     * GPS 오차를 감안해 가까운 지점끼리 묶는다(같은 장소 연속촬영). 각 클러스터의
+     * 좌표는 그 클러스터의 첫 지점 좌표를 기준으로 삼는다(드리프트 방지).
+     *
+     * @param list<array{lat: float, lng: float, taken_at: string, media_item_id: string, thumbnail_url: string|null}> $points
+     *
+     * @return list<array{lat: float, lng: float, photos: list<array{media_item_id: string, taken_at: string, thumbnail_url: string|null}>}>
+     */
+    private function clusterByProximity(array $points): array
+    {
+        $clusters = [];
+
+        foreach ($points as $point) {
+            $photo = [
+                'media_item_id' => $point['media_item_id'],
+                'taken_at' => $point['taken_at'],
+                'thumbnail_url' => $point['thumbnail_url'],
+            ];
+
+            $matched = false;
+            foreach ($clusters as &$cluster) {
+                $distanceKm = GeoDistanceCalculator::kilometers($cluster['lat'], $cluster['lng'], $point['lat'], $point['lng']);
+                if ($distanceKm <= self::CLUSTER_RADIUS_KM) {
+                    $cluster['photos'][] = $photo;
+                    $matched = true;
+                    break;
+                }
+            }
+            unset($cluster);
+
+            if (! $matched) {
+                $clusters[] = [
+                    'lat' => $point['lat'],
+                    'lng' => $point['lng'],
+                    'photos' => [$photo],
+                ];
+            }
+        }
+
+        return $clusters;
     }
 }
