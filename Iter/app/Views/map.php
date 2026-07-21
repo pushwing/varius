@@ -30,16 +30,28 @@ declare(strict_types=1);
         html, body { margin: 0; height: 100%; font-family: system-ui, sans-serif; }
         body { display: flex; flex-direction: column; }
         #map-container { position: relative; flex: 1; min-height: 0; }
-        #map { position: absolute; inset: 0; }
-        #legend {
-            position: absolute; top: 12px; right: 12px; z-index: 1000;
-            background: rgba(255, 255, 255, 0.92); padding: 10px 12px;
-            border-radius: 8px; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
-            max-height: 60%; overflow-y: auto; font-size: 13px;
+        #map { position: absolute; top: 0; right: 0; bottom: 0; left: 280px; }
+        #route-sidebar {
+            position: absolute; top: 0; left: 0; bottom: 0; width: 280px; z-index: 1000;
+            background: #fff; box-shadow: 2px 0 6px rgba(0, 0, 0, 0.15);
+            overflow-y: auto; font-size: 13px;
         }
-        #legend h4 { margin: 0 0 6px; font-size: 13px; }
-        .legend-row { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
-        .legend-swatch { width: 12px; height: 12px; border-radius: 2px; flex: none; }
+        #route-sidebar-header {
+            padding: 14px 16px; font-weight: 600; font-size: 14px; border-bottom: 1px solid #eee;
+        }
+        .month-group { border-bottom: 1px solid #eee; }
+        .month-header {
+            display: block; width: 100%; text-align: left; padding: 10px 16px;
+            border: none; background: #f7f7f7; cursor: pointer; font-size: 13px; font-weight: 600;
+        }
+        .month-header:hover { background: #eee; }
+        .day-list[hidden] { display: none; }
+        .day-item {
+            display: block; width: 100%; text-align: left; padding: 8px 16px 8px 24px;
+            border: none; background: none; cursor: pointer; font-size: 13px; color: #333;
+        }
+        .day-item:hover { background: #f0f4ff; }
+        .day-item.active { background: #e3edff; font-weight: 600; }
         #empty {
             position: absolute; inset: 0; display: none; z-index: 1000;
             align-items: center; justify-content: center;
@@ -76,8 +88,11 @@ declare(strict_types=1);
 <body>
     <?= view('partials/nav', ['mapUrl' => $mapUrl, 'logoutUrl' => $logoutUrl]) ?>
     <div id="map-container">
+        <div id="route-sidebar">
+            <div id="route-sidebar-header">동선 목록</div>
+            <div id="route-sidebar-body"></div>
+        </div>
         <div id="map" data-routes-url="<?= esc($routesUrl, 'attr') ?>"></div>
-        <div id="legend" hidden><h4>날짜별 동선</h4><div id="legend-body"></div></div>
         <div id="empty">표시할 동선이 없습니다. 사진을 선택해 좌표를 적재하세요.</div>
     </div>
 
@@ -105,6 +120,7 @@ declare(strict_types=1);
             }).addTo(map);
 
             var clusterRegistry = []; // 인덱스 → { date, photos } — 팝업의 "더보기" 클릭 시 조회용.
+            var dateIndex = {}; // 날짜(YYYY-MM-DD) → { latlngs, firstClusterIndex } — 사이드바 일자 클릭 시 조회용.
 
             var layerEl = document.getElementById('photo-layer');
             var layerTitleEl = document.getElementById('photo-layer-title');
@@ -115,11 +131,33 @@ declare(strict_types=1);
                 if (evt.target === layerEl) { closeLayer(); }
             });
 
-            // 팝업은 매번 새로 DOM 에 그려지므로 이벤트 위임으로 "더보기" 클릭을 잡는다.
+            // 팝업/사이드바 모두 매번 새로 DOM 에 그려지므로 이벤트 위임으로 클릭을 잡는다.
             document.body.addEventListener('click', function (evt) {
                 var btn = evt.target.closest('.popup-more-btn');
-                if (btn) { openLayer(Number(btn.dataset.clusterIndex)); }
+                if (btn) { openLayer(Number(btn.dataset.clusterIndex)); return; }
+
+                var monthHeader = evt.target.closest('.month-header');
+                if (monthHeader) { toggleMonth(monthHeader); return; }
+
+                var dayItem = evt.target.closest('.day-item');
+                if (dayItem) { selectDay(dayItem); return; }
             });
+
+            function toggleMonth(headerEl) {
+                var listEl = headerEl.nextElementSibling;
+                listEl.hidden = !listEl.hidden;
+            }
+
+            function selectDay(itemEl) {
+                var entry = dateIndex[itemEl.dataset.date];
+                if (!entry) { return; }
+
+                if (entry.latlngs.length) { map.fitBounds(entry.latlngs, { padding: [40, 40] }); }
+                if (entry.firstClusterIndex !== null) { openLayer(entry.firstClusterIndex); }
+
+                document.querySelectorAll('.day-item.active').forEach(function (el) { el.classList.remove('active'); });
+                itemEl.classList.add('active');
+            }
 
             fetch(mapEl.dataset.routesUrl, { headers: { Accept: 'application/json' } })
                 .then(function (res) { return res.json(); })
@@ -130,7 +168,7 @@ declare(strict_types=1);
                 if (!dates.length) { showEmpty(); return; }
 
                 var bounds = [];
-                var legendBody = document.getElementById('legend-body');
+                var dateOrder = []; // 화면에 보여줄 날짜 순서(원본 오름차순 유지) — 사이드바 정렬용.
 
                 dates.forEach(function (group) {
                     var latlngs = group.points.map(function (p) { return [p.lat, p.lng]; });
@@ -141,10 +179,13 @@ declare(strict_types=1);
                         L.polyline(latlngs, { color: group.color, weight: 3, opacity: 0.8 }).addTo(map);
                     }
 
+                    var firstClusterIndex = null;
+
                     // 마커 — 같은 장소(GPS 오차 감안 약 30m 이내) 사진은 클러스터 하나로 묶인다.
                     (group.clusters || []).forEach(function (c) {
                         var clusterIndex = clusterRegistry.length;
                         clusterRegistry.push({ date: group.date, photos: c.photos });
+                        if (firstClusterIndex === null) { firstClusterIndex = clusterIndex; }
 
                         var popupHtml = '<div style="font-size:12px;color:#333;">' +
                             group.date + ' · ' + c.photos.length + '장</div>' +
@@ -155,15 +196,65 @@ declare(strict_types=1);
                         }).addTo(map).bindPopup(popupHtml, { maxWidth: 180 });
                     });
 
-                    var row = document.createElement('div');
-                    row.className = 'legend-row';
-                    row.innerHTML = '<span class="legend-swatch" style="background:' + group.color +
-                        '"></span><span>' + group.date + ' (' + group.points.length + ')</span>';
-                    legendBody.appendChild(row);
+                    dateIndex[group.date] = { latlngs: latlngs, firstClusterIndex: firstClusterIndex };
+                    dateOrder.push({ date: group.date, count: group.points.length });
                 });
 
-                document.getElementById('legend').hidden = false;
+                renderSidebar(dateOrder);
                 if (bounds.length) { map.fitBounds(bounds, { padding: [40, 40] }); }
+            }
+
+            function renderSidebar(dateOrder) {
+                var monthMap = {}; // 'YYYY-MM' → list<{date, count}>
+                var monthOrder = [];
+
+                dateOrder.forEach(function (entry) {
+                    var monthKey = entry.date.slice(0, 7);
+                    if (!monthMap[monthKey]) {
+                        monthMap[monthKey] = [];
+                        monthOrder.push(monthKey);
+                    }
+                    monthMap[monthKey].push(entry);
+                });
+
+                var mostRecentMonthKey = monthOrder[monthOrder.length - 1];
+                var bodyEl = document.getElementById('route-sidebar-body');
+                bodyEl.innerHTML = '';
+
+                monthOrder.slice().reverse().forEach(function (monthKey) {
+                    var days = monthMap[monthKey].slice().reverse();
+                    var parts = monthKey.split('-');
+                    var label = parts[0] + '년 ' + Number(parts[1]) + '월';
+
+                    var groupEl = document.createElement('div');
+                    groupEl.className = 'month-group';
+
+                    var headerEl = document.createElement('button');
+                    headerEl.type = 'button';
+                    headerEl.className = 'month-header';
+                    headerEl.dataset.monthKey = monthKey;
+                    headerEl.textContent = label + ' (' + days.length + '일)';
+
+                    var listEl = document.createElement('div');
+                    listEl.className = 'day-list';
+                    listEl.hidden = monthKey !== mostRecentMonthKey;
+
+                    days.forEach(function (entry) {
+                        var monthNum = Number(entry.date.slice(5, 7));
+                        var dayNum = Number(entry.date.slice(8, 10));
+
+                        var itemEl = document.createElement('button');
+                        itemEl.type = 'button';
+                        itemEl.className = 'day-item';
+                        itemEl.dataset.date = entry.date;
+                        itemEl.textContent = monthNum + '월 ' + dayNum + '일 (' + entry.count + '장)';
+                        listEl.appendChild(itemEl);
+                    });
+
+                    groupEl.appendChild(headerEl);
+                    groupEl.appendChild(listEl);
+                    bodyEl.appendChild(groupEl);
+                });
             }
 
             function openLayer(clusterIndex) {
