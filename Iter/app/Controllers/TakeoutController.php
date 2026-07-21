@@ -29,7 +29,17 @@ class TakeoutController extends BaseController
         }
 
         $file = $this->request->getFile('file');
-        if ($file === null || strtolower($file->getClientExtension()) !== 'zip') {
+        if ($file === null) {
+            return $this->response->setStatusCode(422)->setJSON(['error' => 'zip 파일을 선택해주세요.']);
+        }
+
+        // upload_max_filesize/post_max_size 초과 시 PHP 가 tmp_name 없이 이 에러 코드로
+        // $_FILES 를 채운다 — 확장자 검사보다 먼저 걸러야 "zip 파일만..." 오해를 막는다.
+        if (in_array($file->getError(), [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)) {
+            return $this->response->setStatusCode(413)->setJSON(['error' => '파일이 너무 큽니다. 서버 업로드 용량 제한을 초과했습니다.']);
+        }
+
+        if (strtolower($file->getClientExtension()) !== 'zip') {
             return $this->response->setStatusCode(422)->setJSON(['error' => 'zip 파일만 업로드할 수 있습니다.']);
         }
 
