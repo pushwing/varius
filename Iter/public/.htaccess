@@ -2,6 +2,18 @@
 Options -Indexes
 
 # ----------------------------------------------------------------------
+# Takeout zip 업로드 용량 상한 (mod_php 전용)
+# ----------------------------------------------------------------------
+# .user.ini 는 CGI/FastCGI(PHP-FPM 포함) SAPI 에서만 처리되고 mod_php 에서는
+# 무시된다 — mod_php 환경에서 upload_max_filesize/post_max_size 를 올리는
+# 유일한 방법은 이 php_value 지시자다(TakeoutController::MAX_UPLOAD_BYTES=500MB 와 맞춤).
+# php_module 이 없는 환경(PHP-FPM 등)에서는 이 블록이 조용히 무시된다.
+<IfModule php_module>
+	php_value upload_max_filesize 500M
+	php_value post_max_size 520M
+</IfModule>
+
+# ----------------------------------------------------------------------
 # Rewrite engine
 # ----------------------------------------------------------------------
 

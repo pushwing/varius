@@ -40,6 +40,15 @@ class TakeoutController extends BaseController
         }
 
         if (strtolower($file->getClientExtension()) !== 'zip') {
+            log_message('info', 'Takeout 업로드 확장자 거부: name={name} ext={ext} error={code}({errorString}) size={size} mime={mime}', [
+                'name' => $file->getClientName(),
+                'ext' => $file->getClientExtension(),
+                'code' => $file->getError(),
+                'errorString' => $file->getErrorString(),
+                'size' => $file->getSize() ?? 'null',
+                'mime' => $file->getClientMimeType(),
+            ]);
+
             return $this->response->setStatusCode(422)->setJSON(['error' => 'zip 파일만 업로드할 수 있습니다.']);
         }
 
