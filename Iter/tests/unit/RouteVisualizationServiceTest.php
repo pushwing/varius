@@ -117,6 +117,19 @@ final class RouteVisualizationServiceTest extends CIUnitTestCase
         $this->assertSame(['dates' => []], $service->buildForUser(1));
     }
 
+    public function testExcludesPhotosWithoutCoordinatesFromMap(): void
+    {
+        $service = $this->serviceWithRows([
+            ['id' => 1, 'source_item_id' => 'm1', 'lat' => '37.5000000', 'lng' => '127.0000000', 'taken_at' => '2024-03-15 09:00:00'],
+            ['id' => 2, 'source_item_id' => 'm2', 'lat' => null, 'lng' => null, 'taken_at' => '2024-03-15 09:30:00'],
+        ]);
+
+        $result = $service->buildForUser(1);
+
+        $this->assertCount(1, $result['dates'][0]['points']);
+        $this->assertSame('m1', $result['dates'][0]['points'][0]['media_item_id']);
+    }
+
     public function testClustersNearbyPointsIntoOneGroup(): void
     {
         // 위도 0.0002도 차이 ≈ 22m — 같은 장소 연속촬영으로 묶여야 한다.
