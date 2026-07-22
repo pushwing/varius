@@ -27,6 +27,7 @@ use App\Services\RouteVisualizationService;
 use App\Services\StorageMaintenanceService;
 use App\Services\TakeoutIngestService;
 use App\Services\TimelineService;
+use App\Services\TripStatsService;
 use App\Services\TripSuggestionService;
 use App\Services\TripSummaryService;
 use CodeIgniter\Config\BaseService;
@@ -121,6 +122,18 @@ class Services extends BaseService
         }
 
         return new TripSuggestionService(new PhotoLocationModel(), new TripModel());
+    }
+
+    /**
+     * 여행(날짜 범위) 이동거리·방문 지점 수 통계 서비스.
+     */
+    public static function tripStats(bool $getShared = true): TripStatsService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('tripStats');
+        }
+
+        return new TripStatsService(new PhotoLocationModel());
     }
 
     /**
