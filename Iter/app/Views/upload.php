@@ -47,18 +47,21 @@ declare(strict_types=1);
         .page-title { font-size: 22px; margin: 0 0 6px; }
         .page-lead { margin: 0 0 24px; font-size: 14px; color: #444; line-height: 1.6; }
 
-        /* 좌우 2열 — 좁은 화면에서는 세로로 쌓인다. */
+        /* 좌우 2열 — 좁은 화면에서는 세로로 쌓인다. stretch 로 두 카드 높이를 맞춘다. */
         .upload-grid {
-            display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; align-items: start;
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; align-items: stretch;
         }
         @media (max-width: 640px) {
             .upload-grid { grid-template-columns: 1fr; }
         }
 
+        /* flex 컬럼 + 폼 margin-top:auto 로 설명 길이가 달라도 업로드 폼을 하단 정렬한다. */
         .upload-card {
+            display: flex; flex-direction: column;
             background: #fff; border: 1px solid #eee; border-radius: 14px;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); padding: 24px 22px; text-align: left;
         }
+        .upload-card form { margin-top: auto; }
         .upload-card .badge {
             display: inline-block; font-size: 12px; font-weight: 700; color: #1a73e8;
             background: #eef4ff; border-radius: 999px; padding: 3px 10px; margin-bottom: 10px;
