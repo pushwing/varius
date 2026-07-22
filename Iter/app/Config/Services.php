@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Config;
 
+use App\Models\DayNoteModel;
 use App\Models\OAuthTokenModel;
 use App\Models\PhotoLocationModel;
+use App\Models\TimeNoteModel;
 use App\Models\UserModel;
 use App\Services\AccountDeletionService;
 use App\Services\Auth\GoogleTokenRevoker;
@@ -17,9 +19,12 @@ use App\Services\Ingest\PhotoExifParser;
 use App\Services\Ingest\TakeoutMetadataParser;
 use App\Services\Ingest\UploadedZipHandlerInterface;
 use App\Services\PlainZipIngestService;
+use App\Services\Poi\OverpassPoiLookup;
+use App\Services\Poi\PoiLookupInterface;
 use App\Services\RouteVisualizationService;
 use App\Services\StorageMaintenanceService;
 use App\Services\TakeoutIngestService;
+use App\Services\TimelineService;
 use CodeIgniter\Config\BaseService;
 use League\OAuth2\Client\Provider\Google;
 
@@ -102,6 +107,34 @@ class Services extends BaseService
         }
 
         return new RouteVisualizationService(new PhotoLocationModel());
+    }
+
+    /**
+     * 날짜별 시간 동선 서비스.
+     *
+     * 하루치 좌표를 시간대별 그룹으로 묶고 날짜 노트·시간대 메모를 병합한다.
+     */
+    public static function timeline(bool $getShared = true): TimelineService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('timeline');
+        }
+
+        return new TimelineService(new PhotoLocationModel(), new DayNoteModel(), new TimeNoteModel());
+    }
+
+    /**
+     * 좌표 주변 업장(식당·카페 등) 조회 서비스.
+     *
+     * Overpass API(OpenStreetMap) 구현 + 좌표당 캐싱.
+     */
+    public static function poiLookup(bool $getShared = true): PoiLookupInterface
+    {
+        if ($getShared) {
+            return static::getSharedInstance('poiLookup');
+        }
+
+        return new OverpassPoiLookup(static::curlrequest(), cache());
     }
 
     /**

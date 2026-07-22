@@ -86,6 +86,19 @@ final class RouteControllerTest extends CIUnitTestCase
         $this->assertStringContainsString('/auth/logout', $body);
     }
 
+    public function testMapPageIncludesTimelineLayer(): void
+    {
+        // 사이드바 날짜 옆 "시간표" 진입과 시간별 동선 레이어(여행 스케줄 뷰)가 지도 페이지에 포함돼야 한다.
+        $userId = (new UserModel())->upsertByGoogleSub('sub-map-tl', 'maptl@example.com', 'MapTl');
+
+        $result = $this->withSession(['user_id' => $userId])->get('map');
+
+        $result->assertStatus(200);
+        $body = (string) $result->getBody();
+        $this->assertStringContainsString('id="timeline-layer"', $body);
+        $this->assertStringContainsString('data-timeline-url', $body);
+    }
+
     public function testThumbnailRequiresLogin(): void
     {
         $result = $this->get('thumbnails/1');

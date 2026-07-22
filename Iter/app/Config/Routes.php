@@ -22,5 +22,11 @@ $routes->get('routes', 'RouteController::data');
 $routes->get('map', 'RouteController::map');
 $routes->get('thumbnails/(:num)', 'RouteController::thumbnail/$1');
 
+// 날짜별 시간 동선(여행 스케줄)
+$routes->get('timeline/poi', 'TimelineController::poi', ['filter' => 'sessionRateLimit:poi,300']); // (:segment) 라우트보다 먼저 선언해야 한다
+$routes->get('timeline/(:segment)', 'TimelineController::data/$1');
+$routes->post('timeline/day-note', 'TimelineController::saveDayNote', ['filter' => 'sessionRateLimit:notes,120']);
+$routes->post('timeline/time-note', 'TimelineController::saveTimeNote', ['filter' => 'sessionRateLimit:notes,120']);
+
 // 계정·데이터 삭제
 $routes->post('account/delete', 'AccountController::deleteData', ['filter' => 'sessionRateLimit']);
