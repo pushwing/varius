@@ -70,9 +70,9 @@ final class GdThumbnailGeneratorTest extends CIUnitTestCase
      * GD 는 JPEG 를 쓸 때 EXIF 를 남기지 않으므로, EXIF Orientation 태그 하나만 담은
      * 최소 APP1 세그먼트를 직접 만들어 SOI 뒤에 끼워넣는다(TIFF/EXIF 스펙 최소 구현).
      */
-    private function makeJpegFixtureWithOrientation(int $width, int $height, int $orientation): string
+    private function injectOrientation(string $jpegPath, int $orientation): string
     {
-        $raw = (string) file_get_contents($this->makeJpegFixture($width, $height));
+        $raw = (string) file_get_contents($jpegPath);
         $withoutSoi = substr($raw, 2); // GD 가 붙인 SOI(FF D8) 제거 — 우리가 다시 앞에 붙인다.
 
         $tiffHeader = 'II' . pack('v', 0x002A) . pack('V', 8);
@@ -86,6 +86,11 @@ final class GdThumbnailGeneratorTest extends CIUnitTestCase
         $this->tempFiles[] = $path;
 
         return $path;
+    }
+
+    private function makeJpegFixtureWithOrientation(int $width, int $height, int $orientation): string
+    {
+        return $this->injectOrientation($this->makeJpegFixture($width, $height), $orientation);
     }
 
     public function testGeneratesThumbnailWithTargetWidthPreservingAspectRatio(): void
@@ -124,14 +129,62 @@ final class GdThumbnailGeneratorTest extends CIUnitTestCase
         $this->assertNull($result);
     }
 
-    public function testDoesNotRotateBasedOnExifOrientationTag(): void
+    /**
+     * 좌상단 사분면만 빨간색인 width x height JPEG 을 만들고 Orientation 태그를 붙인다.
+     * 회전 "방향"까지 검증하기 위한 픽스처(어느 코너로 빨강이 이동했는지 확인).
+     */
+    private function makeCornerMarkedJpegWithOrientation(int $width, int $height, int $orientation): string
     {
-        // Google Takeout 으로 재내보낸 사진은 픽셀 자체가 이미 올바른 방향으로
-        // 구워져 있는데 Orientation 태그만 예전 값으로 남아있는 경우가 있다(실사용
-        // 리포트로 확인 — 가로 사진이 태그 기반 보정 후 전부 세로로 바뀜). 그래서
-        // Orientation 태그를 신뢰해 추가 회전을 적용하지 않는다 — 디코딩된 픽셀
-        // 그대로 리사이즈만 한다.
-        $source = $this->makeJpegFixtureWithOrientation(40, 60, 6);
+        $image = imagecreatetruecolor($width, $height);
+        imagefill($image, 0, 0, (int) imagecolorallocate($image, 0, 0, 255));
+        imagefilledrectangle($image, 0, 0, intdiv($width, 2) - 1, intdiv($height, 2) - 1, (int) imagecolorallocate($image, 255, 0, 0));
+
+        $path = tempnam(sys_get_temp_dir(), 'iter_src_corner_') . '.jpg';
+        imagejpeg($image, $path, 100);
+        $this->tempFiles[] = $path;
+
+        return $this->injectOrientation($path, $orientation);
+    }
+
+    /**
+     * 썸네일의 사분면 중심을 샘플링해 빨간 사분면 위치를 반환한다(TL/TR/BL/BR).
+     */
+    private function redQuadrantOf(string $path): string
+    {
+        $image = imagecreatefromjpeg($path);
+        $this->assertNotFalse($image);
+        $width = imagesx($image);
+        $height = imagesy($image);
+
+        $isRed = function (int $x, int $y) use ($image): bool {
+            $rgb = imagecolorat($image, $x, $y);
+
+            return (($rgb >> 16) & 0xFF) > (($rgb) & 0xFF); // R 이 B 보다 우세하면 빨강.
+        };
+
+        $qx = intdiv($width, 4);
+        $qy = intdiv($height, 4);
+        $corners = [
+            'TL' => [$qx, $qy],
+            'TR' => [$width - $qx, $qy],
+            'BL' => [$qx, $height - $qy],
+            'BR' => [$width - $qx, $height - $qy],
+        ];
+        foreach ($corners as $name => [$x, $y]) {
+            if ($isRed($x, $y)) {
+                return $name;
+            }
+        }
+
+        return 'NONE';
+    }
+
+    public function testHonorsExifOrientation6ByRotatingClockwise(): void
+    {
+        // 태그 6 = "시계방향 90도 돌려야 올바름" — 가로(60x40) 원시 픽셀이
+        // 세로(40x60) 썸네일이 되고, 좌상단 빨강은 우상단으로 이동해야 한다.
+        // (이 보정이 없으면 구글포토에선 똑바로 보이는 사진이 썸네일에서 좌로 돌아간다.)
+        $source = $this->makeCornerMarkedJpegWithOrientation(60, 40, 6);
 
         $path = (new GdThumbnailGenerator($this->outputDir))->generate($source, 'media-o6', 1);
 
@@ -139,6 +192,33 @@ final class GdThumbnailGeneratorTest extends CIUnitTestCase
         [$width, $height] = getimagesize($path);
         $this->assertSame(40, $width);
         $this->assertSame(60, $height);
+        $this->assertSame('TR', $this->redQuadrantOf($path));
+    }
+
+    public function testHonorsExifOrientation8ByRotatingCounterClockwise(): void
+    {
+        $source = $this->makeCornerMarkedJpegWithOrientation(60, 40, 8);
+
+        $path = (new GdThumbnailGenerator($this->outputDir))->generate($source, 'media-o8', 1);
+
+        $this->assertNotNull($path);
+        [$width, $height] = getimagesize($path);
+        $this->assertSame(40, $width);
+        $this->assertSame(60, $height);
+        $this->assertSame('BL', $this->redQuadrantOf($path));
+    }
+
+    public function testHonorsExifOrientation3ByRotating180(): void
+    {
+        $source = $this->makeCornerMarkedJpegWithOrientation(60, 40, 3);
+
+        $path = (new GdThumbnailGenerator($this->outputDir))->generate($source, 'media-o3', 1);
+
+        $this->assertNotNull($path);
+        [$width, $height] = getimagesize($path);
+        $this->assertSame(60, $width);
+        $this->assertSame(40, $height);
+        $this->assertSame('BR', $this->redQuadrantOf($path));
     }
 
     public function testOrientation1DoesNotChangeDimensions(): void

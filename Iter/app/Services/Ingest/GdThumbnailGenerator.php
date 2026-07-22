@@ -47,6 +47,14 @@ class GdThumbnailGenerator implements ThumbnailGeneratorInterface
             return null;
         }
 
+        // EXIF Orientation 보정 — 구글포토 등 뷰어는 태그를 반영해 표시하므로,
+        // 원시 픽셀 그대로 축소하면 세로 사진이 돌아간 썸네일이 된다.
+        if ($type === IMAGETYPE_JPEG) {
+            $source = $this->applyExifOrientation($source, $sourcePath);
+            $srcWidth = imagesx($source);   // 90도 회전 시 가로·세로가 바뀐다.
+            $srcHeight = imagesy($source);
+        }
+
         $targetWidth = min(self::TARGET_WIDTH, $srcWidth); // 확대하지 않는다.
         $targetHeight = (int) round($srcHeight * ($targetWidth / $srcWidth));
 
@@ -74,6 +82,42 @@ class GdThumbnailGenerator implements ThumbnailGeneratorInterface
             IMAGETYPE_WEBP => function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($path) : null,
             default => null,
         } ?: null;
+    }
+
+    /**
+     * EXIF Orientation 태그에 따라 픽셀을 올바른 표시 방향으로 돌린다.
+     *
+     * 태그 의미(EXIF 스펙): 3=180도, 6=시계방향 90도 필요, 8=반시계 90도 필요.
+     * 미러 계열(2,4,5,7)은 실기기에서 사실상 나오지 않아 회전만 처리한다.
+     *
+     * @param \GdImage $image
+     *
+     * @return \GdImage
+     */
+    private function applyExifOrientation($image, string $sourcePath)
+    {
+        if (! function_exists('exif_read_data')) {
+            return $image;
+        }
+
+        $exif = @exif_read_data($sourcePath);
+        $orientation = is_array($exif) ? (int) ($exif['Orientation'] ?? 1) : 1;
+
+        // GD imagerotate 는 양수 각도가 반시계 방향이다.
+        $angle = match ($orientation) {
+            3 => 180,
+            6 => -90,
+            8 => 90,
+            default => 0,
+        };
+
+        if ($angle === 0) {
+            return $image;
+        }
+
+        $rotated = imagerotate($image, $angle, 0);
+
+        return $rotated === false ? $image : $rotated;
     }
 
     /**
