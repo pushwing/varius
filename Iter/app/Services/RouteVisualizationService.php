@@ -25,9 +25,6 @@ final class RouteVisualizationService
         '#f032e6', '#bcf60c', '#fabebe', '#008080', '#9a6324', '#800000',
     ];
 
-    /** 이 거리(km) 이내 지점은 "같은 장소 연속촬영"으로 묶는다(GPS 오차 감안, 약 30m). */
-    private const CLUSTER_RADIUS_KM = 0.03;
-
     public function __construct(
         private readonly PhotoLocationModel $model,
     ) {
@@ -96,35 +93,32 @@ final class RouteVisualizationService
      */
     private function clusterByProximity(array $points): array
     {
+        $assignments = PointClusterer::assignClusters(array_map(
+            static fn (array $point): array => ['lat' => $point['lat'], 'lng' => $point['lng']],
+            $points,
+        ));
+
+        /** @var array<int, array{lat: float, lng: float, photos: list<array{media_item_id: string, taken_at: string, thumbnail_url: string|null}>}> $clusters */
         $clusters = [];
 
-        foreach ($points as $point) {
+        foreach ($points as $i => $point) {
+            $clusterIndex = $assignments[$i];
             $photo = [
                 'media_item_id' => $point['media_item_id'],
                 'taken_at' => $point['taken_at'],
                 'thumbnail_url' => $point['thumbnail_url'],
             ];
 
-            $matched = false;
-            foreach ($clusters as &$cluster) {
-                $distanceKm = GeoDistanceCalculator::kilometers($cluster['lat'], $cluster['lng'], $point['lat'], $point['lng']);
-                if ($distanceKm <= self::CLUSTER_RADIUS_KM) {
-                    $cluster['photos'][] = $photo;
-                    $matched = true;
-                    break;
-                }
-            }
-            unset($cluster);
-
-            if (! $matched) {
-                $clusters[] = [
+            if (! isset($clusters[$clusterIndex])) {
+                $clusters[$clusterIndex] = [
                     'lat' => $point['lat'],
                     'lng' => $point['lng'],
-                    'photos' => [$photo],
+                    'photos' => [],
                 ];
             }
+            $clusters[$clusterIndex]['photos'][] = $photo;
         }
 
-        return $clusters;
+        return array_values($clusters);
     }
 }
