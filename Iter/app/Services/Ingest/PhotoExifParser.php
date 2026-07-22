@@ -21,15 +21,19 @@ class PhotoExifParser
     {
         $lat = $this->coordinate($exif, 'GPSLatitude', 'GPSLatitudeRef', ['S']);
         $lng = $this->coordinate($exif, 'GPSLongitude', 'GPSLongitudeRef', ['W']);
-        if ($lat === null || $lng === null) {
-            return null;
+
+        $coords = null;
+        if ($lat !== null && $lng !== null && ! ($lat === 0.0 && $lng === 0.0)) {
+            $coords = [$lat, $lng];
         }
 
-        if ($lat === 0.0 && $lng === 0.0) {
-            return null; // (0,0) 은 위치 없음으로 간주한다.
+        $takenAt = $this->takenAt($exif);
+
+        if ($coords === null && $takenAt === null) {
+            return null; // 좌표도 촬영 시각도 없으면 동선에 쓸 수 없다.
         }
 
-        return new ExifLocation($lat, $lng, $this->takenAt($exif));
+        return new ExifLocation($coords[0] ?? null, $coords[1] ?? null, $takenAt);
     }
 
     /**

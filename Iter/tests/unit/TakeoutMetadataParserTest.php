@@ -65,20 +65,36 @@ final class TakeoutMetadataParserTest extends CIUnitTestCase
         $this->assertEqualsWithDelta(129.0756, $location->lng, 0.0001);
     }
 
-    public function testReturnsNullWhenBothGeoDataAndGeoDataExifAreZero(): void
+    public function testReturnsLocationWithNullCoordsWhenBothGeoDataAndGeoDataExifAreZero(): void
     {
+        // 좌표는 위치 없음으로 판정되지만, 촬영 시각이 있으면 사진 자체는 살려야 한다
+        // (GPS 없는 사진도 시간표에는 노출).
         $location = $this->parser->parse([
             'geoData' => ['latitude' => 0.0, 'longitude' => 0.0],
             'geoDataExif' => ['latitude' => 0.0, 'longitude' => 0.0],
             'photoTakenTime' => ['timestamp' => '1563490529'],
         ]);
 
-        $this->assertNull($location);
+        $this->assertNotNull($location);
+        $this->assertNull($location->lat);
+        $this->assertNull($location->lng);
+        $this->assertSame('2019-07-18 22:55:29', $location->takenAt);
     }
 
-    public function testReturnsNullWhenGeoDataFieldsMissing(): void
+    public function testReturnsLocationWithNullCoordsWhenGeoDataFieldsMissing(): void
     {
-        $this->assertNull($this->parser->parse(['photoTakenTime' => ['timestamp' => '1563490529']]));
+        $location = $this->parser->parse(['photoTakenTime' => ['timestamp' => '1563490529']]);
+
+        $this->assertNotNull($location);
+        $this->assertNull($location->lat);
+        $this->assertNull($location->lng);
+        $this->assertSame('2019-07-18 22:55:29', $location->takenAt);
+    }
+
+    public function testReturnsNullWhenNoCoordinatesAndNoTimestamp(): void
+    {
+        // 좌표도 촬영 시각도 없으면 동선에 쓸 수 없어 완전히 버려진다.
+        $this->assertNull($this->parser->parse([]));
     }
 
     public function testTakenAtIsNullWhenTimestampMissing(): void
@@ -91,12 +107,15 @@ final class TakeoutMetadataParserTest extends CIUnitTestCase
         $this->assertNull($location->takenAt);
     }
 
-    public function testReturnsNullWhenLatitudeIsNonNumeric(): void
+    public function testReturnsLocationWithNullCoordsWhenLatitudeIsNonNumeric(): void
     {
         $location = $this->parser->parse([
             'geoData' => ['latitude' => 'invalid', 'longitude' => 126.9780],
+            'photoTakenTime' => ['timestamp' => '1563490529'],
         ]);
 
-        $this->assertNull($location);
+        $this->assertNotNull($location);
+        $this->assertNull($location->lat);
+        $this->assertNull($location->lng);
     }
 }
