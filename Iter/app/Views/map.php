@@ -185,6 +185,16 @@ declare(strict_types=1);
             position: absolute; top: 14px; right: 20px; border: none; background: none;
             color: #fff; font-size: 28px; cursor: pointer; line-height: 1;
         }
+        .viewer-nav-btn {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            border: none; border-radius: 50%; width: 46px; height: 46px;
+            background: rgba(255, 255, 255, 0.15); color: #fff; font-size: 20px;
+            cursor: pointer; line-height: 1; z-index: 1;
+        }
+        .viewer-nav-btn:hover { background: rgba(255, 255, 255, 0.3); }
+        .viewer-nav-btn[hidden] { display: none; }
+        #photo-viewer-prev { left: 18px; }
+        #photo-viewer-next { right: 18px; }
     </style>
 </head>
 <body>
@@ -232,6 +242,8 @@ declare(strict_types=1);
 
     <div id="photo-viewer" hidden>
         <button type="button" id="photo-viewer-close" aria-label="닫기">&times;</button>
+        <button type="button" id="photo-viewer-prev" class="viewer-nav-btn" aria-label="이전 사진">&#10094;</button>
+        <button type="button" id="photo-viewer-next" class="viewer-nav-btn" aria-label="다음 사진">&#10095;</button>
         <img id="photo-viewer-img" src="" alt="">
         <div id="photo-viewer-caption"></div>
         <div id="photo-viewer-controls">
@@ -294,30 +306,56 @@ declare(strict_types=1);
             var viewerEl = document.getElementById('photo-viewer');
             var viewerImgEl = document.getElementById('photo-viewer-img');
             var viewerCaptionEl = document.getElementById('photo-viewer-caption');
+            var viewerPrevEl = document.getElementById('photo-viewer-prev');
+            var viewerNextEl = document.getElementById('photo-viewer-next');
             var viewerPhotoId = null;
+            var viewerList = [];   // 현재 레이어에서 넘겨볼 수 있는 썸네일 목록
+            var viewerIndex = -1;
 
-            function openViewer(src, caption) {
-                viewerImgEl.src = src;
-                viewerCaptionEl.textContent = caption || '';
-                // 회전·삭제 대상 식별 — 썸네일 URL(/thumbnails/{id})에서 id 를 뽑는다.
-                var match = src.match(/\/thumbnails\/(\d+)/);
-                viewerPhotoId = match ? match[1] : null;
+            // 클릭한 썸네일이 속한 레이어의 사진 목록을 수집해 그 위치부터 넘겨본다.
+            function openViewerFrom(imgEl) {
+                var container = imgEl.closest('#photo-layer-grid') ? '#photo-layer-grid img' : '.timeline-photos img';
+                viewerList = Array.prototype.slice.call(document.querySelectorAll(container));
+                showViewerAt(viewerList.indexOf(imgEl));
                 viewerEl.hidden = false;
+            }
+
+            function showViewerAt(index) {
+                if (index < 0 || index >= viewerList.length) { return; }
+                viewerIndex = index;
+
+                var imgEl = viewerList[index];
+                viewerImgEl.src = imgEl.src;
+                viewerCaptionEl.textContent = imgEl.title || '';
+                // 회전·삭제 대상 식별 — 썸네일 URL(/thumbnails/{id})에서 id 를 뽑는다.
+                var match = imgEl.src.match(/\/thumbnails\/(\d+)/);
+                viewerPhotoId = match ? match[1] : null;
+
+                viewerPrevEl.hidden = index <= 0;
+                viewerNextEl.hidden = index >= viewerList.length - 1;
             }
 
             function closeViewer() {
                 viewerEl.hidden = true;
                 viewerImgEl.src = '';
                 viewerPhotoId = null;
+                viewerList = [];
+                viewerIndex = -1;
             }
 
-            // 컨트롤 버튼 클릭은 닫힘으로 처리하지 않는다.
+            viewerPrevEl.addEventListener('click', function () { showViewerAt(viewerIndex - 1); });
+            viewerNextEl.addEventListener('click', function () { showViewerAt(viewerIndex + 1); });
+
+            // 컨트롤·이동 버튼 클릭은 닫힘으로 처리하지 않는다.
             viewerEl.addEventListener('click', function (evt) {
-                if (evt.target.closest('#photo-viewer-controls')) { return; }
+                if (evt.target.closest('#photo-viewer-controls') || evt.target.closest('.viewer-nav-btn')) { return; }
                 closeViewer();
             });
             document.addEventListener('keydown', function (evt) {
-                if (evt.key === 'Escape' && !viewerEl.hidden) { closeViewer(); }
+                if (viewerEl.hidden) { return; }
+                if (evt.key === 'Escape') { closeViewer(); }
+                if (evt.key === 'ArrowLeft') { showViewerAt(viewerIndex - 1); }
+                if (evt.key === 'ArrowRight') { showViewerAt(viewerIndex + 1); }
             });
 
             // 회전 — 서버가 보관 썸네일을 90도 회전해 저장하면, 캐시를 우회해 다시 그린다.
@@ -363,10 +401,10 @@ declare(strict_types=1);
                 })
                     .then(function (res) {
                         if (!res.ok) { throw new Error('delete failed'); }
+                        // 삭제 후에는 뷰어와 열린 레이어를 모두 닫는다(지도 마커는 새로고침 시 반영).
                         closeViewer();
                         closeLayer();
-                        // 시간표가 열려 있으면 다시 불러 삭제를 반영한다(지도 마커는 새로고침 시 반영).
-                        if (!timelineEl.hidden && currentTimelineDate) { openTimeline(currentTimelineDate); }
+                        closeTimeline();
                     })
                     .catch(function () { alert('삭제에 실패했습니다.'); })
                     .then(function () { buttonEl.disabled = false; });
@@ -375,7 +413,7 @@ declare(strict_types=1);
             // 팝업/사이드바 모두 매번 새로 DOM 에 그려지므로 이벤트 위임으로 클릭을 잡는다.
             document.body.addEventListener('click', function (evt) {
                 var photoImg = evt.target.closest('.timeline-photos img, #photo-layer-grid img');
-                if (photoImg) { openViewer(photoImg.src, photoImg.title); return; }
+                if (photoImg) { openViewerFrom(photoImg); return; }
 
                 var btn = evt.target.closest('.popup-more-btn');
                 if (btn) { openLayer(Number(btn.dataset.clusterIndex)); return; }

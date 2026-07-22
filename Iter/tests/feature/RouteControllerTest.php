@@ -102,6 +102,9 @@ final class RouteControllerTest extends CIUnitTestCase
         // 뷰어에는 회전·삭제 컨트롤이 있어야 한다.
         $this->assertStringContainsString('id="photo-viewer-controls"', $body);
         $this->assertStringContainsString('data-photos-url', $body);
+        // 사진이 여러 장일 때 넘겨볼 수 있는 좌우 이동 버튼도 있어야 한다.
+        $this->assertStringContainsString('id="photo-viewer-prev"', $body);
+        $this->assertStringContainsString('id="photo-viewer-next"', $body);
     }
 
     public function testThumbnailRequiresLogin(): void
