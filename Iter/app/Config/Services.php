@@ -11,9 +11,12 @@ use App\Services\AccountDeletionService;
 use App\Services\Auth\GoogleTokenRevoker;
 use App\Services\GooglePhotosAuthService;
 use App\Services\Ingest\GdThumbnailGenerator;
+use App\Services\Ingest\NativeExifReader;
 use App\Services\Ingest\NativeUploadedZipHandler;
+use App\Services\Ingest\PhotoExifParser;
 use App\Services\Ingest\TakeoutMetadataParser;
 use App\Services\Ingest\UploadedZipHandlerInterface;
+use App\Services\PlainZipIngestService;
 use App\Services\RouteVisualizationService;
 use App\Services\StorageMaintenanceService;
 use App\Services\TakeoutIngestService;
@@ -126,6 +129,24 @@ class Services extends BaseService
 
         return new TakeoutIngestService(
             new TakeoutMetadataParser(),
+            new GdThumbnailGenerator(WRITEPATH . 'uploads/thumbnails'),
+        );
+    }
+
+    /**
+     * 일반 압축파일(사진 EXIF) → 동선 좌표 적재 서비스.
+     *
+     * EXIF 파서 + EXIF 리더 + 300px 썸네일 생성기를 조립한다.
+     */
+    public static function plainZipIngest(bool $getShared = true): PlainZipIngestService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('plainZipIngest');
+        }
+
+        return new PlainZipIngestService(
+            new PhotoExifParser(),
+            new NativeExifReader(),
             new GdThumbnailGenerator(WRITEPATH . 'uploads/thumbnails'),
         );
     }
