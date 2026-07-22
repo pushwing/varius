@@ -47,5 +47,9 @@ $routes->post('trips/(:num)/update', 'TripController::update/$1', ['filter' => '
 $routes->post('trips/(:num)/delete', 'TripController::delete/$1', ['filter' => 'sessionRateLimit:trips,120']);
 $routes->post('trips/(:num)/share', 'TripController::share/$1', ['filter' => 'sessionRateLimit:trips,120']);
 
+// 여행 단위 SNS 공유 링크(비로그인 공개 열람)
+$routes->get('t/(:segment)', 'TripShareController::show/$1');
+$routes->get('t/(:segment)/thumbnails/(:num)', 'TripShareController::thumbnail/$1/$2');
+
 // 계정·데이터 삭제
 $routes->post('account/delete', 'AccountController::deleteData', ['filter' => 'sessionRateLimit']);
