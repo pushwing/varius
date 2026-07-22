@@ -10,6 +10,7 @@ declare(strict_types=1);
  * @var string   $loginUrl
  * @var string   $uploadUrl
  * @var string   $mapUrl
+ * @var string   $tripsUrl
  * @var string   $logoutUrl
  */
 ?>
@@ -72,7 +73,7 @@ declare(strict_types=1);
 </head>
 <body>
 <?php if ($userId !== null): ?>
-    <?= view('partials/nav', ['uploadUrl' => $uploadUrl, 'mapUrl' => $mapUrl, 'logoutUrl' => $logoutUrl]) ?>
+    <?= view('partials/nav', ['uploadUrl' => $uploadUrl, 'mapUrl' => $mapUrl, 'tripsUrl' => $tripsUrl, 'logoutUrl' => $logoutUrl]) ?>
 <?php endif; ?>
     <main class="landing">
         <img class="logo" src="/assets/logo-wordmark.png" alt="Iter">

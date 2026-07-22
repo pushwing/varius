@@ -7,6 +7,7 @@ declare(strict_types=1);
  *
  * @var string $uploadUrl
  * @var string $mapUrl
+ * @var string $tripsUrl
  * @var string $logoutUrl
  */
 ?>
@@ -14,6 +15,7 @@ declare(strict_types=1);
     <a href="/" class="brand"><img src="/assets/logo-mark-512.png" alt="Iter"></a>
     <a href="<?= esc($uploadUrl, 'attr') ?>">사진 가져오기</a>
     <a href="<?= esc($mapUrl, 'attr') ?>">지도 보기</a>
+    <a href="<?= esc($tripsUrl, 'attr') ?>">내 여행</a>
     <a href="<?= esc($logoutUrl, 'attr') ?>">로그아웃</a>
     <span class="spacer"></span>
     <span class="legal">

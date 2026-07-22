@@ -127,4 +127,48 @@ final class PhotoLocationModelTest extends CIUnitTestCase
         $this->assertSame('d1', $rows[0]['source_item_id']);
         $this->assertSame('d2', $rows[1]['source_item_id']);
     }
+
+    public function testCountBetweenCountsOnlyWithinRangeForUser(): void
+    {
+        $otherUserId = (new UserModel())->upsertByGoogleSub('sub-loc-count', 'count@example.com', 'Count');
+
+        $model = new PhotoLocationModel();
+        $model->saveMany($this->userId, [
+            new PhotoLocation('c1', 37.5, 127.0, '2024-03-15 09:00:00'),
+            new PhotoLocation('c2', 37.6, 127.1, '2024-03-16 09:00:00'),
+            new PhotoLocation('c3', 37.6, 127.1, '2024-03-20 09:00:00'), // 범위 밖.
+        ]);
+        $model->saveMany($otherUserId, [
+            new PhotoLocation('c4', 37.5, 127.0, '2024-03-15 10:00:00'),
+        ]);
+
+        $count = $model->countBetween($this->userId, '2024-03-15 00:00:00', '2024-03-16 23:59:59');
+
+        $this->assertSame(2, $count);
+    }
+
+    public function testFirstThumbnailBetweenReturnsEarliestPhotoWithThumbnail(): void
+    {
+        $model = new PhotoLocationModel();
+        $model->saveMany($this->userId, [
+            new PhotoLocation('f1', 37.5, 127.0, '2024-03-15 09:00:00'), // 썸네일 없음.
+            new PhotoLocation('f2', 37.6, 127.1, '2024-03-15 10:00:00', '/thumbs/f2.jpg'),
+            new PhotoLocation('f3', 37.6, 127.1, '2024-03-15 11:00:00', '/thumbs/f3.jpg'),
+        ]);
+        $f2Id = (int) $model->where('source_item_id', 'f2')->first()['id'];
+
+        $id = $model->firstThumbnailBetween($this->userId, '2024-03-15 00:00:00', '2024-03-15 23:59:59');
+
+        $this->assertSame($f2Id, $id);
+    }
+
+    public function testFirstThumbnailBetweenReturnsNullWhenNoneHaveThumbnails(): void
+    {
+        $model = new PhotoLocationModel();
+        $model->saveMany($this->userId, [
+            new PhotoLocation('n1', 37.5, 127.0, '2024-03-15 09:00:00'),
+        ]);
+
+        $this->assertNull($model->firstThumbnailBetween($this->userId, '2024-03-15 00:00:00', '2024-03-15 23:59:59'));
+    }
 }

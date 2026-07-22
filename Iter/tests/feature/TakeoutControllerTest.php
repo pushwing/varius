@@ -63,6 +63,7 @@ final class TakeoutControllerTest extends CIUnitTestCase
         $body = $this->decodedBody($result);
         $this->assertStringContainsString('지도 보기', $body);
         $this->assertStringContainsString('/map', $body);
+        $this->assertStringContainsString('내 여행', $body);
         $this->assertStringContainsString('로그아웃', $body);
         $this->assertStringContainsString('/auth/logout', $body);
         $this->assertStringContainsString('id="takeout-form"', $body);

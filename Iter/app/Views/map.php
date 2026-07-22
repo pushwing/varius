@@ -10,6 +10,7 @@ declare(strict_types=1);
  * @var string $photosUrl   사진 관리 API URL 프리픽스(POST /photos/{id}/rotate 등)
  * @var string $uploadUrl
  * @var string $mapUrl
+ * @var string $tripsUrl
  * @var string $logoutUrl
  */
 ?>
@@ -215,7 +216,7 @@ declare(strict_types=1);
     </style>
 </head>
 <body>
-    <?= view('partials/nav', ['uploadUrl' => $uploadUrl, 'mapUrl' => $mapUrl, 'logoutUrl' => $logoutUrl]) ?>
+    <?= view('partials/nav', ['uploadUrl' => $uploadUrl, 'mapUrl' => $mapUrl, 'tripsUrl' => $tripsUrl, 'logoutUrl' => $logoutUrl]) ?>
     <div id="map-container">
         <div id="route-sidebar">
             <div id="route-sidebar-header">동선 목록</div>

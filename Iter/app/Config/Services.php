@@ -8,6 +8,7 @@ use App\Models\DayNoteModel;
 use App\Models\OAuthTokenModel;
 use App\Models\PhotoLocationModel;
 use App\Models\TimeNoteModel;
+use App\Models\TripModel;
 use App\Models\UserModel;
 use App\Services\AccountDeletionService;
 use App\Services\Auth\GoogleTokenRevoker;
@@ -26,6 +27,8 @@ use App\Services\RouteVisualizationService;
 use App\Services\StorageMaintenanceService;
 use App\Services\TakeoutIngestService;
 use App\Services\TimelineService;
+use App\Services\TripSuggestionService;
+use App\Services\TripSummaryService;
 use CodeIgniter\Config\BaseService;
 use League\OAuth2\Client\Provider\Google;
 
@@ -94,6 +97,30 @@ class Services extends BaseService
             static::googlePhotosAuth(),
             WRITEPATH . 'uploads/thumbnails',
         );
+    }
+
+    /**
+     * 여행(날짜 범위) 날짜별 사진 요약 서비스 — 상세·공개 공유 페이지가 공용으로 사용한다.
+     */
+    public static function tripSummary(bool $getShared = true): TripSummaryService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('tripSummary');
+        }
+
+        return new TripSummaryService(new PhotoLocationModel());
+    }
+
+    /**
+     * 여행 자동 제안 서비스 — 아직 저장된 여행에 속하지 않은 날짜를 3일 공백 규칙으로 묶는다.
+     */
+    public static function tripSuggestion(bool $getShared = true): TripSuggestionService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('tripSuggestion');
+        }
+
+        return new TripSuggestionService(new PhotoLocationModel(), new TripModel());
     }
 
     /**

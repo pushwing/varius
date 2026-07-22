@@ -37,5 +37,19 @@ $routes->get('s/(:segment)/thumbnails/(:num)', 'ShareController::thumbnail/$1/$2
 $routes->post('photos/(:num)/rotate', 'PhotoController::rotate/$1', ['filter' => 'sessionRateLimit:photos,300']);
 $routes->post('photos/(:num)/delete', 'PhotoController::delete/$1', ['filter' => 'sessionRateLimit:photos,300']);
 
+// 여행 그룹핑
+$routes->get('trips', 'TripController::index');
+$routes->get('trips/data', 'TripController::data'); // (:num) 라우트보다 먼저 선언
+$routes->post('trips', 'TripController::create', ['filter' => 'sessionRateLimit:trips,120']);
+$routes->get('trips/(:num)', 'TripController::show/$1');
+$routes->get('trips/(:num)/data', 'TripController::showData/$1');
+$routes->post('trips/(:num)/update', 'TripController::update/$1', ['filter' => 'sessionRateLimit:trips,120']);
+$routes->post('trips/(:num)/delete', 'TripController::delete/$1', ['filter' => 'sessionRateLimit:trips,120']);
+$routes->post('trips/(:num)/share', 'TripController::share/$1', ['filter' => 'sessionRateLimit:trips,120']);
+
+// 여행 단위 SNS 공유 링크(비로그인 공개 열람)
+$routes->get('t/(:segment)', 'TripShareController::show/$1');
+$routes->get('t/(:segment)/thumbnails/(:num)', 'TripShareController::thumbnail/$1/$2');
+
 // 계정·데이터 삭제
 $routes->post('account/delete', 'AccountController::deleteData', ['filter' => 'sessionRateLimit']);

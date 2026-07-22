@@ -72,7 +72,7 @@ final class RouteControllerTest extends CIUnitTestCase
 
     public function testMapPageIncludesLoggedInNav(): void
     {
-        // 로그인 후 상단 메뉴(사진 가져오기·지도 보기·로그아웃)는 업로드 페이지뿐 아니라
+        // 로그인 후 상단 메뉴(사진 가져오기·지도 보기·내 여행·로그아웃)는 업로드 페이지뿐 아니라
         // 지도 페이지에서도 동일하게 보여야 한다.
         $userId = (new UserModel())->upsertByGoogleSub('sub-map-nav', 'mapnav@example.com', 'MapNav');
 
@@ -82,6 +82,8 @@ final class RouteControllerTest extends CIUnitTestCase
         $body = html_entity_decode((string) $result->getBody(), ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $this->assertStringContainsString('class="brand"', $body);
         $this->assertStringContainsString('지도 보기', $body);
+        $this->assertStringContainsString('내 여행', $body);
+        $this->assertStringContainsString('/trips', $body);
         $this->assertStringContainsString('로그아웃', $body);
         $this->assertStringContainsString('/auth/logout', $body);
     }
