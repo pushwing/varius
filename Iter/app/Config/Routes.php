@@ -37,5 +37,10 @@ $routes->get('s/(:segment)/thumbnails/(:num)', 'ShareController::thumbnail/$1/$2
 $routes->post('photos/(:num)/rotate', 'PhotoController::rotate/$1', ['filter' => 'sessionRateLimit:photos,300']);
 $routes->post('photos/(:num)/delete', 'PhotoController::delete/$1', ['filter' => 'sessionRateLimit:photos,300']);
 
+// 여행 그룹핑
+$routes->get('trips', 'TripController::index');
+$routes->get('trips/data', 'TripController::data'); // (:num) 라우트보다 먼저 선언
+$routes->post('trips', 'TripController::create', ['filter' => 'sessionRateLimit:trips,120']);
+
 // 계정·데이터 삭제
 $routes->post('account/delete', 'AccountController::deleteData', ['filter' => 'sessionRateLimit']);
