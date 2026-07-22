@@ -10,9 +10,10 @@ use CodeIgniter\HTTP\ResponseInterface;
 use Throwable;
 
 /**
- * Google Takeout zip 업로드 컨트롤러.
+ * 사진 zip 업로드 컨트롤러.
  *
- * 로직은 UploadedZipHandlerInterface·TakeoutIngestService 에 위임하고,
+ * Google Takeout zip(사이드카 JSON)과 일반 압축파일(사진 EXIF) 두 경로를 처리한다.
+ * 실제 로직은 UploadedZipHandlerInterface·인제스트 서비스에 위임하고,
  * 컨트롤러는 인증 가드·검증·응답만 담당한다.
  */
 class TakeoutController extends BaseController
@@ -35,14 +36,33 @@ class TakeoutController extends BaseController
             'logoutUrl' => site_url('auth/logout'),
             'mapUrl' => site_url('map'),
             'uploadUrl' => site_url('takeout/upload'),
+            'plainUploadUrl' => site_url('photos/upload'),
             'deleteUrl' => site_url('account/delete'),
         ]);
     }
 
     /**
-     * zip 업로드 — 압축 해제해 동선 좌표를 추출·저장한다(POST /takeout/upload).
+     * Google Takeout zip 업로드 — JSON 사이드카에서 좌표 추출·저장(POST /takeout/upload).
      */
     public function upload(): ResponseInterface
+    {
+        return $this->handleZipUpload('takeoutIngest', 'Takeout');
+    }
+
+    /**
+     * 일반 압축파일 업로드 — 사진 EXIF 에서 좌표 추출·저장(POST /photos/upload).
+     */
+    public function uploadPlain(): ResponseInterface
+    {
+        return $this->handleZipUpload('plainZipIngest', '일반 압축');
+    }
+
+    /**
+     * zip 업로드 공통 처리: 인증·검증 → 저장 → 인제스트 → 좌표 저장.
+     *
+     * 좌표를 어느 인제스트 서비스로 뽑느냐만 다르다(Takeout / 일반 압축).
+     */
+    private function handleZipUpload(string $ingestServiceName, string $context): ResponseInterface
     {
         $userId = $this->currentUserId();
         if ($userId === null) {
@@ -61,7 +81,8 @@ class TakeoutController extends BaseController
         }
 
         if (strtolower($file->getClientExtension()) !== 'zip') {
-            log_message('info', 'Takeout 업로드 확장자 거부: name={name} ext={ext} error={code}({errorString}) size={size} mime={mime}', [
+            log_message('info', '{ctx} 업로드 확장자 거부: name={name} ext={ext} error={code}({errorString}) size={size} mime={mime}', [
+                'ctx' => $context,
                 'name' => $file->getClientName(),
                 'ext' => $file->getClientExtension(),
                 'code' => $file->getError(),
@@ -80,15 +101,15 @@ class TakeoutController extends BaseController
         try {
             $zipPath = service('uploadedZipHandler')->store($file, WRITEPATH . 'uploads');
         } catch (Throwable $e) {
-            log_message('error', 'Takeout zip 업로드 실패: {msg}', ['msg' => $e->getMessage()]);
+            log_message('error', '{ctx} zip 업로드 실패: {msg}', ['ctx' => $context, 'msg' => $e->getMessage()]);
 
             return $this->response->setStatusCode(422)->setJSON(['error' => '업로드된 파일을 처리할 수 없습니다.']);
         }
 
         try {
-            $result = service('takeoutIngest')->ingest($zipPath, $userId);
+            $result = service($ingestServiceName)->ingest($zipPath, $userId);
         } catch (Throwable $e) {
-            log_message('error', 'Takeout 처리 실패: {msg}', ['msg' => $e->getMessage()]);
+            log_message('error', '{ctx} 처리 실패: {msg}', ['ctx' => $context, 'msg' => $e->getMessage()]);
 
             return $this->response->setStatusCode(502)->setJSON(['error' => 'zip 처리에 실패했습니다.']);
         } finally {
@@ -100,7 +121,7 @@ class TakeoutController extends BaseController
         try {
             $saved = model(PhotoLocationModel::class)->saveMany($userId, $result['locations']);
         } catch (Throwable $e) {
-            log_message('error', 'Takeout 좌표 저장 실패: {msg}', ['msg' => $e->getMessage()]);
+            log_message('error', '{ctx} 좌표 저장 실패: {msg}', ['ctx' => $context, 'msg' => $e->getMessage()]);
             // 저장이 실패하면 방금 만든 썸네일은 DB 참조가 없는 고아가 되므로 즉시 정리한다.
             $this->deleteThumbnails($result['locations']);
 

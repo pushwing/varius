@@ -8,6 +8,7 @@ use App\Models\PhotoLocationModel;
 use App\Models\UserModel;
 use App\Services\Ingest\PhotoLocation;
 use App\Services\Ingest\UploadedZipHandlerInterface;
+use App\Services\PlainZipIngestService;
 use App\Services\TakeoutIngestService;
 use CodeIgniter\Config\Factories;
 use CodeIgniter\Test\CIUnitTestCase;
@@ -67,6 +68,9 @@ final class TakeoutControllerTest extends CIUnitTestCase
         $this->assertStringContainsString('id="takeout-form"', $body);
         $this->assertStringContainsString('/takeout/upload', $body);
         $this->assertStringContainsString('takeout.google.com', $body);
+        // 일반 압축파일 업로드 카드(POST /photos/upload)가 좌우 분리로 함께 노출돼야 한다.
+        $this->assertStringContainsString('id="plain-form"', $body);
+        $this->assertStringContainsString('/photos/upload', $body);
         // 내 데이터 전체 삭제 UI(POST /account/delete)가 함께 노출돼야 한다.
         $this->assertStringContainsString('id="delete-form"', $body);
         $this->assertStringContainsString('/account/delete', $body);
@@ -159,6 +163,63 @@ final class TakeoutControllerTest extends CIUnitTestCase
             $this->seeInDatabase('photo_locations', [
                 'user_id' => $userId,
                 'source_item_id' => 'photo1.jpg',
+            ]);
+        } finally {
+            service('superglobals')->setFilesArray([]);
+            if (is_file($fakeUpload)) {
+                unlink($fakeUpload);
+            }
+        }
+    }
+
+    public function testUploadPlainRequiresLogin(): void
+    {
+        $result = $this->post('photos/upload');
+
+        $result->assertStatus(401);
+    }
+
+    public function testUploadPlainUsesPlainIngestAndSavesLocations(): void
+    {
+        $userId = (new UserModel())->upsertByGoogleSub('sub-plain-1', 'plain@example.com', 'Plain');
+
+        $handler = $this->createMock(UploadedZipHandlerInterface::class);
+        $handler->method('store')->willReturn('/fake/photos.zip');
+        Services::injectMock('uploadedZipHandler', $handler);
+
+        // 일반 압축 경로는 plainZipIngest 서비스를 써야 한다(takeoutIngest 아님).
+        $ingest = $this->createMock(PlainZipIngestService::class);
+        $ingest->expects($this->once())
+            ->method('ingest')
+            ->with('/fake/photos.zip', $userId)
+            ->willReturn([
+                'locations' => [new PhotoLocation('IMG_0001.JPG', 37.5665, 126.9780, '2024-03-15 09:00:00')],
+                'totalCandidates' => 1,
+                'capped' => false,
+            ]);
+        Services::injectMock('plainZipIngest', $ingest);
+
+        $fakeUpload = tempnam(sys_get_temp_dir(), 'upload_') . '.zip';
+        file_put_contents($fakeUpload, 'zip-bytes');
+        service('superglobals')->setFilesArray([
+            'file' => [
+                'name' => 'photos.zip',
+                'type' => 'application/zip',
+                'tmp_name' => $fakeUpload,
+                'error' => UPLOAD_ERR_OK,
+                'size' => filesize($fakeUpload),
+            ],
+        ]);
+
+        try {
+            $result = $this->withSession(['user_id' => $userId])->post('photos/upload');
+
+            $result->assertStatus(200);
+            $data = json_decode($result->getJSON() ?? '', true);
+            $this->assertSame(1, $data['saved']);
+            $this->seeInDatabase('photo_locations', [
+                'user_id' => $userId,
+                'source_item_id' => 'IMG_0001.JPG',
             ]);
         } finally {
             service('superglobals')->setFilesArray([]);
