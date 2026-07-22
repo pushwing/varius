@@ -160,10 +160,54 @@ final class TakeoutControllerTest extends CIUnitTestCase
             $this->assertSame(1, $data['saved']);
             $this->assertSame(1, $data['totalCandidates']);
             $this->assertFalse($data['capped']);
+            // 저장은 UTC(2024-03-15 09:00) — 지도로 이동 시 포커스할 KST 날짜(2024-03-15)를 응답에 담는다.
+            $this->assertSame('2024-03-15', $data['latestDate']);
             $this->seeInDatabase('photo_locations', [
                 'user_id' => $userId,
                 'source_item_id' => 'photo1.jpg',
             ]);
+        } finally {
+            service('superglobals')->setFilesArray([]);
+            if (is_file($fakeUpload)) {
+                unlink($fakeUpload);
+            }
+        }
+    }
+
+    public function testUploadReturnsLatestKstDateAmongMultipleLocations(): void
+    {
+        $userId = (new UserModel())->upsertByGoogleSub('sub-takeout-latest', 'tlatest@example.com', 'TLatest');
+
+        $handler = $this->createMock(UploadedZipHandlerInterface::class);
+        $handler->method('store')->willReturn('/fake/takeout.zip');
+        Services::injectMock('uploadedZipHandler', $handler);
+
+        $ingest = $this->createMock(TakeoutIngestService::class);
+        $ingest->method('ingest')->willReturn([
+            'locations' => [
+                // UTC 저녁(23:30)은 KST 로 다음 날 — 가장 늦은 시각이 가장 늦은 KST 날짜는 아닐 수 있다.
+                new PhotoLocation('early.jpg', 37.5, 127.0, '2024-03-14 01:00:00'),
+                new PhotoLocation('late-utc.jpg', 37.5, 127.0, '2024-03-15 23:30:00'), // KST 2024-03-16
+            ],
+            'totalCandidates' => 2,
+            'capped' => false,
+        ]);
+        Services::injectMock('takeoutIngest', $ingest);
+
+        $fakeUpload = tempnam(sys_get_temp_dir(), 'upload_') . '.zip';
+        file_put_contents($fakeUpload, 'zip-bytes');
+        service('superglobals')->setFilesArray([
+            'file' => [
+                'name' => 'takeout.zip', 'type' => 'application/zip', 'tmp_name' => $fakeUpload,
+                'error' => UPLOAD_ERR_OK, 'size' => filesize($fakeUpload),
+            ],
+        ]);
+
+        try {
+            $result = $this->withSession(['user_id' => $userId])->post('takeout/upload');
+
+            $data = json_decode($result->getJSON() ?? '', true);
+            $this->assertSame('2024-03-16', $data['latestDate']);
         } finally {
             service('superglobals')->setFilesArray([]);
             if (is_file($fakeUpload)) {
