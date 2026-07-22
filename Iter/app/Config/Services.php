@@ -18,6 +18,7 @@ use App\Services\Ingest\NativeUploadedZipHandler;
 use App\Services\Ingest\PhotoExifParser;
 use App\Services\Ingest\TakeoutMetadataParser;
 use App\Services\Ingest\UploadedZipHandlerInterface;
+use App\Services\PhotoManagementService;
 use App\Services\PlainZipIngestService;
 use App\Services\Poi\OverpassPoiLookup;
 use App\Services\Poi\PoiLookupInterface;
@@ -107,6 +108,18 @@ class Services extends BaseService
         }
 
         return new RouteVisualizationService(new PhotoLocationModel());
+    }
+
+    /**
+     * 사진 개별 관리 서비스(썸네일 회전·삭제).
+     */
+    public static function photoManagement(bool $getShared = true): PhotoManagementService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('photoManagement');
+        }
+
+        return new PhotoManagementService(new PhotoLocationModel());
     }
 
     /**

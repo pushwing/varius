@@ -79,6 +79,21 @@ class PhotoLocationModel extends Model
     }
 
     /**
+     * 좌표 레코드가 이 사용자 소유일 때만 행을 반환한다(다른 사용자 접근 방지).
+     *
+     * @return array<string, mixed>|null
+     */
+    public function findOwned(int $id, int $userId): ?array
+    {
+        /** @var array<string, mixed>|null $row */
+        $row = $this->where('id', $id)
+            ->where('user_id', $userId)
+            ->first();
+
+        return $row;
+    }
+
+    /**
      * 좌표 레코드가 이 사용자 소유일 때만 썸네일 경로를 반환한다(다른 사용자 열람 방지).
      */
     public function thumbnailPathFor(int $id, int $userId): ?string

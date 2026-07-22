@@ -28,5 +28,9 @@ $routes->get('timeline/(:segment)', 'TimelineController::data/$1');
 $routes->post('timeline/day-note', 'TimelineController::saveDayNote', ['filter' => 'sessionRateLimit:notes,120']);
 $routes->post('timeline/time-note', 'TimelineController::saveTimeNote', ['filter' => 'sessionRateLimit:notes,120']);
 
+// 사진 개별 관리(썸네일 회전·삭제)
+$routes->post('photos/(:num)/rotate', 'PhotoController::rotate/$1', ['filter' => 'sessionRateLimit:photos,300']);
+$routes->post('photos/(:num)/delete', 'PhotoController::delete/$1', ['filter' => 'sessionRateLimit:photos,300']);
+
 // 계정·데이터 삭제
 $routes->post('account/delete', 'AccountController::deleteData', ['filter' => 'sessionRateLimit']);
