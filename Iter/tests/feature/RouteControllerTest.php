@@ -97,6 +97,8 @@ final class RouteControllerTest extends CIUnitTestCase
         $body = (string) $result->getBody();
         $this->assertStringContainsString('id="timeline-layer"', $body);
         $this->assertStringContainsString('data-timeline-url', $body);
+        // 사진 클릭 시 보관된 이미지를 크게 보는 확대 뷰어도 포함돼야 한다.
+        $this->assertStringContainsString('id="photo-viewer"', $body);
     }
 
     public function testThumbnailRequiresLogin(): void

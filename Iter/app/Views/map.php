@@ -158,6 +158,24 @@ declare(strict_types=1);
         }
         .note-save-btn:disabled { opacity: 0.6; cursor: default; }
         #timeline-empty { color: #777; font-size: 13px; padding: 8px 0; }
+
+        /* ── 사진 확대 뷰어(보관된 이미지를 크게 표시) ── */
+        #photo-layer-grid img, .timeline-photos img { cursor: zoom-in; }
+        #photo-viewer {
+            position: fixed; inset: 0; z-index: 3000; background: rgba(0, 0, 0, 0.88);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 24px; cursor: zoom-out;
+        }
+        #photo-viewer[hidden] { display: none; }
+        #photo-viewer img {
+            max-width: 92vw; max-height: 82vh; border-radius: 8px;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+        }
+        #photo-viewer-caption { margin-top: 12px; color: #ddd; font-size: 13px; }
+        #photo-viewer-close {
+            position: absolute; top: 14px; right: 20px; border: none; background: none;
+            color: #fff; font-size: 28px; cursor: pointer; line-height: 1;
+        }
     </style>
 </head>
 <body>
@@ -203,6 +221,12 @@ declare(strict_types=1);
         </div>
     </div>
 
+    <div id="photo-viewer" hidden>
+        <button type="button" id="photo-viewer-close" aria-label="닫기">&times;</button>
+        <img id="photo-viewer-img" src="" alt="">
+        <div id="photo-viewer-caption"></div>
+    </div>
+
     <script
         src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
@@ -241,8 +265,32 @@ declare(strict_types=1);
             });
             document.getElementById('timeline-daynote-save').addEventListener('click', saveDayNote);
 
+            // 사진 확대 뷰어 — 시간표·사진 레이어의 썸네일 클릭 시 보관된 이미지를 크게 표시.
+            var viewerEl = document.getElementById('photo-viewer');
+            var viewerImgEl = document.getElementById('photo-viewer-img');
+            var viewerCaptionEl = document.getElementById('photo-viewer-caption');
+
+            function openViewer(src, caption) {
+                viewerImgEl.src = src;
+                viewerCaptionEl.textContent = caption || '';
+                viewerEl.hidden = false;
+            }
+
+            function closeViewer() {
+                viewerEl.hidden = true;
+                viewerImgEl.src = '';
+            }
+
+            viewerEl.addEventListener('click', closeViewer);
+            document.addEventListener('keydown', function (evt) {
+                if (evt.key === 'Escape' && !viewerEl.hidden) { closeViewer(); }
+            });
+
             // 팝업/사이드바 모두 매번 새로 DOM 에 그려지므로 이벤트 위임으로 클릭을 잡는다.
             document.body.addEventListener('click', function (evt) {
+                var photoImg = evt.target.closest('.timeline-photos img, #photo-layer-grid img');
+                if (photoImg) { openViewer(photoImg.src, photoImg.title); return; }
+
                 var btn = evt.target.closest('.popup-more-btn');
                 if (btn) { openLayer(Number(btn.dataset.clusterIndex)); return; }
 
