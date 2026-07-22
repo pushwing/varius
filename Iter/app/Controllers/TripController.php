@@ -160,6 +160,7 @@ class TripController extends BaseController
         return view('trip-detail', [
             'tripId' => $id,
             'tripsUrl' => site_url('trips'),
+            'timelineUrl' => site_url('timeline'),
             'uploadUrl' => site_url('upload'),
             'mapUrl' => site_url('map'),
             'logoutUrl' => site_url('auth/logout'),
