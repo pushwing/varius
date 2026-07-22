@@ -241,7 +241,9 @@ declare(strict_types=1);
                             } else if (data.totalCandidates > data.saved) {
                                 message += ' (위치 정보를 찾지 못한 ' + (data.totalCandidates - data.saved) + '장 제외)';
                             }
-                            showStatus(message, mapUrl, '지도에서 보기');
+                            // 방금 업로드한 사진 중 가장 늦은 날짜로 지도가 바로 포커스되게 한다.
+                            var mapHref = data.latestDate ? mapUrl + '?date=' + encodeURIComponent(data.latestDate) : mapUrl;
+                            showStatus(message, mapHref, '지도에서 보기');
                             setBusy(false);
                         })
                         .catch(onError);

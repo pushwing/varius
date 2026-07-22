@@ -542,6 +542,23 @@ declare(strict_types=1);
 
                 renderSidebar(dateOrder);
                 if (bounds.length) { map.fitBounds(bounds, { padding: [40, 40] }); }
+                focusDateFromQuery();
+            }
+
+            // 업로드 완료 화면의 "지도에서 보기"(?date=YYYY-MM-DD)로 들어오면, 사이드바에서
+            // 그 날짜를 선택하고 지도를 그 날의 첫 지점으로 이동한 상태로 연다.
+            function focusDateFromQuery() {
+                var date = new URLSearchParams(location.search).get('date');
+                if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !dateIndex[date]) { return; }
+
+                var itemEl = document.querySelector('.day-item[data-date="' + date + '"]');
+                if (!itemEl) { return; }
+
+                var listEl = itemEl.closest('.day-list');
+                if (listEl) { listEl.hidden = false; } // 접혀 있는 달이면 펼친다.
+
+                selectDay(itemEl);
+                itemEl.scrollIntoView({ block: 'nearest' });
             }
 
             function renderSidebar(dateOrder) {

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Models\PhotoLocationModel;
+use App\Services\Ingest\PhotoLocation;
+use App\Support\TimeConverter;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 use Throwable;
@@ -132,7 +134,26 @@ class TakeoutController extends BaseController
             'saved' => $saved,
             'totalCandidates' => $result['totalCandidates'],
             'capped' => $result['capped'],
+            // 업로드 완료 후 "지도에서 보기"가 이 날짜로 바로 이동하기 위한 값(KST, YYYY-MM-DD).
+            'latestDate' => $this->latestKstDate($result['locations']),
         ]);
+    }
+
+    /**
+     * 업로드된 좌표들 중 가장 늦은 촬영 시각의 KST 날짜를 반환한다(없으면 null).
+     *
+     * @param list<PhotoLocation> $locations
+     */
+    private function latestKstDate(array $locations): ?string
+    {
+        $latestUtc = null;
+        foreach ($locations as $location) {
+            if ($latestUtc === null || $location->takenAt > $latestUtc) {
+                $latestUtc = $location->takenAt;
+            }
+        }
+
+        return $latestUtc === null ? null : substr(TimeConverter::utcToKst($latestUtc), 0, 10);
     }
 
     /**
