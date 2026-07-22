@@ -32,8 +32,22 @@ final class TripSummaryService
     {
         [$startUtc] = TimeConverter::kstDateToUtcRange($startDate);
         [, $endUtc] = TimeConverter::kstDateToUtcRange($endDate);
-        $rows = $this->photos->findByUserBetween($userId, $startUtc, $endUtc);
 
+        return $this->buildDaySummariesFromRows($this->photos->findByUserBetween($userId, $startUtc, $endUtc));
+    }
+
+    /**
+     * 이미 조회된 좌표 행으로 날짜별 요약을 만드는 순수 로직. buildDaySummaries() 의
+     * 실제 계산부이며, TripController::showData() 처럼 사진 조회를 이미 한 번 수행한
+     * 호출측이 중복 조회 없이 재사용하기 위해 공개 메서드로 노출한다.
+     *
+     * @param list<array<string, mixed>> $rows PhotoLocationModel::findByUserBetween() 과
+     *                                          같은 형태.
+     *
+     * @return list<array{date: string, photo_count: int, thumbnail_ids: list<int>}>
+     */
+    public function buildDaySummariesFromRows(array $rows): array
+    {
         $grouped = [];
         foreach ($rows as $row) {
             $takenAt = (string) ($row['taken_at'] ?? '');

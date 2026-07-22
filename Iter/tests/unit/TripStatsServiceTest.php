@@ -74,4 +74,61 @@ final class TripStatsServiceTest extends CIUnitTestCase
         $this->assertSame(0.0, $stats['distance_km']);
         $this->assertSame(1, $stats['spot_count']);
     }
+
+    public function testFromRowsReturnsZeroesWhenNoPhotos(): void
+    {
+        $service = new TripStatsService($this->createMock(PhotoLocationModel::class));
+
+        $stats = $service->buildStatsFromRows([]);
+
+        $this->assertSame(0.0, $stats['distance_km']);
+        $this->assertSame(0, $stats['spot_count']);
+    }
+
+    public function testFromRowsSinglePhotoHasZeroDistanceAndOneSpot(): void
+    {
+        $service = new TripStatsService($this->createMock(PhotoLocationModel::class));
+
+        $stats = $service->buildStatsFromRows([
+            ['lat' => '37.5665', 'lng' => '126.9780', 'taken_at' => '2024-03-15 01:00:00'],
+        ]);
+
+        $this->assertSame(0.0, $stats['distance_km']);
+        $this->assertSame(1, $stats['spot_count']);
+    }
+
+    public function testFromRowsAccumulatesDistanceInChronologicalOrderAndCountsSpots(): void
+    {
+        // 서울시청 → 강남역 → 잠실, 세 지점 모두 서로 30m 반경 밖(별개 지점).
+        $p1 = ['lat' => 37.5665, 'lng' => 126.9780];
+        $p2 = ['lat' => 37.4979, 'lng' => 127.0276];
+        $p3 = ['lat' => 37.5133, 'lng' => 127.1000];
+
+        $service = new TripStatsService($this->createMock(PhotoLocationModel::class));
+
+        $stats = $service->buildStatsFromRows([
+            ['lat' => (string) $p1['lat'], 'lng' => (string) $p1['lng'], 'taken_at' => '2024-03-15 01:00:00'],
+            ['lat' => (string) $p2['lat'], 'lng' => (string) $p2['lng'], 'taken_at' => '2024-03-15 02:00:00'],
+            ['lat' => (string) $p3['lat'], 'lng' => (string) $p3['lng'], 'taken_at' => '2024-03-15 03:00:00'],
+        ]);
+
+        $expectedDistance = GeoDistanceCalculator::kilometers($p1['lat'], $p1['lng'], $p2['lat'], $p2['lng'])
+            + GeoDistanceCalculator::kilometers($p2['lat'], $p2['lng'], $p3['lat'], $p3['lng']);
+
+        $this->assertEqualsWithDelta($expectedDistance, $stats['distance_km'], 0.0001);
+        $this->assertSame(3, $stats['spot_count']);
+    }
+
+    public function testFromRowsPhotosWithinClusterRadiusCountAsOneSpotWithNearZeroDistance(): void
+    {
+        $service = new TripStatsService($this->createMock(PhotoLocationModel::class));
+
+        $stats = $service->buildStatsFromRows([
+            ['lat' => '37.5665', 'lng' => '126.9780', 'taken_at' => '2024-03-15 01:00:00'],
+            ['lat' => '37.5665', 'lng' => '126.9780', 'taken_at' => '2024-03-15 02:00:00'],
+        ]);
+
+        $this->assertSame(0.0, $stats['distance_km']);
+        $this->assertSame(1, $stats['spot_count']);
+    }
 }
