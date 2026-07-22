@@ -155,6 +155,10 @@ abstract class AbstractZipIngestService
     /**
      * 직전 유효 지점 대비 비현실적 이동 속도(기본 200km/h 초과)인 지점을 제외한다.
      *
+     * 단, 걸러진 지점 바로 다음 지점이 그 걸러진 지점과 서로 정합하면(같은 지역)
+     * 비행기·KTX 등 실제 고속 이동의 도착지로 보고 둘 다 살려 앵커를 옮긴다 —
+     * 앵커 고착으로 도착지 동선이 통째로 잘리는 것을 방지한다.
+     *
      * @param list<PhotoLocation> $locations
      *
      * @return list<PhotoLocation>
@@ -169,12 +173,26 @@ abstract class AbstractZipIngestService
 
         $kept = [$locations[0]];
         $previous = $locations[0];
+        $dropped = null; // 직전에 걸러진 지점 — 후속 지점이 확인해 주면 복권된다.
 
         foreach (array_slice($locations, 1) as $current) {
             if ($this->isReachable($previous, $current)) {
                 $kept[] = $current;
                 $previous = $current;
+                $dropped = null;
+                continue;
             }
+
+            if ($dropped !== null && $this->isReachable($dropped, $current)) {
+                // 연속 두 지점이 서로 일치 → 실제 이동으로 재인정하고 도착지로 재앵커.
+                $kept[] = $dropped;
+                $kept[] = $current;
+                $previous = $current;
+                $dropped = null;
+                continue;
+            }
+
+            $dropped = $current;
         }
 
         return $kept;
