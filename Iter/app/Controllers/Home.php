@@ -20,6 +20,7 @@ class Home extends BaseController
             'loginUrl' => site_url('auth/google'),
             'uploadUrl' => site_url('upload'),
             'mapUrl' => site_url('map'),
+            'tripsUrl' => site_url('trips'),
             'logoutUrl' => site_url('auth/logout'),
         ]);
     }

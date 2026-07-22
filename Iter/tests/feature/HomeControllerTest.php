@@ -57,6 +57,7 @@ final class HomeControllerTest extends CIUnitTestCase
         $this->assertStringContainsString('class="brand"', $body);
         $this->assertStringContainsString('/upload', $body);
         $this->assertStringContainsString('지도 보기', $body);
+        $this->assertStringContainsString('내 여행', $body);
         $this->assertStringContainsString('로그아웃', $body);
         $this->assertStringContainsString('/auth/logout', $body);
         $this->assertStringNotContainsString('Google로 로그인', $body);

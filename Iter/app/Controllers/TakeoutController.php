@@ -37,6 +37,7 @@ class TakeoutController extends BaseController
             'loginUrl' => site_url('auth/google'),
             'logoutUrl' => site_url('auth/logout'),
             'mapUrl' => site_url('map'),
+            'tripsUrl' => site_url('trips'),
             'uploadUrl' => site_url('takeout/upload'),
             'plainUploadUrl' => site_url('photos/upload'),
             'deleteUrl' => site_url('account/delete'),

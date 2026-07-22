@@ -8,6 +8,7 @@ declare(strict_types=1);
  * @var string $loginUrl
  * @var string $logoutUrl
  * @var string $mapUrl
+ * @var string $tripsUrl
  * @var string $uploadUrl      Takeout 업로드 엔드포인트(POST /takeout/upload)
  * @var string $plainUploadUrl 일반 압축파일 업로드 엔드포인트(POST /photos/upload)
  * @var string $deleteUrl
@@ -110,7 +111,7 @@ declare(strict_types=1);
     </style>
 </head>
 <body>
-    <?= view('partials/nav', ['uploadUrl' => $uploadUrl, 'mapUrl' => $mapUrl, 'logoutUrl' => $logoutUrl]) ?>
+    <?= view('partials/nav', ['uploadUrl' => $uploadUrl, 'mapUrl' => $mapUrl, 'tripsUrl' => $tripsUrl, 'logoutUrl' => $logoutUrl]) ?>
     <main id="takeout-flow">
         <?php if (session()->getFlashdata('message')) : ?>
             <div class="flash-box flash-message"><?= esc(session()->getFlashdata('message')) ?></div>
