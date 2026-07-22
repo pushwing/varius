@@ -27,6 +27,7 @@ declare(strict_types=1);
         .header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
         .header-row h1 { font-size: 20px; margin: 0; }
         .header-actions { display: flex; gap: 8px; position: relative; }
+        .trip-stats { font-size: 13px; color: #555; margin: -10px 0 18px; }
         .btn {
             display: inline-block; padding: 7px 14px; border-radius: 8px; border: 1.5px solid transparent;
             background: #1a73e8; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;
@@ -129,6 +130,8 @@ declare(strict_types=1);
             </div>
         </div>
 
+        <div class="trip-stats" id="trip-stats"></div>
+
         <div class="field-group">
             <label for="trip-title">제목</label>
             <input type="text" id="trip-title" maxlength="100">
@@ -191,8 +194,14 @@ declare(strict_types=1);
                 endEl.value = trip.end_date;
                 selectedCoverId = trip.cover_photo_id;
 
+                renderTripStats(data.stats);
                 renderCoverPicker(data.days);
                 renderDayList(data.days);
+            }
+
+            function renderTripStats(stats) {
+                var statsEl = document.getElementById('trip-stats');
+                statsEl.textContent = '총 ' + stats.distance_km.toFixed(1) + 'km · 방문 지점 ' + stats.spot_count + '곳';
             }
 
             function renderCoverPicker(days) {

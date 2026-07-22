@@ -200,6 +200,8 @@ class TripController extends BaseController
             ];
         }
 
+        $stats = service('tripStats')->buildStats($userId, $startDate, $endDate);
+
         return $this->response->setJSON([
             'trip' => [
                 'id' => (int) $trip['id'],
@@ -211,6 +213,10 @@ class TripController extends BaseController
                 'cover_thumbnail_url' => $coverId !== null ? '/thumbnails/' . $coverId : null,
             ],
             'days' => $days,
+            'stats' => [
+                'distance_km' => round($stats['distance_km'], 1),
+                'spot_count' => $stats['spot_count'],
+            ],
         ]);
     }
 
