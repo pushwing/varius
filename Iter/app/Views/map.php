@@ -7,6 +7,7 @@ declare(strict_types=1);
  *
  * @var string $routesUrl   동선 JSON API URL(GET /routes)
  * @var string $timelineUrl 시간별 동선 API URL 프리픽스(GET /timeline/{date} 등)
+ * @var string $photosUrl   사진 관리 API URL 프리픽스(POST /photos/{id}/rotate 등)
  * @var string $uploadUrl
  * @var string $mapUrl
  * @var string $logoutUrl
@@ -172,6 +173,14 @@ declare(strict_types=1);
             box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
         }
         #photo-viewer-caption { margin-top: 12px; color: #ddd; font-size: 13px; }
+        #photo-viewer-controls { margin-top: 14px; display: flex; gap: 10px; cursor: default; }
+        .viewer-ctl-btn {
+            border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; background: rgba(255, 255, 255, 0.12);
+            color: #fff; font-size: 13px; padding: 8px 14px; cursor: pointer;
+        }
+        .viewer-ctl-btn:hover { background: rgba(255, 255, 255, 0.25); }
+        .viewer-ctl-btn:disabled { opacity: 0.5; cursor: default; }
+        .viewer-ctl-danger { border-color: rgba(255, 120, 120, 0.6); color: #ffb4b4; }
         #photo-viewer-close {
             position: absolute; top: 14px; right: 20px; border: none; background: none;
             color: #fff; font-size: 28px; cursor: pointer; line-height: 1;
@@ -186,7 +195,7 @@ declare(strict_types=1);
             <div id="route-sidebar-body"></div>
             <div id="route-sidebar-footer">날짜를 클릭하면 그 날의 첫 번째 장소로 이동합니다.</div>
         </div>
-        <div id="map" data-routes-url="<?= esc($routesUrl, 'attr') ?>" data-timeline-url="<?= esc($timelineUrl, 'attr') ?>"></div>
+        <div id="map" data-routes-url="<?= esc($routesUrl, 'attr') ?>" data-timeline-url="<?= esc($timelineUrl, 'attr') ?>" data-photos-url="<?= esc($photosUrl, 'attr') ?>"></div>
         <div id="empty">표시할 동선이 없습니다. 사진을 선택해 좌표를 적재하세요.</div>
     </div>
 
@@ -225,6 +234,11 @@ declare(strict_types=1);
         <button type="button" id="photo-viewer-close" aria-label="닫기">&times;</button>
         <img id="photo-viewer-img" src="" alt="">
         <div id="photo-viewer-caption"></div>
+        <div id="photo-viewer-controls">
+            <button type="button" class="viewer-ctl-btn" id="photo-viewer-rotate-left" title="왼쪽으로 회전">⟲ 왼쪽</button>
+            <button type="button" class="viewer-ctl-btn" id="photo-viewer-rotate-right" title="오른쪽으로 회전">⟳ 오른쪽</button>
+            <button type="button" class="viewer-ctl-btn viewer-ctl-danger" id="photo-viewer-delete" title="사진 삭제">🗑 삭제</button>
+        </div>
     </div>
 
     <script
@@ -248,9 +262,21 @@ declare(strict_types=1);
             var layerGridEl = document.getElementById('photo-layer-grid');
 
             document.getElementById('photo-layer-close').addEventListener('click', closeLayer);
-            layerEl.addEventListener('click', function (evt) {
-                if (evt.target === layerEl) { closeLayer(); }
-            });
+            bindBackdropClose(layerEl, closeLayer);
+
+            // 배경 클릭으로 닫되, "클릭이 배경에서 시작된 경우"만 닫는다.
+            // 메모 등 내용 안에서 텍스트를 드래그 선택하다 배경 위에서 마우스를 놓으면
+            // click 이 배경에서 발생해 레이어가 닫혀버리는 문제 방지.
+            function bindBackdropClose(overlayEl, closeFn) {
+                var downOnBackdrop = false;
+                overlayEl.addEventListener('mousedown', function (evt) {
+                    downOnBackdrop = evt.target === overlayEl;
+                });
+                overlayEl.addEventListener('click', function (evt) {
+                    if (downOnBackdrop && evt.target === overlayEl) { closeFn(); }
+                    downOnBackdrop = false;
+                });
+            }
 
             var timelineEl = document.getElementById('timeline-layer');
             var timelineTitleEl = document.getElementById('timeline-title');
@@ -260,30 +286,90 @@ declare(strict_types=1);
             var currentTimelineDate = null;
 
             document.getElementById('timeline-close').addEventListener('click', closeTimeline);
-            timelineEl.addEventListener('click', function (evt) {
-                if (evt.target === timelineEl) { closeTimeline(); }
-            });
+            bindBackdropClose(timelineEl, closeTimeline);
             document.getElementById('timeline-daynote-save').addEventListener('click', saveDayNote);
 
             // 사진 확대 뷰어 — 시간표·사진 레이어의 썸네일 클릭 시 보관된 이미지를 크게 표시.
+            var photosUrl = mapEl.dataset.photosUrl;
             var viewerEl = document.getElementById('photo-viewer');
             var viewerImgEl = document.getElementById('photo-viewer-img');
             var viewerCaptionEl = document.getElementById('photo-viewer-caption');
+            var viewerPhotoId = null;
 
             function openViewer(src, caption) {
                 viewerImgEl.src = src;
                 viewerCaptionEl.textContent = caption || '';
+                // 회전·삭제 대상 식별 — 썸네일 URL(/thumbnails/{id})에서 id 를 뽑는다.
+                var match = src.match(/\/thumbnails\/(\d+)/);
+                viewerPhotoId = match ? match[1] : null;
                 viewerEl.hidden = false;
             }
 
             function closeViewer() {
                 viewerEl.hidden = true;
                 viewerImgEl.src = '';
+                viewerPhotoId = null;
             }
 
-            viewerEl.addEventListener('click', closeViewer);
+            // 컨트롤 버튼 클릭은 닫힘으로 처리하지 않는다.
+            viewerEl.addEventListener('click', function (evt) {
+                if (evt.target.closest('#photo-viewer-controls')) { return; }
+                closeViewer();
+            });
             document.addEventListener('keydown', function (evt) {
                 if (evt.key === 'Escape' && !viewerEl.hidden) { closeViewer(); }
+            });
+
+            // 회전 — 서버가 보관 썸네일을 90도 회전해 저장하면, 캐시를 우회해 다시 그린다.
+            function rotateViewerPhoto(direction, buttonEl) {
+                if (!viewerPhotoId) { return; }
+                buttonEl.disabled = true;
+                fetch(photosUrl + '/' + viewerPhotoId + '/rotate', {
+                    method: 'POST',
+                    headers: { Accept: 'application/json' },
+                    body: new URLSearchParams({ direction: direction })
+                })
+                    .then(function (res) {
+                        if (!res.ok) { throw new Error('rotate failed'); }
+                        var bust = '?v=' + Date.now();
+                        var freshSrc = '/thumbnails/' + viewerPhotoId + bust;
+                        viewerImgEl.src = freshSrc;
+                        // 레이어 목록의 같은 썸네일도 갱신한다.
+                        document.querySelectorAll('.timeline-photos img, #photo-layer-grid img').forEach(function (img) {
+                            if (img.src.indexOf('/thumbnails/' + viewerPhotoId) !== -1) { img.src = freshSrc; }
+                        });
+                    })
+                    .catch(function () { alert('회전에 실패했습니다.'); })
+                    .then(function () { buttonEl.disabled = false; });
+            }
+
+            document.getElementById('photo-viewer-rotate-left').addEventListener('click', function () {
+                rotateViewerPhoto('left', this);
+            });
+            document.getElementById('photo-viewer-rotate-right').addEventListener('click', function () {
+                rotateViewerPhoto('right', this);
+            });
+
+            // 삭제 — 썸네일 파일과 위치 기록(DB)이 함께 삭제된다.
+            document.getElementById('photo-viewer-delete').addEventListener('click', function () {
+                if (!viewerPhotoId) { return; }
+                if (!window.confirm('이 사진을 삭제할까요? 썸네일과 위치 기록이 함께 삭제됩니다.')) { return; }
+
+                var buttonEl = this;
+                buttonEl.disabled = true;
+                fetch(photosUrl + '/' + viewerPhotoId + '/delete', {
+                    method: 'POST',
+                    headers: { Accept: 'application/json' }
+                })
+                    .then(function (res) {
+                        if (!res.ok) { throw new Error('delete failed'); }
+                        closeViewer();
+                        closeLayer();
+                        // 시간표가 열려 있으면 다시 불러 삭제를 반영한다(지도 마커는 새로고침 시 반영).
+                        if (!timelineEl.hidden && currentTimelineDate) { openTimeline(currentTimelineDate); }
+                    })
+                    .catch(function () { alert('삭제에 실패했습니다.'); })
+                    .then(function () { buttonEl.disabled = false; });
             });
 
             // 팝업/사이드바 모두 매번 새로 DOM 에 그려지므로 이벤트 위임으로 클릭을 잡는다.
