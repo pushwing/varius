@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Models\DayNoteModel;
+use App\Models\ShareLinkModel;
 use App\Models\TimeNoteModel;
 use CodeIgniter\HTTP\ResponseInterface;
 use Throwable;
@@ -94,6 +95,29 @@ class TimelineController extends BaseController
         model(TimeNoteModel::class)->upsertNote($userId, $date, $slot, $memo);
 
         return $this->response->setJSON(['saved' => true, 'memo' => $memo]);
+    }
+
+    /**
+     * 시간표 SNS 공유 링크 생성(POST /timeline/share). 같은 날짜를 다시 공유해도
+     * 기존 링크를 재사용한다(이미 퍼진 링크가 깨지지 않도록).
+     */
+    public function share(): ResponseInterface
+    {
+        $userId = $this->currentUserId();
+        if ($userId === null) {
+            return $this->response->setStatusCode(401)->setJSON(['error' => '로그인이 필요합니다.']);
+        }
+
+        $date = (string) $this->request->getPost('date');
+        if (! $this->isValidDate($date)) {
+            return $this->response->setStatusCode(422)->setJSON(['error' => '날짜 형식이 올바르지 않습니다(YYYY-MM-DD).']);
+        }
+
+        $token = model(ShareLinkModel::class)->createOrGet($userId, $date);
+
+        helper('url');
+
+        return $this->response->setJSON(['url' => site_url('s/' . $token)]);
     }
 
     /**
