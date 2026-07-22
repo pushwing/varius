@@ -323,4 +323,41 @@ final class TripControllerTest extends CIUnitTestCase
         $this->dontSeeInDatabase('trips', ['id' => $tripId]);
         $this->seeInDatabase('photo_locations', ['source_item_id' => 'kd1']);
     }
+
+    // ── POST /trips/{id}/share ───────────────────────────────────────
+
+    public function testShareRequiresLogin(): void
+    {
+        $result = $this->post('trips/1/share');
+
+        $result->assertStatus(401);
+    }
+
+    public function testShareReturns404WhenNotOwned(): void
+    {
+        $otherId = (new UserModel())->upsertByGoogleSub('sub-tripc-5', 'tripc5@example.com', 'TripC5');
+        $tripId = (int) (new TripModel())->insert([
+            'user_id' => $otherId, 'title' => 'T', 'body' => '',
+            'start_date' => '2024-03-15', 'end_date' => '2024-03-16', 'cover_photo_id' => null,
+        ]);
+
+        $result = $this->withSession(['user_id' => $this->userId])->post('trips/' . $tripId . '/share');
+
+        $result->assertStatus(404);
+    }
+
+    public function testShareReturnsShareUrl(): void
+    {
+        $tripId = (int) (new TripModel())->insert([
+            'user_id' => $this->userId, 'title' => '서울 여행', 'body' => '',
+            'start_date' => '2024-03-15', 'end_date' => '2024-03-16', 'cover_photo_id' => null,
+        ]);
+
+        $result = $this->withSession(['user_id' => $this->userId])->post('trips/' . $tripId . '/share');
+
+        $result->assertStatus(200);
+        $data = json_decode($result->getJSON() ?? '', true);
+        $this->assertMatchesRegularExpression('#/t/[0-9a-f]{32}$#', $data['url']);
+        $this->seeInDatabase('trip_share_links', ['trip_id' => $tripId]);
+    }
 }

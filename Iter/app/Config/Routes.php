@@ -45,6 +45,7 @@ $routes->get('trips/(:num)', 'TripController::show/$1');
 $routes->get('trips/(:num)/data', 'TripController::showData/$1');
 $routes->post('trips/(:num)/update', 'TripController::update/$1', ['filter' => 'sessionRateLimit:trips,120']);
 $routes->post('trips/(:num)/delete', 'TripController::delete/$1', ['filter' => 'sessionRateLimit:trips,120']);
+$routes->post('trips/(:num)/share', 'TripController::share/$1', ['filter' => 'sessionRateLimit:trips,120']);
 
 // 계정·데이터 삭제
 $routes->post('account/delete', 'AccountController::deleteData', ['filter' => 'sessionRateLimit']);

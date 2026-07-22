@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Models\PhotoLocationModel;
 use App\Models\TripModel;
+use App\Models\TripShareLinkModel;
 use App\Support\TimeConverter;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -289,6 +290,28 @@ class TripController extends BaseController
         $tripModel->delete($id);
 
         return $this->response->setJSON(['deleted' => true]);
+    }
+
+    /**
+     * 여행 SNS 공유 링크 생성(POST /trips/{id}/share). 같은 여행을 다시 공유해도
+     * 기존 링크를 재사용한다(이미 퍼진 링크가 깨지지 않도록).
+     */
+    public function share(int $id): ResponseInterface
+    {
+        $userId = $this->currentUserId();
+        if ($userId === null) {
+            return $this->response->setStatusCode(401)->setJSON(['error' => '로그인이 필요합니다.']);
+        }
+
+        if (model(TripModel::class)->findOwned($id, $userId) === null) {
+            return $this->response->setStatusCode(404);
+        }
+
+        $token = model(TripShareLinkModel::class)->createOrGet($id);
+
+        helper('url');
+
+        return $this->response->setJSON(['url' => site_url('t/' . $token)]);
     }
 
     /**

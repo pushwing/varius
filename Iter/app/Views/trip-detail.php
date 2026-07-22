@@ -54,6 +54,16 @@ declare(strict_types=1);
         }
         .day-list a { color: #1a73e8; text-decoration: none; font-size: 12px; }
         .save-feedback { font-size: 12px; color: #777; margin-left: 8px; }
+        #share-menu {
+            position: absolute; top: calc(100% + 6px); right: 0; z-index: 10;
+            background: #fff; border: 1px solid #e2e2e2; border-radius: 10px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12); padding: 6px; min-width: 140px;
+        }
+        .share-option {
+            display: block; width: 100%; text-align: left; border: none; background: none;
+            padding: 8px 10px; font-size: 13px; color: #333; cursor: pointer; border-radius: 6px;
+        }
+        .share-option:hover { background: #f4f6fb; }
     </style>
 </head>
 <body>
@@ -62,6 +72,14 @@ declare(strict_types=1);
         <div class="header-row">
             <h1 id="trip-title-heading">여행</h1>
             <div class="header-actions">
+                <button type="button" class="btn btn-secondary" id="share-toggle">🔗 공유</button>
+                <div id="share-menu" hidden>
+                    <button type="button" class="share-option" data-share="x">X(트위터)</button>
+                    <button type="button" class="share-option" data-share="facebook">페이스북</button>
+                    <button type="button" class="share-option" data-share="kakao">카카오톡</button>
+                    <button type="button" class="share-option" data-share="instagram">인스타그램</button>
+                    <button type="button" class="share-option" data-share="copy">링크 복사</button>
+                </div>
                 <button type="button" class="btn btn-danger" id="delete-btn">삭제</button>
             </div>
         </div>
@@ -220,6 +238,81 @@ declare(strict_types=1);
                     })
                     .catch(function () { alert('삭제에 실패했습니다.'); });
             });
+
+            // ── SNS 공유(시간표 공유 메뉴와 동일 패턴, 대상만 여행 단위) ──
+
+            var shareToggleEl = document.getElementById('share-toggle');
+            var shareMenuEl = document.getElementById('share-menu');
+            var shareUrlCache = null;
+
+            shareToggleEl.addEventListener('click', function (evt) {
+                evt.stopPropagation();
+                shareMenuEl.hidden = !shareMenuEl.hidden;
+            });
+            document.addEventListener('click', function (evt) {
+                if (!shareMenuEl.hidden && !evt.target.closest('#share-toggle') && !evt.target.closest('#share-menu')) {
+                    shareMenuEl.hidden = true;
+                }
+            });
+            shareMenuEl.addEventListener('click', function (evt) {
+                var btn = evt.target.closest('.share-option');
+                if (btn) { handleShareOption(btn.dataset.share); }
+            });
+
+            function getShareUrl() {
+                if (shareUrlCache) { return Promise.resolve(shareUrlCache); }
+
+                return fetch(tripUrl + '/share', { method: 'POST', headers: { Accept: 'application/json' } })
+                    .then(function (res) {
+                        if (!res.ok) { throw new Error('공유 링크 생성 실패'); }
+                        return res.json();
+                    })
+                    .then(function (data) {
+                        shareUrlCache = data.url;
+                        return data.url;
+                    });
+            }
+
+            function handleShareOption(kind) {
+                getShareUrl().then(function (url) {
+                    var title = headingEl.textContent;
+
+                    if (kind === 'x') {
+                        window.open('https://twitter.com/intent/tweet?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(title), '_blank', 'noopener,width=560,height=480');
+                    } else if (kind === 'facebook') {
+                        window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url), '_blank', 'noopener,width=560,height=480');
+                    } else if (kind === 'kakao' || kind === 'instagram') {
+                        if (navigator.share) {
+                            navigator.share({ title: title, url: url }).catch(function () {});
+                        } else {
+                            copyToClipboard(url);
+                            alert((kind === 'kakao' ? '카카오톡은' : '인스타그램은') + ' 이 브라우저에서 바로 공유할 수 없어 링크를 복사했어요. 앱에 붙여넣어 공유해보세요.');
+                        }
+                    } else if (kind === 'copy') {
+                        copyToClipboard(url);
+                        alert('링크가 복사되었습니다.');
+                    }
+
+                    shareMenuEl.hidden = true;
+                }).catch(function () {
+                    alert('공유 링크를 만들지 못했습니다.');
+                });
+            }
+
+            function copyToClipboard(text) {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text);
+                    return;
+                }
+                var ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand('copy'); } catch (e) { /* 무시 */ }
+                document.body.removeChild(ta);
+            }
         })();
     </script>
 </body>
