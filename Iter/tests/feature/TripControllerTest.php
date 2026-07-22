@@ -185,6 +185,9 @@ final class TripControllerTest extends CIUnitTestCase
         $result->assertStatus(200);
         $body = (string) $result->getBody();
         $this->assertStringContainsString('data-trip-id="1"', $body);
+        // 인라인 시간표 펼치기에 필요한 timeline API URL과 토글 마크업이 포함돼야 한다.
+        $this->assertStringContainsString('data-timeline-url', $body);
+        $this->assertStringContainsString('day-timeline-toggle', $body);
     }
 
     // ── GET /trips/{id}/data ─────────────────────────────────────────

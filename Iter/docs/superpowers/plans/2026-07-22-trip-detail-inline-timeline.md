@@ -1,7 +1,87 @@
-<?php
+# 여행 상세 — 인라인 시간표 펼치기 Implementation Plan
 
-declare(strict_types=1);
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Goal:** 여행 상세 페이지(`/trips/{id}`)의 "포함된 날짜" 목록에서 "이 날 시간표 보기"(지도 페이지로 이동하는 링크)를, 페이지를 벗어나지 않고 그 날의 전체 시간표(사진·주변 업장·메모·날짜 노트)를 바로 볼 수 있는 인라인 아코디언 토글로 바꾼다.
+
+**Architecture:** 순수 프론트엔드 변경이다. `app/Views/map.php`의 시간표 레이어 JS(사진 먼저 렌더 → POI 순차 조회 → 메모/노트 저장) 패턴을 `app/Views/trip-detail.php`의 날짜 목록에 인라인 형태로 이식한다. 신규 백엔드 엔드포인트는 없다 — 기존 `GET /timeline/{date}`, `GET /timeline/poi`, `POST /timeline/day-note`, `POST /timeline/time-note`를 그대로 재사용한다.
+
+**Tech Stack:** CodeIgniter 4 뷰(순수 PHP + 인라인 vanilla JS, 프레임워크/빌드 없음), PHPUnit(피처 테스트로 마크업 존재만 확인, 실제 동작은 브라우저 실측).
+
+## Global Constraints
+
+- `declare(strict_types=1)` 모든 PHP 파일 필수.
+- 사진 클릭 시 확대(뷰어·회전·삭제)는 이번 범위 제외 — 썸네일만 표시.
+- 여러 날짜 동시 펼침 금지 — 아코디언(한 번에 하나만 열림).
+- POI 조회는 사진 로드 완료 후 슬롯마다 **순차** 호출(병렬 금지) — 기존 `map.php` 원칙 유지.
+- 레이트리밋(`poi` 300/시간, `notes` 120/시간)은 지도 페이지와 공유 — 신규 버킷 만들지 않음.
+- `composer ci`(CS Fixer → PHPStan → PHPUnit) 그린 없이 다음 태스크로 넘어가지 않는다. `composer check`는 CS Fixer를 빠뜨리므로 사용 금지.
+
+---
+
+## Task 1: 인라인 시간표 패널 — 토글·표시·저장
+
+**Files:**
+- Modify: `app/Controllers/TripController.php:152-167`(`show()` 메서드)
+- Modify: `app/Views/trip-detail.php`(문서블록, `<main>` 속성, `<style>`, `renderDayList()` 교체, 신규 JS 함수 추가)
+- Modify: `tests/feature/TripControllerTest.php:181-188`(`testShowRendersPageShell`)
+
+**Interfaces:**
+- Consumes: 기존 `GET /timeline/{date}` 응답(`{date, day_note: {title, body}|null, slots: [{slot, label, lat, lng, photos: [{media_item_id, taken_at, thumbnail_url}], memo}]}`), `GET /timeline/poi?lat=&lng=` 응답(`{places: [{name, category}]}`), `POST /timeline/day-note`(date, title, body), `POST /timeline/time-note`(date, slot, memo) — 모두 기존 `TimelineController`(변경 없음).
+- Produces: 이 태스크로 끝나는 기능이라 이후 태스크가 소비할 새 인터페이스는 없다(Task 2는 검증 전용).
+
+- [ ] **Step 1: 테스트 수정(RED)**
+
+`tests/feature/TripControllerTest.php`의 `testShowRendersPageShell`(181-188행)을 다음으로 교체:
+
+```php
+    public function testShowRendersPageShell(): void
+    {
+        $result = $this->withSession(['user_id' => $this->userId])->get('trips/1');
+
+        $result->assertStatus(200);
+        $body = (string) $result->getBody();
+        $this->assertStringContainsString('data-trip-id="1"', $body);
+        // 인라인 시간표 펼치기에 필요한 timeline API URL과 토글 마크업이 포함돼야 한다.
+        $this->assertStringContainsString('data-timeline-url', $body);
+        $this->assertStringContainsString('day-timeline-toggle', $body);
+    }
+```
+
+- [ ] **Step 2: RED 확인**
+
+Run: `vendor/bin/phpunit --no-coverage --filter testShowRendersPageShell tests/feature/TripControllerTest.php`
+Expected: FAIL — `data-timeline-url`/`day-timeline-toggle` 문자열이 응답 본문에 없음.
+
+- [ ] **Step 3: 컨트롤러에 `timelineUrl` 추가**
+
+`app/Controllers/TripController.php`의 `show()` 메서드(152-167행) 전체를 다음으로 교체:
+
+```php
+    public function show(int $id): ResponseInterface|RedirectResponse|string
+    {
+        if ($this->currentUserId() === null) {
+            return redirect()->to('/auth/google');
+        }
+
+        helper('url');
+
+        return view('trip-detail', [
+            'tripId' => $id,
+            'tripsUrl' => site_url('trips'),
+            'timelineUrl' => site_url('timeline'),
+            'uploadUrl' => site_url('upload'),
+            'mapUrl' => site_url('map'),
+            'logoutUrl' => site_url('auth/logout'),
+        ]);
+    }
+```
+
+- [ ] **Step 4: 뷰 문서블록·`<main>` 속성 수정**
+
+`app/Views/trip-detail.php`의 문서블록(5-13행)을 다음으로 교체:
+
+```php
 /**
  * 여행 상세/편집 — 제목·설명·기간·커버 수정, 포함된 날짜 목록(인라인 시간표 펼치기 포함).
  *
@@ -12,43 +92,29 @@ declare(strict_types=1);
  * @var string $mapUrl
  * @var string $logoutUrl
  */
-?>
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>여행 상세 — Iter</title>
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="stylesheet" href="/assets/nav.css">
-    <style>
-        html, body { margin: 0; font-family: system-ui, sans-serif; color: #222; }
-        main { padding: 40px 20px; max-width: 720px; margin: 0 auto; }
-        .header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
-        .header-row h1 { font-size: 20px; margin: 0; }
-        .header-actions { display: flex; gap: 8px; position: relative; }
-        .btn {
-            display: inline-block; padding: 7px 14px; border-radius: 8px; border: 1.5px solid transparent;
-            background: #1a73e8; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;
+```
+
+같은 파일의 `<main>` 태그(71행)를 다음으로 교체:
+
+```php
+    <main data-trips-url="<?= esc($tripsUrl, 'attr') ?>" data-trip-id="<?= (int) $tripId ?>" data-timeline-url="<?= esc($timelineUrl, 'attr') ?>">
+```
+
+- [ ] **Step 5: CSS 추가·수정**
+
+`app/Views/trip-detail.php`의 `<style>` 블록에서 다음 두 규칙:
+
+```css
+        .day-list li {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px;
         }
-        .btn:disabled { background: #9db8e8; cursor: not-allowed; }
-        .btn-secondary { background: #fff; color: #1a73e8; border-color: #c7d2e0; }
-        .btn-danger { background: #fff; color: #c0392b; border-color: #e6b8b3; }
-        .field-group {
-            background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 18px; margin-bottom: 20px;
-        }
-        .field-group label { display: block; font-size: 12px; color: #666; margin-bottom: 4px; }
-        .field-group input, .field-group textarea {
-            width: 100%; box-sizing: border-box; border: 1px solid #ccd6f0; border-radius: 6px;
-            font: inherit; padding: 7px 10px; margin-bottom: 12px;
-        }
-        .date-row { display: flex; gap: 12px; }
-        .date-row > div { flex: 1; }
-        .cover-picker { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-        .cover-option { position: relative; cursor: pointer; }
-        .cover-option img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; display: block; border: 3px solid transparent; }
-        .cover-option.selected img { border-color: #1a73e8; }
-        .day-list { list-style: none; padding: 0; margin: 0; }
+        .day-list a { color: #1a73e8; text-decoration: none; font-size: 12px; }
+```
+
+를 다음으로 교체(`.day-list li` → `.day-list .day-row`로 범위를 좁혀 이후 추가할 `.day-timeline-panel`이 같은 `<ul>` 안에서 다른 레이아웃을 쓸 수 있게 하고, 더 이상 안 쓰는 `<a>` 규칙은 제거):
+
+```css
         .day-list .day-row {
             display: flex; align-items: center; justify-content: space-between;
             padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px;
@@ -98,128 +164,13 @@ declare(strict_types=1);
         }
         .note-save-btn:disabled { opacity: 0.6; cursor: default; }
         .timeline-empty { color: #777; font-size: 13px; padding: 8px 0; }
-        .save-feedback { font-size: 12px; color: #777; margin-left: 8px; }
-        #share-menu {
-            position: absolute; top: calc(100% + 6px); right: 0; z-index: 10;
-            background: #fff; border: 1px solid #e2e2e2; border-radius: 10px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12); padding: 6px; min-width: 140px;
-        }
-        .share-option {
-            display: block; width: 100%; text-align: left; border: none; background: none;
-            padding: 8px 10px; font-size: 13px; color: #333; cursor: pointer; border-radius: 6px;
-        }
-        .share-option:hover { background: #f4f6fb; }
-    </style>
-</head>
-<body>
-    <?= view('partials/nav', ['uploadUrl' => $uploadUrl, 'mapUrl' => $mapUrl, 'tripsUrl' => $tripsUrl, 'logoutUrl' => $logoutUrl]) ?>
-    <main data-trips-url="<?= esc($tripsUrl, 'attr') ?>" data-trip-id="<?= (int) $tripId ?>" data-timeline-url="<?= esc($timelineUrl, 'attr') ?>">
-        <div class="header-row">
-            <h1 id="trip-title-heading">여행</h1>
-            <div class="header-actions">
-                <button type="button" class="btn btn-secondary" id="share-toggle">🔗 공유</button>
-                <div id="share-menu" hidden>
-                    <button type="button" class="share-option" data-share="x">X(트위터)</button>
-                    <button type="button" class="share-option" data-share="facebook">페이스북</button>
-                    <button type="button" class="share-option" data-share="kakao">카카오톡</button>
-                    <button type="button" class="share-option" data-share="instagram">인스타그램</button>
-                    <button type="button" class="share-option" data-share="copy">링크 복사</button>
-                </div>
-                <button type="button" class="btn btn-danger" id="delete-btn">삭제</button>
-            </div>
-        </div>
+```
 
-        <div class="field-group">
-            <label for="trip-title">제목</label>
-            <input type="text" id="trip-title" maxlength="100">
+- [ ] **Step 6: `renderDayList()` 교체 + 신규 함수 추가**
 
-            <label for="trip-body">설명</label>
-            <textarea id="trip-body" maxlength="2000" rows="3"></textarea>
+`app/Views/trip-detail.php`의 `renderDayList()` 함수(178-194행) 전체를 다음으로 교체:
 
-            <div class="date-row">
-                <div>
-                    <label for="trip-start">시작일</label>
-                    <input type="date" id="trip-start">
-                </div>
-                <div>
-                    <label for="trip-end">종료일</label>
-                    <input type="date" id="trip-end">
-                </div>
-            </div>
-
-            <label>커버 사진</label>
-            <div class="cover-picker" id="cover-picker"></div>
-
-            <button type="button" class="btn" id="save-btn">저장</button>
-            <span class="save-feedback" id="save-feedback"></span>
-        </div>
-
-        <div class="field-group">
-            <label>포함된 날짜</label>
-            <ul class="day-list" id="day-list"></ul>
-        </div>
-    </main>
-
-    <script>
-        (function () {
-            var mainEl = document.querySelector('main');
-            var tripsUrl = mainEl.dataset.tripsUrl;
-            var tripId = mainEl.dataset.tripId;
-            var tripUrl = tripsUrl + '/' + tripId;
-
-            var titleEl = document.getElementById('trip-title');
-            var bodyEl = document.getElementById('trip-body');
-            var startEl = document.getElementById('trip-start');
-            var endEl = document.getElementById('trip-end');
-            var coverPickerEl = document.getElementById('cover-picker');
-            var dayListEl = document.getElementById('day-list');
-            var headingEl = document.getElementById('trip-title-heading');
-            var saveFeedbackEl = document.getElementById('save-feedback');
-            var selectedCoverId = null;
-
-            fetch(tripUrl + '/data', { headers: { Accept: 'application/json' } })
-                .then(function (res) { return res.json(); })
-                .then(render)
-                .catch(function () { headingEl.textContent = '여행을 불러오지 못했습니다.'; });
-
-            function render(data) {
-                var trip = data.trip;
-                headingEl.textContent = trip.title;
-                titleEl.value = trip.title;
-                bodyEl.value = trip.body;
-                startEl.value = trip.start_date;
-                endEl.value = trip.end_date;
-                selectedCoverId = trip.cover_photo_id;
-
-                renderCoverPicker(data.days);
-                renderDayList(data.days);
-            }
-
-            function renderCoverPicker(days) {
-                coverPickerEl.innerHTML = '';
-                days.forEach(function (day) {
-                    if (!day.first_thumbnail_url) { return; }
-
-                    var optionEl = document.createElement('div');
-                    optionEl.className = 'cover-option' + (day.first_photo_id === selectedCoverId ? ' selected' : '');
-                    optionEl.dataset.photoId = day.first_photo_id;
-
-                    var img = document.createElement('img');
-                    img.src = day.first_thumbnail_url;
-                    img.alt = day.date;
-                    img.title = day.date;
-                    optionEl.appendChild(img);
-
-                    optionEl.addEventListener('click', function () {
-                        selectedCoverId = day.first_photo_id;
-                        coverPickerEl.querySelectorAll('.cover-option').forEach(function (el) { el.classList.remove('selected'); });
-                        optionEl.classList.add('selected');
-                    });
-
-                    coverPickerEl.appendChild(optionEl);
-                });
-            }
-
+```javascript
             var timelineUrl = mainEl.dataset.timelineUrl;
             var timelineCache = {}; // date → 최근 /timeline/{date} 응답(재조회 방지, 저장 성공 시 갱신)
             var openTimelineDate = null; // 현재 펼쳐진 날짜(아코디언 — 한 번에 하나만 열림)
@@ -499,128 +450,146 @@ declare(strict_types=1);
                         }, 1500);
                     });
             }
+```
 
-            document.getElementById('save-btn').addEventListener('click', function () {
-                var btn = this;
-                btn.disabled = true;
-                saveFeedbackEl.textContent = '저장 중…';
+- [ ] **Step 7: GREEN 확인**
 
-                var fields = {
-                    title: titleEl.value.trim(),
-                    body: bodyEl.value.trim(),
-                    start_date: startEl.value,
-                    end_date: endEl.value
-                };
-                if (selectedCoverId) { fields.cover_photo_id = String(selectedCoverId); }
+Run: `vendor/bin/phpunit --no-coverage --filter testShowRendersPageShell tests/feature/TripControllerTest.php`
+Expected: `OK (1 test, 3 assertions)`
 
-                fetch(tripUrl + '/update', {
-                    method: 'POST',
-                    headers: { Accept: 'application/json' },
-                    body: new URLSearchParams(fields)
-                })
-                    .then(function (res) {
-                        if (!res.ok) { return res.json().then(function (b) { throw new Error(b.error || '저장 실패'); }); }
-                        return res.json();
-                    })
-                    .then(function () {
-                        headingEl.textContent = fields.title;
-                        saveFeedbackEl.textContent = '저장됨';
-                    })
-                    .catch(function (err) {
-                        saveFeedbackEl.textContent = err.message || '저장 실패';
-                    })
-                    .then(function () {
-                        btn.disabled = false;
-                        setTimeout(function () { saveFeedbackEl.textContent = ''; }, 2000);
-                    });
-            });
+- [ ] **Step 8: 전체 테스트·정적분석 확인**
 
-            document.getElementById('delete-btn').addEventListener('click', function () {
-                if (!window.confirm('이 여행을 삭제할까요? 사진·시간표는 그대로 남고, 여행 그룹만 해제됩니다.')) { return; }
+Run: `composer ci`
+Expected: `[OK] No errors`(PHPStan — PHP 파일만 대상이라 JS/CSS 변경은 영향 없음), CS Fixer diff 없음, PHPUnit 전체 `OK (...)`.
 
-                fetch(tripUrl + '/delete', { method: 'POST', headers: { Accept: 'application/json' } })
-                    .then(function (res) {
-                        if (!res.ok) { throw new Error('delete failed'); }
-                        window.location.href = tripsUrl;
-                    })
-                    .catch(function () { alert('삭제에 실패했습니다.'); });
-            });
+- [ ] **Step 9: 커밋**
 
-            // ── SNS 공유(시간표 공유 메뉴와 동일 패턴, 대상만 여행 단위) ──
+```bash
+git add app/Controllers/TripController.php app/Views/trip-detail.php tests/feature/TripControllerTest.php
+git commit -m "✨ feat: 여행 상세에 날짜별 시간표 인라인 펼치기 추가"
+```
 
-            var shareToggleEl = document.getElementById('share-toggle');
-            var shareMenuEl = document.getElementById('share-menu');
-            var shareUrlCache = null;
+---
 
-            shareToggleEl.addEventListener('click', function (evt) {
-                evt.stopPropagation();
-                shareMenuEl.hidden = !shareMenuEl.hidden;
-            });
-            document.addEventListener('click', function (evt) {
-                if (!shareMenuEl.hidden && !evt.target.closest('#share-toggle') && !evt.target.closest('#share-menu')) {
-                    shareMenuEl.hidden = true;
-                }
-            });
-            shareMenuEl.addEventListener('click', function (evt) {
-                var btn = evt.target.closest('.share-option');
-                if (btn) { handleShareOption(btn.dataset.share); }
-            });
+## Task 2: 브라우저 실측 검증
 
-            function getShareUrl() {
-                if (shareUrlCache) { return Promise.resolve(shareUrlCache); }
+**Files:** 없음(검증 전용 태스크)
 
-                return fetch(tripUrl + '/share', { method: 'POST', headers: { Accept: 'application/json' } })
-                    .then(function (res) {
-                        if (!res.ok) { throw new Error('공유 링크 생성 실패'); }
-                        return res.json();
-                    })
-                    .then(function (data) {
-                        shareUrlCache = data.url;
-                        return data.url;
-                    });
-            }
+**Interfaces:** 없음.
 
-            function handleShareOption(kind) {
-                getShareUrl().then(function (url) {
-                    var title = headingEl.textContent;
+- [ ] **Step 1: 로컬 SQLite 임시 DB로 런타임 구동 확인**
 
-                    if (kind === 'x') {
-                        window.open('https://twitter.com/intent/tweet?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(title), '_blank', 'noopener,width=560,height=480');
-                    } else if (kind === 'facebook') {
-                        window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url), '_blank', 'noopener,width=560,height=480');
-                    } else if (kind === 'kakao' || kind === 'instagram') {
-                        if (navigator.share) {
-                            navigator.share({ title: title, url: url }).catch(function () {});
-                        } else {
-                            copyToClipboard(url);
-                            alert((kind === 'kakao' ? '카카오톡은' : '인스타그램은') + ' 이 브라우저에서 바로 공유할 수 없어 링크를 복사했어요. 앱에 붙여넣어 공유해보세요.');
-                        }
-                    } else if (kind === 'copy') {
-                        copyToClipboard(url);
-                        alert('링크가 복사되었습니다.');
-                    }
+이 프로젝트는 `.env`를 임시로 SQLite3 로 바꿔 `php spark migrate` 후
+`mcp__Claude_Browser__preview_start`(`.claude/launch.json`의 `iter-serve`)로 실제 화면을
+확인하는 방식을 반복 사용해왔다. `app.baseURL` 은 **기존 활성 라인을 직접 수정**해야 한다
+(파일 끝에 새 줄을 추가하면 앞쪽의 기존 활성 라인이 먼저 읽혀 무시된다 — 이전 세션에서
+반복 확인된 함정).
 
-                    shareMenuEl.hidden = true;
-                }).catch(function () {
-                    alert('공유 링크를 만들지 못했습니다.');
-                });
-            }
+```bash
+cp .env .env.bak-inline-timeline-verify
+python3 - << 'EOF'
+p = '.env'
+s = open(p).read().replace(
+    "app.baseURL = 'http://localhost:8080/'",
+    "app.baseURL = 'http://localhost:8299/'",
+)
+s += "\n# TEMP inline-timeline-verify\ndatabase.default.database = dev-inline-timeline.db\ndatabase.default.DBDriver = SQLite3\ndatabase.default.DBPrefix =\n"
+open(p, 'w').write(s)
+EOF
+php spark migrate
+```
 
-            function copyToClipboard(text) {
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(text);
-                    return;
-                }
-                var ta = document.createElement('textarea');
-                ta.value = text;
-                ta.style.position = 'fixed';
-                ta.style.opacity = '0';
-                document.body.appendChild(ta);
-                ta.select();
-                try { document.execCommand('copy'); } catch (e) { /* 무시 */ }
-                document.body.removeChild(ta);
-            }
-        })();
-    </script>
-</body>
-</html>
+Expected: 기존 마이그레이션들이 재실행되고 `Migrations complete.`(이번 태스크는 신규
+마이그레이션이 없다 — 이미 존재하는 스키마에 대해 안전하게 재적용됨).
+
+- [ ] **Step 2: 시드 데이터 준비(같은 날짜에 서로 다른 두 시간대 사진)**
+
+```bash
+mkdir -p writable/uploads/thumbnails
+php -r '
+$colors = [[220,60,60],[60,140,220]];
+foreach ($colors as $i => $c) {
+    $im = imagecreatetruecolor(300, 200);
+    imagefill($im, 0, 0, imagecolorallocate($im, $c[0], $c[1], $c[2]));
+    imagejpeg($im, "writable/uploads/thumbnails/verify-{$i}.jpg");
+}'
+sqlite3 writable/dev-inline-timeline.db << EOF
+INSERT INTO users (google_sub, email, name, created_at, updated_at) VALUES ('dev-sub', 'dev@example.com', 'Dev', datetime('now'), datetime('now'));
+INSERT INTO photo_locations (user_id, source_item_id, lat, lng, thumbnail_path, taken_at, created_at) VALUES
+ (1, 'p1', 37.5796, 126.9770, '$(pwd)/writable/uploads/thumbnails/verify-0.jpg', '2024-03-15 00:10:00', datetime('now')),
+ (1, 'p2', 37.5665, 126.9780, '$(pwd)/writable/uploads/thumbnails/verify-1.jpg', '2024-03-15 06:00:00', datetime('now'));
+INSERT INTO trips (user_id, title, body, start_date, end_date, cover_photo_id, created_at, updated_at) VALUES
+ (1, '서울 여행', '고궁 투어', '2024-03-15', '2024-03-15', NULL, datetime('now'), datetime('now'));
+EOF
+```
+
+Expected: 오류 없이 완료(경복궁·시청 부근 좌표 2장이 3/15 하루에 서로 다른 시간대로 들어감,
+여행 1건 저장).
+
+- [ ] **Step 3: 브라우저로 확인**
+
+`mcp__Claude_Browser__preview_start`(`name: "iter-serve"`)로 서버를 띄우고, 새로 생긴
+세션 파일에 `user_id|i:1;`을 주입한 뒤 `/trips/1`에 접속해 다음을 확인한다:
+
+1. "포함된 날짜" 목록에 `2024-03-15` 항목이 있고, 옆에 "시간표 보기" 버튼이 있다(이전
+   "이 날 시간표 보기" 링크가 사라졌는지 확인 — `mcp__Claude_Browser__read_page` 로 `<a>`
+   태그가 day-list 안에 없는지 확인).
+2. "시간표 보기" 클릭 → 그 자리 아래 패널이 펼쳐지고, 버튼 텍스트가 "접기"로 바뀐다.
+3. 패널 안에 "이 날의 제목"/"이 날의 메모" 입력칸(날짜 노트 카드)과, 두 시간대 행(각각 사진
+   1장 + 주변 업장 텍스트, 로드 완료까지 몇 초 대기)이 보인다(`mcp__Claude_Browser__read_network_requests`
+   로 `GET /timeline/2024-03-15` → `GET /thumbnails/*` → `GET /timeline/poi?...` 순서 확인 —
+   사진이 POI보다 먼저 요청·완료돼야 한다).
+4. 시간대 메모 입력 후 "저장" 클릭 → 버튼이 "저장 중…" → "저장됨" → "저장"으로 돌아온다.
+   `POST /timeline/time-note` 요청이 200으로 나가는지 확인.
+5. "접기" 클릭 → 패널이 닫히고 버튼이 "시간표 보기"로 돌아온다. 다시 "시간표 보기" 클릭 →
+   방금 저장한 메모가 그대로 남아 있다(재조회 없이 캐시로 즉시 표시 — Step 3에서 기록한
+   `GET /timeline/2024-03-15` 요청이 두 번째 열 때는 **다시 나가지 않아야** 한다).
+6. (두 번째 날짜가 있다면) 다른 날짜의 "시간표 보기"를 누르면 방금 열려 있던 패널이 자동으로
+   닫히는지 확인(아코디언).
+
+Expected: 위 6개 동작이 화면·네트워크 요청으로 모두 확인됨.
+
+- [ ] **Step 4: 환경 원복**
+
+```bash
+mv .env.bak-inline-timeline-verify .env
+rm -f writable/dev-inline-timeline.db writable/uploads/thumbnails/verify-*.jpg
+rm -f writable/session/ci_session*
+```
+
+Expected: `.env`가 원래 상태로 복원되고, 임시 DB·썸네일·세션 파일이 모두 제거됨.
+
+- [ ] **Step 5: 최종 확인**
+
+Run: `git status --short`
+Expected: 추적되지 않은 `.claude/`(세션 전용, 무시)를 제외하고 워킹트리 깨끗 — 모든 변경은
+Task 1에서 이미 커밋됨.
+
+이 태스크는 커밋할 코드 변경이 없다(검증 전용).
+
+---
+
+## Self-Review
+
+**스펙 커버리지 확인:**
+- 인라인 펼치기(아코디언, 한 번에 하나만) → Task 1 Step 6 `toggleDayTimeline()`. ✅
+- 날짜 노트 표시·수정 → Task 1 Step 6 `renderDayTimelinePanel()`(날짜 노트 카드). ✅
+- 시간대별 행(시각·사진·POI·메모) → Task 1 Step 6 `buildDayTimelineSlot()`. ✅
+- 메모 인라인 저장 → Task 1 Step 6 `saveDayTimelineNote()` + 캐시 갱신. ✅
+- 사진 확대 뷰어 제외(범위 밖) → `buildDayTimelineSlot()`에 클릭 핸들러 없음(썸네일만). ✅
+- "이 날 시간표 보기" 링크를 토글로 교체 → Task 1 Step 6 `renderDayList()`(`<a>` 없음, `<button class="day-timeline-toggle">`만). ✅
+- 캐시 재사용(재조회 방지) → Task 1 Step 6 `timelineCache`. ✅
+- 에러 처리(fetch 실패·POI 실패·저장 실패) → Task 1 Step 6 각 함수의 `.catch()`. ✅
+- 레이트리밋 버킷 공유(신규 버킷 없음) → 신규 라우트가 없으므로 자동 충족(변경 없음). ✅
+- 테스트 전략(마크업 존재 확인 + 브라우저 실측) → Task 1 Step 1(테스트), Task 2(브라우저). ✅
+
+**플레이스홀더 스캔:** "TODO"/"TBD"/"적절히 처리" 없음. 모든 스텝에 완전한 코드 첨부.
+
+**타입 일관성 확인:** `saveDayTimelineNote(kind, fields, buttonEl, onSuccess)`의 `onSuccess`
+콜백 시그니처가 `day-note` 호출부(`timelineCache[date].day_note = {...}`)와 `time-note`
+호출부(`cached.slots` 배열 갱신) 양쪽에서 인자 없이 클로저로 값을 캡처하는 동일한 패턴으로
+쓰인다 — 일관됨. `renderDayTimelinePanel(panelEl, date, data)`가 받는 `data` 형태
+(`day_note`/`slots`)는 `GET /timeline/{date}`의 기존 응답 형태 그대로이며 `buildDayTimelineSlot`
+이 소비하는 `slot.slot`/`slot.label`/`slot.lat`/`slot.lng`/`slot.photos`/`slot.memo` 필드명과
+정확히 일치한다(기존 `TimelineService`/`TimelineController`를 변경하지 않았으므로 당연히
+일치 — 재확인 완료).
