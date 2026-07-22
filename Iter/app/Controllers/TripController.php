@@ -146,6 +146,152 @@ class TripController extends BaseController
     }
 
     /**
+     * 여행 상세/편집 페이지 껍데기(GET /trips/{id}).
+     */
+    public function show(int $id): ResponseInterface|RedirectResponse|string
+    {
+        if ($this->currentUserId() === null) {
+            return redirect()->to('/auth/google');
+        }
+
+        helper('url');
+
+        return view('trip-detail', [
+            'tripId' => $id,
+            'tripsUrl' => site_url('trips'),
+            'uploadUrl' => site_url('upload'),
+            'mapUrl' => site_url('map'),
+            'logoutUrl' => site_url('auth/logout'),
+        ]);
+    }
+
+    /**
+     * 여행 상세 데이터(JSON, GET /trips/{id}/data).
+     */
+    public function showData(int $id): ResponseInterface
+    {
+        $userId = $this->currentUserId();
+        if ($userId === null) {
+            return $this->response->setStatusCode(401)->setJSON(['error' => '로그인이 필요합니다.']);
+        }
+
+        $trip = model(TripModel::class)->findOwned($id, $userId);
+        if ($trip === null) {
+            return $this->response->setStatusCode(404);
+        }
+
+        $startDate = (string) $trip['start_date'];
+        $endDate = (string) $trip['end_date'];
+        $summaryService = service('tripSummary');
+
+        $storedCoverId = $trip['cover_photo_id'] !== null ? (int) $trip['cover_photo_id'] : null;
+        $coverId = $summaryService->resolveCoverId($storedCoverId, $userId, $startDate, $endDate);
+
+        $days = [];
+        foreach ($summaryService->buildDaySummaries($userId, $startDate, $endDate) as $summary) {
+            $firstId = $summary['thumbnail_ids'][0] ?? null;
+            $days[] = [
+                'date' => $summary['date'],
+                'photo_count' => $summary['photo_count'],
+                'first_photo_id' => $firstId,
+                'first_thumbnail_url' => $firstId !== null ? '/thumbnails/' . $firstId : null,
+            ];
+        }
+
+        return $this->response->setJSON([
+            'trip' => [
+                'id' => (int) $trip['id'],
+                'title' => (string) $trip['title'],
+                'body' => (string) ($trip['body'] ?? ''),
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'cover_photo_id' => $storedCoverId,
+                'cover_thumbnail_url' => $coverId !== null ? '/thumbnails/' . $coverId : null,
+            ],
+            'days' => $days,
+        ]);
+    }
+
+    /**
+     * 여행 수정(POST /trips/{id}/update).
+     */
+    public function update(int $id): ResponseInterface
+    {
+        $userId = $this->currentUserId();
+        if ($userId === null) {
+            return $this->response->setStatusCode(401)->setJSON(['error' => '로그인이 필요합니다.']);
+        }
+
+        $tripModel = model(TripModel::class);
+        $trip = $tripModel->findOwned($id, $userId);
+        if ($trip === null) {
+            return $this->response->setStatusCode(404);
+        }
+
+        $title = trim((string) $this->request->getPost('title'));
+        $body = trim((string) $this->request->getPost('body'));
+        $startDate = (string) $this->request->getPost('start_date');
+        $endDate = (string) $this->request->getPost('end_date');
+        $coverRaw = $this->request->getPost('cover_photo_id');
+
+        [$valid, $error] = $this->validateTripFields($title, $body, $startDate, $endDate);
+        if (! $valid) {
+            return $this->response->setStatusCode(422)->setJSON(['error' => $error]);
+        }
+
+        if ($tripModel->overlaps($userId, $startDate, $endDate, $id)) {
+            return $this->response->setStatusCode(422)->setJSON(['error' => '겹치는 여행이 있습니다.']);
+        }
+
+        [$coverValid, $coverId, $coverError] = $this->validateCoverPhotoId(
+            $coverRaw === null ? null : (string) $coverRaw,
+            $userId,
+            $startDate,
+            $endDate,
+        );
+        if (! $coverValid) {
+            return $this->response->setStatusCode(422)->setJSON(['error' => $coverError]);
+        }
+
+        $tripModel->update($id, [
+            'title' => $title,
+            'body' => $body,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'cover_photo_id' => $coverId,
+        ]);
+
+        return $this->response->setJSON([
+            'id' => $id,
+            'title' => $title,
+            'body' => $body,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'cover_photo_id' => $coverId,
+        ]);
+    }
+
+    /**
+     * 여행 삭제 — Trip 레코드만 지운다(사진·노트는 그대로 남는다, POST /trips/{id}/delete).
+     */
+    public function delete(int $id): ResponseInterface
+    {
+        $userId = $this->currentUserId();
+        if ($userId === null) {
+            return $this->response->setStatusCode(401)->setJSON(['error' => '로그인이 필요합니다.']);
+        }
+
+        $tripModel = model(TripModel::class);
+        if ($tripModel->findOwned($id, $userId) === null) {
+            return $this->response->setStatusCode(404);
+        }
+
+        $tripModel->delete($id);
+
+        return $this->response->setJSON(['deleted' => true]);
+    }
+
+    /**
      * 제목·설명·기간 유효성을 검증한다.
      *
      * @return array{0: bool, 1: string} [유효 여부, 에러 메시지]

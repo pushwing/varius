@@ -168,4 +168,159 @@ final class TripControllerTest extends CIUnitTestCase
         $result->assertStatus(200);
         $this->seeInDatabase('trips', ['user_id' => $this->userId, 'title' => '서울 여행']);
     }
+
+    // ── GET /trips/{id} ──────────────────────────────────────────────
+
+    public function testShowRedirectsWhenNotLoggedIn(): void
+    {
+        $result = $this->get('trips/1');
+
+        $result->assertRedirect();
+    }
+
+    public function testShowRendersPageShell(): void
+    {
+        $result = $this->withSession(['user_id' => $this->userId])->get('trips/1');
+
+        $result->assertStatus(200);
+        $body = (string) $result->getBody();
+        $this->assertStringContainsString('data-trip-id="1"', $body);
+    }
+
+    // ── GET /trips/{id}/data ─────────────────────────────────────────
+
+    public function testShowDataRequiresLogin(): void
+    {
+        $result = $this->get('trips/1/data');
+
+        $result->assertStatus(401);
+    }
+
+    public function testShowDataReturns404WhenNotOwned(): void
+    {
+        $otherId = (new UserModel())->upsertByGoogleSub('sub-tripc-2', 'tripc2@example.com', 'TripC2');
+        $tripId = (int) (new TripModel())->insert([
+            'user_id' => $otherId, 'title' => 'T', 'body' => '',
+            'start_date' => '2024-03-15', 'end_date' => '2024-03-16', 'cover_photo_id' => null,
+        ]);
+
+        $result = $this->withSession(['user_id' => $this->userId])->get('trips/' . $tripId . '/data');
+
+        $result->assertStatus(404);
+    }
+
+    public function testShowDataReturnsTripAndDaySummaries(): void
+    {
+        (new PhotoLocationModel())->saveMany($this->userId, [
+            new PhotoLocation('sd1', 37.5, 127.0, '2024-03-15 02:00:00'),
+            new PhotoLocation('sd2', 37.5, 127.0, '2024-03-16 02:00:00'),
+        ]);
+        $tripId = (int) (new TripModel())->insert([
+            'user_id' => $this->userId, 'title' => '서울 여행', 'body' => '고궁 투어',
+            'start_date' => '2024-03-15', 'end_date' => '2024-03-16', 'cover_photo_id' => null,
+        ]);
+
+        $result = $this->withSession(['user_id' => $this->userId])->get('trips/' . $tripId . '/data');
+
+        $result->assertStatus(200);
+        $data = json_decode($result->getJSON() ?? '', true);
+        $this->assertSame('서울 여행', $data['trip']['title']);
+        $this->assertCount(2, $data['days']);
+        $this->assertSame('2024-03-15', $data['days'][0]['date']);
+    }
+
+    // ── POST /trips/{id}/update ──────────────────────────────────────
+
+    public function testUpdateRequiresLogin(): void
+    {
+        $result = $this->post('trips/1/update', ['title' => 'T', 'body' => '', 'start_date' => '2024-03-15', 'end_date' => '2024-03-16']);
+
+        $result->assertStatus(401);
+    }
+
+    public function testUpdateReturns404WhenNotOwned(): void
+    {
+        $otherId = (new UserModel())->upsertByGoogleSub('sub-tripc-3', 'tripc3@example.com', 'TripC3');
+        $tripId = (int) (new TripModel())->insert([
+            'user_id' => $otherId, 'title' => 'T', 'body' => '',
+            'start_date' => '2024-03-15', 'end_date' => '2024-03-16', 'cover_photo_id' => null,
+        ]);
+
+        $result = $this->withSession(['user_id' => $this->userId])
+            ->post('trips/' . $tripId . '/update', ['title' => 'X', 'body' => '', 'start_date' => '2024-03-15', 'end_date' => '2024-03-16']);
+
+        $result->assertStatus(404);
+    }
+
+    public function testUpdateAllowsKeepingSameDateRange(): void
+    {
+        // 자기 자신의 기존 범위와 겹침 검사를 하면 항상 실패하므로, excludeId 로 제외돼야 한다.
+        $tripId = (int) (new TripModel())->insert([
+            'user_id' => $this->userId, 'title' => '서울 여행', 'body' => '',
+            'start_date' => '2024-03-15', 'end_date' => '2024-03-16', 'cover_photo_id' => null,
+        ]);
+
+        $result = $this->withSession(['user_id' => $this->userId])
+            ->post('trips/' . $tripId . '/update', ['title' => '수정된 제목', 'body' => '', 'start_date' => '2024-03-15', 'end_date' => '2024-03-16']);
+
+        $result->assertStatus(200);
+        $this->seeInDatabase('trips', ['id' => $tripId, 'title' => '수정된 제목']);
+    }
+
+    public function testUpdateRejectsOverlapWithOtherTrip(): void
+    {
+        (new TripModel())->insert([
+            'user_id' => $this->userId, 'title' => '여행 A', 'body' => '',
+            'start_date' => '2024-03-01', 'end_date' => '2024-03-03', 'cover_photo_id' => null,
+        ]);
+        $tripBId = (int) (new TripModel())->insert([
+            'user_id' => $this->userId, 'title' => '여행 B', 'body' => '',
+            'start_date' => '2024-03-10', 'end_date' => '2024-03-12', 'cover_photo_id' => null,
+        ]);
+
+        $result = $this->withSession(['user_id' => $this->userId])
+            ->post('trips/' . $tripBId . '/update', ['title' => '여행 B', 'body' => '', 'start_date' => '2024-03-02', 'end_date' => '2024-03-12']);
+
+        $result->assertStatus(422);
+    }
+
+    // ── POST /trips/{id}/delete ──────────────────────────────────────
+
+    public function testDeleteRequiresLogin(): void
+    {
+        $result = $this->post('trips/1/delete');
+
+        $result->assertStatus(401);
+    }
+
+    public function testDeleteReturns404WhenNotOwned(): void
+    {
+        $otherId = (new UserModel())->upsertByGoogleSub('sub-tripc-4', 'tripc4@example.com', 'TripC4');
+        $tripId = (int) (new TripModel())->insert([
+            'user_id' => $otherId, 'title' => 'T', 'body' => '',
+            'start_date' => '2024-03-15', 'end_date' => '2024-03-16', 'cover_photo_id' => null,
+        ]);
+
+        $result = $this->withSession(['user_id' => $this->userId])->post('trips/' . $tripId . '/delete');
+
+        $result->assertStatus(404);
+        $this->seeInDatabase('trips', ['id' => $tripId]);
+    }
+
+    public function testDeleteRemovesTripButKeepsPhotosAndNotes(): void
+    {
+        (new PhotoLocationModel())->saveMany($this->userId, [
+            new PhotoLocation('kd1', 37.5, 127.0, '2024-03-15 02:00:00'),
+        ]);
+        $tripId = (int) (new TripModel())->insert([
+            'user_id' => $this->userId, 'title' => '서울 여행', 'body' => '',
+            'start_date' => '2024-03-15', 'end_date' => '2024-03-16', 'cover_photo_id' => null,
+        ]);
+
+        $result = $this->withSession(['user_id' => $this->userId])->post('trips/' . $tripId . '/delete');
+
+        $result->assertStatus(200);
+        $this->dontSeeInDatabase('trips', ['id' => $tripId]);
+        $this->seeInDatabase('photo_locations', ['source_item_id' => 'kd1']);
+    }
 }
