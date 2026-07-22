@@ -47,18 +47,21 @@ declare(strict_types=1);
         .page-title { font-size: 22px; margin: 0 0 6px; }
         .page-lead { margin: 0 0 24px; font-size: 14px; color: #444; line-height: 1.6; }
 
-        /* 좌우 2열 — 좁은 화면에서는 세로로 쌓인다. */
+        /* 좌우 2열 — 좁은 화면에서는 세로로 쌓인다. stretch 로 두 카드 높이를 맞춘다. */
         .upload-grid {
-            display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; align-items: start;
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; align-items: stretch;
         }
         @media (max-width: 640px) {
             .upload-grid { grid-template-columns: 1fr; }
         }
 
+        /* flex 컬럼 + 폼 margin-top:auto 로 설명 길이가 달라도 업로드 폼을 하단 정렬한다. */
         .upload-card {
+            display: flex; flex-direction: column;
             background: #fff; border: 1px solid #eee; border-radius: 14px;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); padding: 24px 22px; text-align: left;
         }
+        .upload-card form { margin-top: auto; }
         .upload-card .badge {
             display: inline-block; font-size: 12px; font-weight: 700; color: #1a73e8;
             background: #eef4ff; border-radius: 999px; padding: 3px 10px; margin-bottom: 10px;
@@ -128,9 +131,9 @@ declare(strict_types=1);
                 <span class="badge">Google Photos</span>
                 <h2>Google Takeout zip</h2>
                 <p class="lead-text">
-                    Google Photos에 백업된 사진용입니다. Google은 사진을 내려받을 때 GPS를 제거하지만,
-                    Takeout으로 내보내면 위치가 사진 옆 <strong>JSON 파일</strong>에 그대로 보존됩니다.
-                    Iter는 이 JSON에서 좌표를 읽습니다.
+                    Google Photos 라이브러리를 한꺼번에 내보낼 때 편리합니다. Takeout은 위치를 사진 옆
+                    <strong>JSON 파일</strong>에 함께 담아 주며, Iter는 이 JSON에서 좌표를 읽습니다.
+                    사진 자체에 GPS가 없어도 이 JSON 덕분에 위치를 찾을 수 있습니다.
                 </p>
                 <p class="help">
                     <a href="https://takeout.google.com" target="_blank" rel="noopener">takeout.google.com</a>에서
@@ -158,8 +161,9 @@ declare(strict_types=1);
                     각 사진 파일의 <strong>EXIF</strong>에 저장된 GPS를 직접 읽으므로 JSON 파일이 필요 없습니다.
                 </p>
                 <p class="help">
-                    사진들을 zip으로 압축해 그대로 올려주세요. 단, <strong>Google Photos에서 받은 사진은
-                    GPS가 제거돼</strong> 이 방식으로는 위치를 찾을 수 없습니다 — 그런 경우 왼쪽 Takeout 방식을 쓰세요.
+                    사진들을 zip으로 압축해 그대로 올려주세요. 위치 기록을 켜고 찍은 사진이라면
+                    직접 다운로드한 원본에도 GPS가 남아 있어 그대로 인식됩니다. 사진에 위치 정보가
+                    없으면 지도에 표시되지 않으니, 그런 경우 왼쪽 Takeout 방식을 써보세요.
                 </p>
                 <form id="plain-form" data-upload-url="<?= esc($plainUploadUrl, 'attr') ?>" data-map-url="<?= esc($mapUrl, 'attr') ?>">
                     <label class="file-picker" for="plain-file">
