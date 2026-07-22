@@ -230,6 +230,10 @@ final class TripControllerTest extends CIUnitTestCase
         $this->assertSame('서울 여행', $data['trip']['title']);
         $this->assertCount(2, $data['days']);
         $this->assertSame('2024-03-15', $data['days'][0]['date']);
+        // distance_km 은 정수값(0.0)일 때 JSON_PRESERVE_ZERO_FRACTION 옵션 없이 인코딩/디코딩되면
+        // int 0 으로 돌아오므로(PHP json_encode 특성) 비교 전 float 로 캐스팅한다.
+        $this->assertSame(0.0, (float) $data['stats']['distance_km']);
+        $this->assertSame(1, $data['stats']['spot_count']);
     }
 
     // ── POST /trips/{id}/update ──────────────────────────────────────
