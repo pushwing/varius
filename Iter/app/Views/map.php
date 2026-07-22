@@ -501,6 +501,10 @@ declare(strict_types=1);
                         registryEntry.marker = L.circleMarker([c.lat, c.lng], {
                             radius: 6, color: group.color, fillColor: group.color, fillOpacity: 0.9
                         }).addTo(map).bindPopup(popupHtml, { maxWidth: 180 });
+
+                        // 지점 액션은 클릭이 아니라 마우스오버로 연다(#27).
+                        // 클릭(bindPopup 기본 동작)도 유지한다 — 터치 기기엔 hover 가 없다.
+                        registryEntry.marker.on('mouseover', function () { this.openPopup(); });
                     });
 
                     dateIndex[group.date] = { latlngs: latlngs, firstClusterIndex: firstClusterIndex };
