@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Models\DayNoteModel;
 use App\Models\PhotoLocationModel;
 use App\Models\TimeNoteModel;
+use App\Support\TimeConverter;
 
 /**
  * 하루치 좌표를 시간대별 사진 그룹으로 묶고 날짜 노트·시간대 메모를 병합한다.
@@ -44,7 +45,9 @@ final class TimelineService
      */
     public function buildForDate(int $userId, string $date): array
     {
-        $rows = $this->photoModel->findByUserAndDate($userId, $date);
+        // 날짜는 KST 기준 — 저장(UTC)에서 그 하루를 커버하는 범위로 조회한다.
+        [$startUtc, $endUtc] = TimeConverter::kstDateToUtcRange($date);
+        $rows = $this->photoModel->findByUserBetween($userId, $startUtc, $endUtc);
         $memos = $this->timeNoteModel->findForDate($userId, $date);
 
         // taken_at 오름차순으로 조회되므로 시간대 그룹·그룹 내 순서가 자연히 유지된다.
@@ -54,6 +57,9 @@ final class TimelineService
             if ($takenAt === '') {
                 continue;
             }
+
+            // 표시·그룹핑은 한국시간(KST) 기준.
+            $takenAt = TimeConverter::utcToKst($takenAt);
 
             $hour = (int) substr($takenAt, 11, 2);
             if (! isset($grouped[$hour])) {

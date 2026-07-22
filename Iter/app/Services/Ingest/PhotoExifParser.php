@@ -105,6 +105,7 @@ class PhotoExifParser
             return null;
         }
 
-        return $parsed->format('Y-m-d H:i:s');
+        // EXIF 촬영 시각은 카메라 로컬(KST 가정) — 저장 표준인 UTC 로 변환한다.
+        return \App\Support\TimeConverter::kstToUtc($parsed->format('Y-m-d H:i:s'));
     }
 }

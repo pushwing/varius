@@ -45,17 +45,17 @@ class PhotoLocationModel extends Model
     }
 
     /**
-     * 특정 날짜의 사용자 좌표를 촬영 시각 오름차순으로 조회한다(시간별 동선용).
+     * 촬영 시각(UTC) 범위 내 사용자 좌표를 오름차순으로 조회한다(시간별 동선용).
      *
      * @return list<array<string, mixed>>
      */
-    public function findByUserAndDate(int $userId, string $date): array
+    public function findByUserBetween(int $userId, string $startUtc, string $endUtc): array
     {
         /** @var list<array<string, mixed>> $rows */
         $rows = $this->select('id, source_item_id, lat, lng, thumbnail_path, taken_at')
             ->where('user_id', $userId)
-            ->where('taken_at >=', $date . ' 00:00:00')
-            ->where('taken_at <=', $date . ' 23:59:59')
+            ->where('taken_at >=', $startUtc)
+            ->where('taken_at <=', $endUtc)
             ->orderBy('taken_at', 'ASC')
             ->findAll();
 
