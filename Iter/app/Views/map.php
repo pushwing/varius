@@ -422,7 +422,20 @@ declare(strict_types=1);
                 if (monthHeader) { toggleMonth(monthHeader); return; }
 
                 var timelineBtn = evt.target.closest('.day-timeline-btn');
-                if (timelineBtn) { openTimeline(timelineBtn.dataset.date); return; }
+                if (timelineBtn) {
+                    // 시간표를 열면서 지도도 그 날짜의 동선 범위로 이동한다.
+                    var timelineDate = timelineBtn.dataset.date;
+                    var dateEntry = dateIndex[timelineDate];
+                    if (dateEntry && dateEntry.latlngs.length) {
+                        map.fitBounds(dateEntry.latlngs, { padding: [40, 40] });
+                    }
+                    document.querySelectorAll('.day-item.active').forEach(function (el) { el.classList.remove('active'); });
+                    var dayItemEl = document.querySelector('.day-item[data-date="' + timelineDate + '"]');
+                    if (dayItemEl) { dayItemEl.classList.add('active'); }
+
+                    openTimeline(timelineDate);
+                    return;
+                }
 
                 var dayItem = evt.target.closest('.day-item');
                 if (dayItem) { selectDay(dayItem); return; }
