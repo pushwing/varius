@@ -26,6 +26,7 @@ use App\Services\RouteVisualizationService;
 use App\Services\StorageMaintenanceService;
 use App\Services\TakeoutIngestService;
 use App\Services\TimelineService;
+use App\Services\TripSummaryService;
 use CodeIgniter\Config\BaseService;
 use League\OAuth2\Client\Provider\Google;
 
@@ -94,6 +95,18 @@ class Services extends BaseService
             static::googlePhotosAuth(),
             WRITEPATH . 'uploads/thumbnails',
         );
+    }
+
+    /**
+     * 여행(날짜 범위) 날짜별 사진 요약 서비스 — 상세·공개 공유 페이지가 공용으로 사용한다.
+     */
+    public static function tripSummary(bool $getShared = true): TripSummaryService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('tripSummary');
+        }
+
+        return new TripSummaryService(new PhotoLocationModel());
     }
 
     /**
