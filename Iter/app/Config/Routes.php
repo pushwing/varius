@@ -27,6 +27,11 @@ $routes->get('timeline/poi', 'TimelineController::poi', ['filter' => 'sessionRat
 $routes->get('timeline/(:segment)', 'TimelineController::data/$1');
 $routes->post('timeline/day-note', 'TimelineController::saveDayNote', ['filter' => 'sessionRateLimit:notes,120']);
 $routes->post('timeline/time-note', 'TimelineController::saveTimeNote', ['filter' => 'sessionRateLimit:notes,120']);
+$routes->post('timeline/share', 'TimelineController::share', ['filter' => 'sessionRateLimit:share,60']);
+
+// SNS 공유 링크(비로그인 공개 열람)
+$routes->get('s/(:segment)', 'ShareController::show/$1');
+$routes->get('s/(:segment)/thumbnails/(:num)', 'ShareController::thumbnail/$1/$2');
 
 // 사진 개별 관리(썸네일 회전·삭제)
 $routes->post('photos/(:num)/rotate', 'PhotoController::rotate/$1', ['filter' => 'sessionRateLimit:photos,300']);

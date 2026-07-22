@@ -105,6 +105,10 @@ final class RouteControllerTest extends CIUnitTestCase
         // 사진이 여러 장일 때 넘겨볼 수 있는 좌우 이동 버튼도 있어야 한다.
         $this->assertStringContainsString('id="photo-viewer-prev"', $body);
         $this->assertStringContainsString('id="photo-viewer-next"', $body);
+        // SNS 공유 버튼(#19)도 시간표 상단에 있어야 한다.
+        $this->assertStringContainsString('id="timeline-share-toggle"', $body);
+        $this->assertStringContainsString('data-share="x"', $body);
+        $this->assertStringContainsString('data-share="kakao"', $body);
     }
 
     public function testThumbnailRequiresLogin(): void

@@ -114,10 +114,27 @@ declare(strict_types=1);
             display: flex; align-items: center; justify-content: space-between;
             padding: 14px 18px; border-bottom: 1px solid #eee;
         }
-        #timeline-header h3 { margin: 0; font-size: 15px; }
+        #timeline-header h3 { margin: 0; font-size: 15px; padding-right: 12px; }
+        #timeline-header-actions { display: flex; align-items: center; gap: 10px; flex: none; }
         #timeline-close {
             border: none; background: none; font-size: 20px; cursor: pointer; color: #666; line-height: 1;
         }
+        #timeline-share { position: relative; }
+        #timeline-share-toggle {
+            border: 1px solid #dbe5ff; border-radius: 8px; background: #f2f6ff; color: #1a73e8;
+            font-size: 12px; padding: 6px 12px; cursor: pointer;
+        }
+        #timeline-share-toggle:hover { background: #e6edff; }
+        #timeline-share-menu {
+            position: absolute; top: calc(100% + 6px); right: 0; z-index: 10;
+            background: #fff; border: 1px solid #e2e2e2; border-radius: 10px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12); padding: 6px; min-width: 140px;
+        }
+        .share-option {
+            display: block; width: 100%; text-align: left; border: none; background: none;
+            padding: 8px 10px; font-size: 13px; color: #333; cursor: pointer; border-radius: 6px;
+        }
+        .share-option:hover { background: #f4f6fb; }
         #timeline-body { overflow-y: auto; padding: 16px 22px 22px; }
         #timeline-daynote {
             background: #f7f9ff; border: 1px solid #dbe5ff; border-radius: 10px;
@@ -223,7 +240,19 @@ declare(strict_types=1);
         <div id="timeline-panel">
             <div id="timeline-header">
                 <h3 id="timeline-title"></h3>
-                <button type="button" id="timeline-close" aria-label="닫기">&times;</button>
+                <div id="timeline-header-actions">
+                    <div id="timeline-share">
+                        <button type="button" id="timeline-share-toggle">🔗 공유</button>
+                        <div id="timeline-share-menu" hidden>
+                            <button type="button" class="share-option" data-share="x">X(트위터)</button>
+                            <button type="button" class="share-option" data-share="facebook">페이스북</button>
+                            <button type="button" class="share-option" data-share="kakao">카카오톡</button>
+                            <button type="button" class="share-option" data-share="instagram">인스타그램</button>
+                            <button type="button" class="share-option" data-share="copy">링크 복사</button>
+                        </div>
+                    </div>
+                    <button type="button" id="timeline-close" aria-label="닫기">&times;</button>
+                </div>
             </div>
             <div id="timeline-body">
                 <div id="timeline-daynote">
@@ -634,6 +663,92 @@ declare(strict_types=1);
 
             function closeTimeline() {
                 timelineEl.hidden = true;
+                shareMenuEl.hidden = true;
+            }
+
+            // ── SNS 공유 ──
+
+            var shareToggleEl = document.getElementById('timeline-share-toggle');
+            var shareMenuEl = document.getElementById('timeline-share-menu');
+            var shareUrlCache = {}; // 날짜 → 공유 URL(같은 세션 내 재요청 방지)
+
+            shareToggleEl.addEventListener('click', function (evt) {
+                evt.stopPropagation();
+                shareMenuEl.hidden = !shareMenuEl.hidden;
+            });
+            document.addEventListener('click', function (evt) {
+                if (!shareMenuEl.hidden && !evt.target.closest('#timeline-share')) { shareMenuEl.hidden = true; }
+            });
+            shareMenuEl.addEventListener('click', function (evt) {
+                var btn = evt.target.closest('.share-option');
+                if (btn) { handleShareOption(btn.dataset.share); }
+            });
+
+            function getShareUrl() {
+                if (!currentTimelineDate) { return Promise.reject(new Error('날짜 없음')); }
+                if (shareUrlCache[currentTimelineDate]) { return Promise.resolve(shareUrlCache[currentTimelineDate]); }
+
+                return fetch(timelineUrl + '/share', {
+                    method: 'POST',
+                    headers: { Accept: 'application/json' },
+                    body: new URLSearchParams({ date: currentTimelineDate })
+                })
+                    .then(function (res) {
+                        if (!res.ok) { throw new Error('공유 링크 생성 실패'); }
+                        return res.json();
+                    })
+                    .then(function (data) {
+                        shareUrlCache[currentTimelineDate] = data.url;
+                        return data.url;
+                    });
+            }
+
+            function handleShareOption(kind) {
+                getShareUrl().then(function (url) {
+                    var title = timelineTitleEl.textContent;
+
+                    if (kind === 'x') {
+                        openShareWindow('https://twitter.com/intent/tweet?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(title));
+                    } else if (kind === 'facebook') {
+                        openShareWindow('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url));
+                    } else if (kind === 'kakao' || kind === 'instagram') {
+                        // 카카오톡·인스타그램은 웹에서 바로 공유할 URL 스킴이 없다 — 모바일에서는
+                        // OS 공유 시트(navigator.share, 설치된 앱 선택 가능)로, 그 외엔 링크 복사로 대신한다.
+                        if (navigator.share) {
+                            navigator.share({ title: title, url: url }).catch(function () {});
+                        } else {
+                            copyToClipboard(url);
+                            alert((kind === 'kakao' ? '카카오톡은' : '인스타그램은') + ' 이 브라우저에서 바로 공유할 수 없어 링크를 복사했어요. 앱에 붙여넣어 공유해보세요.');
+                        }
+                    } else if (kind === 'copy') {
+                        copyToClipboard(url);
+                        alert('링크가 복사되었습니다.');
+                    }
+
+                    shareMenuEl.hidden = true;
+                }).catch(function () {
+                    alert('공유 링크를 만들지 못했습니다.');
+                });
+            }
+
+            function openShareWindow(url) {
+                window.open(url, '_blank', 'noopener,width=560,height=480');
+            }
+
+            function copyToClipboard(text) {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text);
+                    return;
+                }
+                // 클립보드 API 미지원 브라우저 폴백.
+                var ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand('copy'); } catch (e) { /* 무시 — 최소한 alert 로 URL 은 안내된다 */ }
+                document.body.removeChild(ta);
             }
 
             function renderTimeline(data) {
