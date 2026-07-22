@@ -94,9 +94,15 @@ final class TimelineService
      * 세그먼트 기준 좌표는 첫 지점 좌표(드리프트 방지), 슬롯 키는 첫 사진의
      * KST 시각("HH:MM")이다.
      *
+     * 좌표 없는 사진(GPS 없이 촬영 시각만 있는 사진)은 장소 비교 자체가 불가능하므로,
+     * 직전에 열린 세그먼트가 있으면(좌표 유무 무관) 그대로 편입하고, 없으면(하루의 첫
+     * 사진부터 좌표가 없는 경우) `lat: null, lng: null` 인 새 세그먼트를 연다. 좌표
+     * 없는 세그먼트 다음에 좌표 있는 사진이 오면 "같은 장소"로 비교할 기준이 없으므로
+     * 무조건 새 세그먼트를 연다.
+     *
      * @param list<array<string, mixed>> $rows taken_at(UTC) 오름차순 좌표 행
      *
-     * @return list<array{slot: string, lat: float, lng: float, photos: list<array{media_item_id: string, taken_at: string, thumbnail_url: string|null}>}>
+     * @return list<array{slot: string, lat: float|null, lng: float|null, photos: list<array{media_item_id: string, taken_at: string, thumbnail_url: string|null}>}>
      */
     private function segmentByPlace(array $rows): array
     {
@@ -111,8 +117,10 @@ final class TimelineService
 
             // 표시·슬롯 키는 한국시간(KST) 기준.
             $takenAt = TimeConverter::utcToKst($takenAt);
-            $lat = (float) ($row['lat'] ?? 0);
-            $lng = (float) ($row['lng'] ?? 0);
+            $rawLat = $row['lat'] ?? null;
+            $rawLng = $row['lng'] ?? null;
+            $lat = $rawLat === null ? null : (float) $rawLat;
+            $lng = $rawLng === null ? null : (float) $rawLng;
 
             $photo = [
                 'media_item_id' => (string) ($row['source_item_id'] ?? ''),
@@ -121,9 +129,13 @@ final class TimelineService
             ];
 
             $isSamePlace = $current !== null
+                && $current['lat'] !== null && $current['lng'] !== null
+                && $lat !== null && $lng !== null
                 && GeoDistanceCalculator::kilometers($current['lat'], $current['lng'], $lat, $lng) <= self::SEGMENT_RADIUS_KM;
 
-            if ($isSamePlace) {
+            $isNoLocationContinuation = $current !== null && $lat === null && $lng === null;
+
+            if ($isSamePlace || $isNoLocationContinuation) {
                 $current['photos'][] = $photo;
                 continue;
             }
