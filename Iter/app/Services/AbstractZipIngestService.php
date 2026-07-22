@@ -159,6 +159,11 @@ abstract class AbstractZipIngestService
      * 비행기·KTX 등 실제 고속 이동의 도착지로 보고 둘 다 살려 앵커를 옮긴다 —
      * 앵커 고착으로 도착지 동선이 통째로 잘리는 것을 방지한다.
      *
+     * 좌표 없는 지점(GPS 없이 촬영 시각만 있는 사진)은 속도 계산 자체가 불가능하므로
+     * 항상 유지하고, 앵커(previous)·직전 걸러진 지점(dropped) 갱신에는 관여하지 않는다
+     * — 좌표 없는 지점을 몇 개 건너뛰어도 그다음 좌표 있는 지점은 그 이전의 마지막
+     * 좌표 있는 지점을 기준으로 이상치 판정을 받는다.
+     *
      * @param list<PhotoLocation> $locations
      *
      * @return list<PhotoLocation>
@@ -171,12 +176,17 @@ abstract class AbstractZipIngestService
 
         usort($locations, static fn (PhotoLocation $a, PhotoLocation $b): int => strcmp($a->takenAt, $b->takenAt));
 
-        $kept = [$locations[0]];
-        $previous = $locations[0];
-        $dropped = null; // 직전에 걸러진 지점 — 후속 지점이 확인해 주면 복권된다.
+        $kept = [];
+        $previous = null; // 마지막으로 채택된, 좌표 있는 지점(이상치 판정 기준 앵커).
+        $dropped = null; // 직전에 걸러진, 좌표 있는 지점 — 후속 지점이 확인해 주면 복권된다.
 
-        foreach (array_slice($locations, 1) as $current) {
-            if ($this->isReachable($previous, $current)) {
+        foreach ($locations as $current) {
+            if ($current->lat === null || $current->lng === null) {
+                $kept[] = $current;
+                continue;
+            }
+
+            if ($previous === null || $this->isReachable($previous, $current)) {
                 $kept[] = $current;
                 $previous = $current;
                 $dropped = null;
