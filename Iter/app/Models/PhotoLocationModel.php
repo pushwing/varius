@@ -45,6 +45,24 @@ class PhotoLocationModel extends Model
     }
 
     /**
+     * 특정 날짜의 사용자 좌표를 촬영 시각 오름차순으로 조회한다(시간별 동선용).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function findByUserAndDate(int $userId, string $date): array
+    {
+        /** @var list<array<string, mixed>> $rows */
+        $rows = $this->select('id, source_item_id, lat, lng, thumbnail_path, taken_at')
+            ->where('user_id', $userId)
+            ->where('taken_at >=', $date . ' 00:00:00')
+            ->where('taken_at <=', $date . ' 23:59:59')
+            ->orderBy('taken_at', 'ASC')
+            ->findAll();
+
+        return $rows;
+    }
+
+    /**
      * DB 에 저장된 모든(비어있지 않은) 썸네일 경로를 반환한다(고아 썸네일 정리용).
      *
      * @return list<string>
