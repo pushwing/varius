@@ -189,8 +189,12 @@ class TripController extends BaseController
         $storedCoverId = $trip['cover_photo_id'] !== null ? (int) $trip['cover_photo_id'] : null;
         $coverId = $summaryService->resolveCoverId($storedCoverId, $userId, $startDate, $endDate);
 
+        [$startUtc] = TimeConverter::kstDateToUtcRange($startDate);
+        [, $endUtc] = TimeConverter::kstDateToUtcRange($endDate);
+        $rows = model(PhotoLocationModel::class)->findByUserBetween($userId, $startUtc, $endUtc);
+
         $days = [];
-        foreach ($summaryService->buildDaySummaries($userId, $startDate, $endDate) as $summary) {
+        foreach ($summaryService->buildDaySummariesFromRows($rows) as $summary) {
             $firstId = $summary['thumbnail_ids'][0] ?? null;
             $days[] = [
                 'date' => $summary['date'],
@@ -200,7 +204,7 @@ class TripController extends BaseController
             ];
         }
 
-        $stats = service('tripStats')->buildStats($userId, $startDate, $endDate);
+        $stats = service('tripStats')->buildStatsFromRows($rows);
 
         return $this->response->setJSON([
             'trip' => [

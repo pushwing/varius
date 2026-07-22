@@ -236,6 +236,25 @@ final class TripControllerTest extends CIUnitTestCase
         $this->assertSame(1, $data['stats']['spot_count']);
     }
 
+    public function testShowDataReturnsNonZeroDistanceWhenPhotosAreFarApart(): void
+    {
+        (new PhotoLocationModel())->saveMany($this->userId, [
+            new PhotoLocation('nz1', 37.5665, 126.9780, '2024-03-15 01:00:00'), // 서울시청
+            new PhotoLocation('nz2', 37.4979, 127.0276, '2024-03-15 02:00:00'), // 강남역
+        ]);
+        $tripId = (int) (new TripModel())->insert([
+            'user_id' => $this->userId, 'title' => 'T', 'body' => '',
+            'start_date' => '2024-03-15', 'end_date' => '2024-03-15', 'cover_photo_id' => null,
+        ]);
+
+        $result = $this->withSession(['user_id' => $this->userId])->get('trips/' . $tripId . '/data');
+
+        $result->assertStatus(200);
+        $data = json_decode($result->getJSON() ?? '', true);
+        $this->assertGreaterThan(0.0, (float) $data['stats']['distance_km']);
+        $this->assertSame(2, $data['stats']['spot_count']);
+    }
+
     // ── POST /trips/{id}/update ──────────────────────────────────────
 
     public function testUpdateRequiresLogin(): void
