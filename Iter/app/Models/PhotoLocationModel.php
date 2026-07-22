@@ -63,6 +63,35 @@ class PhotoLocationModel extends Model
     }
 
     /**
+     * 촬영 시각(UTC) 범위 내 사용자 좌표 개수를 센다(여행 카드 사진 수 표시용).
+     */
+    public function countBetween(int $userId, string $startUtc, string $endUtc): int
+    {
+        return $this->where('user_id', $userId)
+            ->where('taken_at >=', $startUtc)
+            ->where('taken_at <=', $endUtc)
+            ->countAllResults();
+    }
+
+    /**
+     * 촬영 시각(UTC) 범위 내에서 썸네일이 있는 가장 이른 사진의 id 를 반환한다
+     * (여행 커버 사진 자동 선택용). 썸네일이 있는 사진이 없으면 null.
+     */
+    public function firstThumbnailBetween(int $userId, string $startUtc, string $endUtc): ?int
+    {
+        $row = $this->select('id')
+            ->where('user_id', $userId)
+            ->where('taken_at >=', $startUtc)
+            ->where('taken_at <=', $endUtc)
+            ->where('thumbnail_path IS NOT NULL')
+            ->where('thumbnail_path !=', '')
+            ->orderBy('taken_at', 'ASC')
+            ->first();
+
+        return $row === null ? null : (int) $row['id'];
+    }
+
+    /**
      * DB 에 저장된 모든(비어있지 않은) 썸네일 경로를 반환한다(고아 썸네일 정리용).
      *
      * @return list<string>
