@@ -68,7 +68,7 @@ class TimelineController extends BaseController
     }
 
     /**
-     * 시간대 메모 저장 — 메모가 비면 삭제(POST /timeline/time-note).
+     * 세그먼트 메모 저장 — 메모가 비면 삭제(POST /timeline/time-note).
      */
     public function saveTimeNote(): ResponseInterface
     {
@@ -78,20 +78,20 @@ class TimelineController extends BaseController
         }
 
         $date = (string) $this->request->getPost('date');
-        $hourRaw = $this->request->getPost('hour');
+        $slot = (string) $this->request->getPost('slot');
         $memo = trim((string) $this->request->getPost('memo'));
 
         if (! $this->isValidDate($date)) {
             return $this->response->setStatusCode(422)->setJSON(['error' => '날짜 형식이 올바르지 않습니다(YYYY-MM-DD).']);
         }
-        if (! is_numeric($hourRaw) || (int) $hourRaw < 0 || (int) $hourRaw > 23) {
-            return $this->response->setStatusCode(422)->setJSON(['error' => '시간은 0-23 사이여야 합니다.']);
+        if (preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $slot) !== 1) {
+            return $this->response->setStatusCode(422)->setJSON(['error' => '시각 형식이 올바르지 않습니다(HH:MM).']);
         }
         if (mb_strlen($memo) > self::MAX_MEMO_LENGTH) {
             return $this->response->setStatusCode(422)->setJSON(['error' => '메모는 ' . self::MAX_MEMO_LENGTH . '자 이하여야 합니다.']);
         }
 
-        model(TimeNoteModel::class)->upsertNote($userId, $date, (int) $hourRaw, $memo);
+        model(TimeNoteModel::class)->upsertNote($userId, $date, $slot, $memo);
 
         return $this->response->setJSON(['saved' => true, 'memo' => $memo]);
     }

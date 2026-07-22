@@ -504,14 +504,14 @@ declare(strict_types=1);
                 dayNoteBodyEl.value = data.day_note ? data.day_note.body : '';
 
                 timelineHoursEl.innerHTML = '';
-                if (!data.hours.length) {
+                if (!data.slots.length) {
                     timelineHoursEl.appendChild(emptyMessage('이 날짜에 표시할 사진이 없습니다. 아래에서 메모만 남길 수도 있어요.'));
                 }
 
                 var poiTasks = []; // {el, lat, lng} — 사진이 먼저 뜨도록 POI 조회는 뒤로 미룬다.
                 var pendingImgs = [];
-                data.hours.forEach(function (hourEntry) {
-                    timelineHoursEl.appendChild(buildHourRow(hourEntry, poiTasks, pendingImgs));
+                data.slots.forEach(function (slotEntry) {
+                    timelineHoursEl.appendChild(buildSlotRow(slotEntry, poiTasks, pendingImgs));
                 });
 
                 timelineEl.hidden = false;
@@ -550,37 +550,37 @@ declare(strict_types=1);
                 return el;
             }
 
-            function buildHourRow(hourEntry, poiTasks, pendingImgs) {
+            function buildSlotRow(slotEntry, poiTasks, pendingImgs) {
                 var rowEl = document.createElement('div');
                 rowEl.className = 'timeline-hour';
 
                 var timeEl = document.createElement('div');
                 timeEl.className = 'timeline-hour-time';
-                timeEl.textContent = hourEntry.label;
+                timeEl.textContent = slotEntry.label;
                 rowEl.appendChild(timeEl);
 
                 var contentEl = document.createElement('div');
                 contentEl.className = 'timeline-hour-content';
 
-                if (hourEntry.photos.length) {
+                if (slotEntry.photos.length) {
                     var countEl = document.createElement('div');
                     countEl.className = 'timeline-count';
-                    countEl.textContent = '사진 ' + hourEntry.photos.length + '장';
+                    countEl.textContent = '사진 ' + slotEntry.photos.length + '장';
                     contentEl.appendChild(countEl);
                 }
 
                 // 주변 업장 정보(식당·카페 등) 자리 — 실제 조회는 사진 로드 후 순차 실행된다.
-                if (hourEntry.lat !== null && hourEntry.lng !== null) {
+                if (slotEntry.lat !== null && slotEntry.lng !== null) {
                     var poiEl = document.createElement('div');
                     poiEl.className = 'timeline-poi';
                     contentEl.appendChild(poiEl);
-                    poiTasks.push({ el: poiEl, lat: hourEntry.lat, lng: hourEntry.lng });
+                    poiTasks.push({ el: poiEl, lat: slotEntry.lat, lng: slotEntry.lng });
                 }
 
-                if (hourEntry.photos.length) {
+                if (slotEntry.photos.length) {
                     var photosEl = document.createElement('div');
                     photosEl.className = 'timeline-photos';
-                    hourEntry.photos.forEach(function (p) {
+                    slotEntry.photos.forEach(function (p) {
                         if (!p.thumbnail_url) { return; }
                         var img = document.createElement('img');
                         img.src = p.thumbnail_url;
@@ -592,12 +592,12 @@ declare(strict_types=1);
                     if (photosEl.children.length) { contentEl.appendChild(photosEl); }
                 }
 
-                contentEl.appendChild(buildMemoInput(hourEntry));
+                contentEl.appendChild(buildMemoInput(slotEntry));
                 rowEl.appendChild(contentEl);
                 return rowEl;
             }
 
-            function buildMemoInput(hourEntry) {
+            function buildMemoInput(slotEntry) {
                 var wrapEl = document.createElement('div');
                 wrapEl.className = 'timeline-memo';
 
@@ -605,7 +605,7 @@ declare(strict_types=1);
                 inputEl.type = 'text';
                 inputEl.maxLength = 500;
                 inputEl.placeholder = '이 시간에 한 일을 메모해보세요';
-                inputEl.value = hourEntry.memo || '';
+                inputEl.value = slotEntry.memo || '';
                 wrapEl.appendChild(inputEl);
 
                 var saveEl = document.createElement('button');
@@ -615,7 +615,7 @@ declare(strict_types=1);
                 saveEl.addEventListener('click', function () {
                     postNote('time-note', {
                         date: currentTimelineDate,
-                        hour: String(hourEntry.hour),
+                        slot: slotEntry.slot,
                         memo: inputEl.value.trim()
                     }, saveEl);
                 });

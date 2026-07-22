@@ -57,17 +57,17 @@ final class TimelineControllerTest extends CIUnitTestCase
         $result->assertStatus(422);
     }
 
-    public function testTimelineReturnsKstHoursWithNotes(): void
+    public function testTimelineReturnsKstPlaceSegmentsWithNotes(): void
     {
-        // 저장은 UTC — KST(+9) 기준으로 시간대가 표시된다. UTC 09:10 → KST 18시 행.
+        // 저장은 UTC — KST(+9) 기준 시각으로 표시되고, 장소가 바뀌면 세그먼트가 나뉜다.
         (new PhotoLocationModel())->saveMany($this->userId, [
-            new PhotoLocation('t1', 37.5, 127.0, '2024-03-15 09:10:00'),
-            new PhotoLocation('t2', 37.5001, 127.0001, '2024-03-15 09:40:00'),
-            new PhotoLocation('t3', 37.6, 127.1, '2024-03-15 12:05:00'),
+            new PhotoLocation('t1', 37.5, 127.0, '2024-03-15 09:10:00'),      // KST 18:10 장소 A
+            new PhotoLocation('t2', 37.5001, 127.0001, '2024-03-15 09:40:00'), // 같은 장소 A
+            new PhotoLocation('t3', 37.6, 127.1, '2024-03-15 12:05:00'),      // KST 21:05 장소 B
             new PhotoLocation('other-day', 35.1, 129.0, '2024-03-16 08:00:00'),
         ]);
         (new DayNoteModel())->upsertNote($this->userId, '2024-03-15', '서울 1일차', '고궁 투어');
-        (new TimeNoteModel())->upsertNote($this->userId, '2024-03-15', 18, '경복궁 산책');
+        (new TimeNoteModel())->upsertNote($this->userId, '2024-03-15', '18:10', '경복궁 산책');
 
         $result = $this->withSession(['user_id' => $this->userId])->get('timeline/2024-03-15');
 
@@ -76,12 +76,12 @@ final class TimelineControllerTest extends CIUnitTestCase
         $this->assertIsArray($data);
         $this->assertSame('2024-03-15', $data['date']);
         $this->assertSame('서울 1일차', $data['day_note']['title']);
-        $this->assertCount(2, $data['hours']);
-        $this->assertSame(18, $data['hours'][0]['hour']);
-        $this->assertCount(2, $data['hours'][0]['photos']);
-        $this->assertSame('경복궁 산책', $data['hours'][0]['memo']);
-        $this->assertSame(21, $data['hours'][1]['hour']);
-        $this->assertNull($data['hours'][1]['memo']);
+        $this->assertCount(2, $data['slots']);
+        $this->assertSame('18:10', $data['slots'][0]['slot']);
+        $this->assertCount(2, $data['slots'][0]['photos']);
+        $this->assertSame('경복궁 산책', $data['slots'][0]['memo']);
+        $this->assertSame('21:05', $data['slots'][1]['slot']);
+        $this->assertNull($data['slots'][1]['memo']);
     }
 
     // ── POST /timeline/day-note ──────────────────────────────────────
@@ -126,15 +126,15 @@ final class TimelineControllerTest extends CIUnitTestCase
 
     public function testSaveTimeNoteRequiresLogin(): void
     {
-        $result = $this->post('timeline/time-note', ['date' => '2024-03-15', 'hour' => '9', 'memo' => 'm']);
+        $result = $this->post('timeline/time-note', ['date' => '2024-03-15', 'slot' => '09:10', 'memo' => 'm']);
 
         $result->assertStatus(401);
     }
 
-    public function testSaveTimeNoteRejectsInvalidHour(): void
+    public function testSaveTimeNoteRejectsInvalidSlot(): void
     {
         $result = $this->withSession(['user_id' => $this->userId])
-            ->post('timeline/time-note', ['date' => '2024-03-15', 'hour' => '24', 'memo' => 'm']);
+            ->post('timeline/time-note', ['date' => '2024-03-15', 'slot' => '24:00', 'memo' => 'm']);
 
         $result->assertStatus(422);
     }
@@ -142,13 +142,13 @@ final class TimelineControllerTest extends CIUnitTestCase
     public function testSaveTimeNotePersists(): void
     {
         $result = $this->withSession(['user_id' => $this->userId])
-            ->post('timeline/time-note', ['date' => '2024-03-15', 'hour' => '9', 'memo' => '경복궁 산책']);
+            ->post('timeline/time-note', ['date' => '2024-03-15', 'slot' => '09:10', 'memo' => '경복궁 산책']);
 
         $result->assertStatus(200);
         $this->seeInDatabase('time_notes', [
             'user_id' => $this->userId,
             'note_date' => '2024-03-15',
-            'hour' => 9,
+            'slot' => '09:10',
             'memo' => '경복궁 산책',
         ]);
     }
