@@ -33,6 +33,25 @@ final class TakeoutMetadataParserTest extends CIUnitTestCase
         $this->assertSame('2019-07-18 22:55:29', $location->takenAt);
     }
 
+    public function testTimestampIsStoredAsUtcRegardlessOfDefaultTimezone(): void
+    {
+        // 서버 기본 타임존이 무엇이든 epoch → UTC 문자열로 저장돼야 한다(저장 표준 = UTC).
+        $original = date_default_timezone_get();
+        date_default_timezone_set('Asia/Seoul');
+
+        try {
+            $location = $this->parser->parse([
+                'geoData' => ['latitude' => 37.5665, 'longitude' => 126.9780],
+                'photoTakenTime' => ['timestamp' => '1563490529'],
+            ]);
+        } finally {
+            date_default_timezone_set($original);
+        }
+
+        $this->assertNotNull($location);
+        $this->assertSame('2019-07-18 22:55:29', $location->takenAt);
+    }
+
     public function testFallsBackToGeoDataExifWhenGeoDataIsZero(): void
     {
         $location = $this->parser->parse([

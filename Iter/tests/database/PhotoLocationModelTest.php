@@ -106,7 +106,7 @@ final class PhotoLocationModelTest extends CIUnitTestCase
         $this->assertNull($model->thumbnailPathFor(999999, $this->userId));
     }
 
-    public function testFindByUserAndDateReturnsOnlyThatDateOrdered(): void
+    public function testFindByUserBetweenReturnsOnlyRangeOrdered(): void
     {
         $otherUserId = (new UserModel())->upsertByGoogleSub('sub-loc-date', 'date@example.com', 'Date');
 
@@ -120,9 +120,9 @@ final class PhotoLocationModelTest extends CIUnitTestCase
             new PhotoLocation('d4', 37.5, 127.0, '2024-03-15 10:00:00'),
         ]);
 
-        $rows = $model->findByUserAndDate($this->userId, '2024-03-15');
+        $rows = $model->findByUserBetween($this->userId, '2024-03-14 15:00:00', '2024-03-15 14:59:59');
 
-        // 해당 사용자의 그 날짜 좌표만, 촬영 시각 오름차순으로.
+        // 해당 사용자의 범위 내 좌표만, 촬영 시각 오름차순으로.
         $this->assertCount(2, $rows);
         $this->assertSame('d1', $rows[0]['source_item_id']);
         $this->assertSame('d2', $rows[1]['source_item_id']);

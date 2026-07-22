@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\PhotoLocationModel;
+use App\Support\TimeConverter;
 
 /**
  * 저장된 좌표를 날짜별 동선(마커 + 경로선)으로 조합한다.
@@ -56,6 +57,9 @@ final class RouteVisualizationService
             if ($takenAt === '') {
                 continue;
             }
+
+            // 저장은 UTC — 표시·날짜 그룹핑은 한국시간(KST) 기준.
+            $takenAt = TimeConverter::utcToKst($takenAt);
 
             $date = substr($takenAt, 0, 10);
             $grouped[$date][] = [

@@ -35,7 +35,8 @@ final class PhotoExifParserTest extends CIUnitTestCase
         $this->assertNotNull($result);
         $this->assertEqualsWithDelta(37.5, $result->lat, 0.0001);
         $this->assertEqualsWithDelta(127.0, $result->lng, 0.0001);
-        $this->assertSame('2019-07-18 22:55:29', $result->takenAt);
+        // EXIF 촬영 시각은 카메라 로컬(KST 가정) — 저장 표준인 UTC 로 변환된다.
+        $this->assertSame('2019-07-18 13:55:29', $result->takenAt);
     }
 
     public function testAppliesSouthAndWestRefsAsNegative(): void
@@ -109,6 +110,7 @@ final class PhotoExifParserTest extends CIUnitTestCase
         $result = (new PhotoExifParser())->parse($exif);
 
         $this->assertNotNull($result);
-        $this->assertSame('2020-01-02 03:04:05', $result->takenAt);
+        // KST 2020-01-02 03:04:05 → UTC 로 -9시간(날짜 경계도 넘어간다).
+        $this->assertSame('2020-01-01 18:04:05', $result->takenAt);
     }
 }

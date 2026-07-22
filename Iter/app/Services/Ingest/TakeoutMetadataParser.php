@@ -68,6 +68,7 @@ class TakeoutMetadataParser
             return null;
         }
 
-        return date('Y-m-d H:i:s', (int) $timestamp);
+        // 서버 타임존과 무관하게 UTC 로 저장한다(표시 시 KST 변환).
+        return gmdate('Y-m-d H:i:s', (int) $timestamp);
     }
 }

@@ -459,11 +459,40 @@ declare(strict_types=1);
                 if (!data.hours.length) {
                     timelineHoursEl.appendChild(emptyMessage('이 날짜에 표시할 사진이 없습니다. 아래에서 메모만 남길 수도 있어요.'));
                 }
+
+                var poiTasks = []; // {el, lat, lng} — 사진이 먼저 뜨도록 POI 조회는 뒤로 미룬다.
+                var pendingImgs = [];
                 data.hours.forEach(function (hourEntry) {
-                    timelineHoursEl.appendChild(buildHourRow(hourEntry));
+                    timelineHoursEl.appendChild(buildHourRow(hourEntry, poiTasks, pendingImgs));
                 });
 
                 timelineEl.hidden = false;
+
+                // 썸네일이 모두 뜬 뒤(최대 4초 대기) 주변 업장 정보를 한 건씩 차례로 불러온다.
+                // POI 를 먼저·병렬로 부르면 세션 잠금 탓에 썸네일 응답이 그 뒤로 밀린다.
+                var renderedDate = currentTimelineDate;
+                whenImagesSettled(pendingImgs, 4000).then(function () {
+                    poiTasks.reduce(function (chain, task) {
+                        return chain.then(function () {
+                            // 레이어를 닫았거나 다른 날짜로 넘어갔으면 중단.
+                            if (timelineEl.hidden || currentTimelineDate !== renderedDate) { return; }
+                            return loadPoi(task.el, task.lat, task.lng);
+                        });
+                    }, Promise.resolve());
+                });
+            }
+
+            // 이미지들이 로드(또는 실패)될 때까지 기다리되, capMs 를 넘기면 그냥 진행한다.
+            function whenImagesSettled(imgs, capMs) {
+                var waits = imgs.map(function (img) {
+                    return new Promise(function (resolve) {
+                        if (img.complete) { resolve(); return; }
+                        img.addEventListener('load', resolve, { once: true });
+                        img.addEventListener('error', resolve, { once: true });
+                    });
+                });
+                var cap = new Promise(function (resolve) { setTimeout(resolve, capMs); });
+                return Promise.race([Promise.all(waits), cap]);
             }
 
             function emptyMessage(text) {
@@ -473,7 +502,7 @@ declare(strict_types=1);
                 return el;
             }
 
-            function buildHourRow(hourEntry) {
+            function buildHourRow(hourEntry, poiTasks, pendingImgs) {
                 var rowEl = document.createElement('div');
                 rowEl.className = 'timeline-hour';
 
@@ -492,12 +521,12 @@ declare(strict_types=1);
                     contentEl.appendChild(countEl);
                 }
 
-                // 주변 업장 정보(식당·카페 등)는 좌표가 있을 때 비동기로 채운다.
+                // 주변 업장 정보(식당·카페 등) 자리 — 실제 조회는 사진 로드 후 순차 실행된다.
                 if (hourEntry.lat !== null && hourEntry.lng !== null) {
                     var poiEl = document.createElement('div');
                     poiEl.className = 'timeline-poi';
                     contentEl.appendChild(poiEl);
-                    loadPoi(poiEl, hourEntry.lat, hourEntry.lng);
+                    poiTasks.push({ el: poiEl, lat: hourEntry.lat, lng: hourEntry.lng });
                 }
 
                 if (hourEntry.photos.length) {
@@ -509,7 +538,7 @@ declare(strict_types=1);
                         img.src = p.thumbnail_url;
                         img.alt = '';
                         img.title = p.taken_at;
-                        img.loading = 'lazy';
+                        pendingImgs.push(img);
                         photosEl.appendChild(img);
                     });
                     if (photosEl.children.length) { contentEl.appendChild(photosEl); }
@@ -547,9 +576,10 @@ declare(strict_types=1);
                 return wrapEl;
             }
 
+            // 반환한 Promise 로 호출측이 순차 실행을 제어한다(병렬 호출 금지 — 세션 잠금·외부 API 부하).
             function loadPoi(poiEl, lat, lng) {
                 poiEl.textContent = '주변 정보 불러오는 중…';
-                fetch(timelineUrl + '/poi?lat=' + encodeURIComponent(lat) + '&lng=' + encodeURIComponent(lng), {
+                return fetch(timelineUrl + '/poi?lat=' + encodeURIComponent(lat) + '&lng=' + encodeURIComponent(lng), {
                     headers: { Accept: 'application/json' }
                 })
                     .then(function (res) {

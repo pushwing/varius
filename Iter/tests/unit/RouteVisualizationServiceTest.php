@@ -26,6 +26,19 @@ final class RouteVisualizationServiceTest extends CIUnitTestCase
         return new RouteVisualizationService($model);
     }
 
+    public function testDisplaysTimesInKstAndGroupsAcrossUtcDateBoundary(): void
+    {
+        // 저장은 UTC — UTC 저녁 사진은 KST 다음 날로 그룹핑·표시돼야 한다.
+        $service = $this->serviceWithRows([
+            ['id' => 1, 'source_item_id' => 'm1', 'lat' => '37.5000000', 'lng' => '127.0000000', 'taken_at' => '2024-03-15 23:30:00'],
+        ]);
+
+        $result = $service->buildForUser(1);
+
+        $this->assertSame('2024-03-16', $result['dates'][0]['date']);
+        $this->assertSame('2024-03-16 08:30:00', $result['dates'][0]['points'][0]['taken_at']);
+    }
+
     public function testGroupsPointsByDateWithDistinctColors(): void
     {
         $service = $this->serviceWithRows([
@@ -58,7 +71,8 @@ final class RouteVisualizationServiceTest extends CIUnitTestCase
         $this->assertIsFloat($point['lat']);
         $this->assertIsFloat($point['lng']);
         $this->assertEqualsWithDelta(37.5, $point['lat'], 0.0001);
-        $this->assertSame('2024-03-15 09:00:00', $point['taken_at']);
+        // 저장(UTC) 09:00 → 표시(KST) 18:00.
+        $this->assertSame('2024-03-15 18:00:00', $point['taken_at']);
     }
 
     public function testPointHasThumbnailUrlWhenThumbnailPathPresent(): void
@@ -87,7 +101,7 @@ final class RouteVisualizationServiceTest extends CIUnitTestCase
     {
         $service = $this->serviceWithRows([
             ['source_item_id' => 'early', 'lat' => '37.5', 'lng' => '127.0', 'taken_at' => '2024-03-15 09:00:00'],
-            ['source_item_id' => 'late', 'lat' => '37.6', 'lng' => '127.1', 'taken_at' => '2024-03-15 18:00:00'],
+            ['source_item_id' => 'late', 'lat' => '37.6', 'lng' => '127.1', 'taken_at' => '2024-03-15 12:00:00'],
         ]);
 
         $points = $service->buildForUser(1)['dates'][0]['points'];
@@ -142,7 +156,8 @@ final class RouteVisualizationServiceTest extends CIUnitTestCase
 
         $photo = $service->buildForUser(1)['dates'][0]['clusters'][0]['photos'][0];
 
-        $this->assertSame('2024-03-15 09:00:00', $photo['taken_at']);
+        // 저장(UTC) 09:00 → 표시(KST) 18:00.
+        $this->assertSame('2024-03-15 18:00:00', $photo['taken_at']);
         $this->assertSame('/thumbnails/42', $photo['thumbnail_url']);
     }
 
