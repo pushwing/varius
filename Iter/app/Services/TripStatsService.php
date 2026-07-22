@@ -46,7 +46,13 @@ final class TripStatsService
     {
         $points = [];
         foreach ($rows as $row) {
-            $points[] = ['lat' => (float) ($row['lat'] ?? 0), 'lng' => (float) ($row['lng'] ?? 0)];
+            $lat = $row['lat'] ?? null;
+            $lng = $row['lng'] ?? null;
+            if ($lat === null || $lng === null) {
+                continue; // GPS 없이 촬영 시각만 있는 사진은 거리·클러스터 계산에서 제외한다.
+            }
+
+            $points[] = ['lat' => (float) $lat, 'lng' => (float) $lng];
         }
 
         $distanceKm = 0.0;
