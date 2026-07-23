@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Database\Migrations;
 
+use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\Migration;
+use RuntimeException;
 
 /**
  * 발자국 지도용 지역 코드 컬럼 추가.
@@ -22,23 +24,36 @@ final class AddRegionCodesToPhotoLocations extends Migration
         ]);
         // CREATE INDEX 표준 문법은 MySQL·SQLite 공통 — 테스트에서도 같은 DDL 이 실행되도록 분기하지 않는다.
         // raw 쿼리는 DBPrefix 가 자동 적용되지 않으므로 prefixTable() 로 테이블명을 만든다(테스트 그룹은 'db_' 프리픽스 사용).
-        /** @phpstan-ignore-next-line */
-        $table = $this->db->prefixTable('photo_locations');
+        $db = $this->connection();
+        $table = $db->prefixTable('photo_locations');
         $this->db->query("CREATE INDEX idx_photo_locations_user_country ON {$table} (user_id, country_code)");
     }
 
     public function down(): void
     {
-        /** @phpstan-ignore-next-line */
-        $table = $this->db->prefixTable('photo_locations');
+        $db = $this->connection();
         // DROP INDEX 문법은 드라이버별로 다르다(MySQL 은 테이블 지정 필요).
-        /** @phpstan-ignore-next-line */
-        if ($this->db->DBDriver === 'SQLite3') {
+        if ($db->DBDriver === 'SQLite3') {
             $this->db->query('DROP INDEX idx_photo_locations_user_country');
         } else {
+            $table = $db->prefixTable('photo_locations');
             $this->db->query("ALTER TABLE {$table} DROP INDEX idx_photo_locations_user_country");
         }
         $this->forge->dropColumn('photo_locations', 'country_code');
         $this->forge->dropColumn('photo_locations', 'region_code');
+    }
+
+    /**
+     * prefixTable()/DBDriver 를 제공하는 실제 커넥션 타입으로 좁힌다.
+     *
+     * @return BaseConnection<object|resource, object|resource>
+     */
+    private function connection(): BaseConnection
+    {
+        if (! $this->db instanceof BaseConnection) {
+            throw new RuntimeException('BaseConnection 이 아닌 커넥션에서는 실행할 수 없습니다.');
+        }
+
+        return $this->db;
     }
 }
