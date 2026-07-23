@@ -558,6 +558,78 @@ declare(strict_types=1);
                 playback = null;
             }
 
+            playbackToggleEl.addEventListener('click', function () {
+                if (!playback) { return; }
+                if (playback.playing) { pausePlayback(); return; }
+                if (playback.elapsed >= playback.plan.totalMs) { resetPlaybackProgress(); }
+                startPlayback();
+            });
+
+            playbackSpeedEl.addEventListener('click', function () {
+                if (!playback) { return; }
+                playback.speedIndex = (playback.speedIndex + 1) % PLAYBACK_SPEEDS.length;
+                playbackSpeedEl.textContent = PLAYBACK_SPEEDS[playback.speedIndex] + 'x';
+            });
+
+            function startPlayback() {
+                var entry = playback.entry;
+                if (!playback.line) {
+                    var color = entry.polyline ? entry.polyline.options.color : '#1a73e8';
+                    if (entry.polyline) { entry.polyline.setStyle({ opacity: 0.25 }); }
+                    playback.line = L.polyline([playback.plan.segments[0].from], {
+                        color: color, weight: 5, opacity: 1
+                    }).addTo(map);
+                    playback.marker = L.circleMarker(playback.plan.segments[0].from, {
+                        radius: 8, color: '#fff', weight: 2, fillColor: color, fillOpacity: 1
+                    }).addTo(map);
+                }
+                playback.playing = true;
+                playback.lastTs = null; // 일시정지 후 재개 시 델타 점프 방지
+                playbackToggleEl.textContent = '⏸ 일시정지';
+                playback.rafId = requestAnimationFrame(playbackFrame);
+            }
+
+            function pausePlayback() {
+                playback.playing = false;
+                if (playback.rafId !== null) { cancelAnimationFrame(playback.rafId); playback.rafId = null; }
+                playbackToggleEl.textContent = '▶ 재생';
+            }
+
+            // 끝까지 재생한 뒤 "다시 재생"을 위해 진행 상태만 초기화한다(레이어는 유지).
+            function resetPlaybackProgress() {
+                playback.elapsed = 0;
+                playback.pulsedMarkers = [];
+                if (playback.line) { playback.line.setLatLngs([playback.plan.segments[0].from]); }
+            }
+
+            function playbackFrame(ts) {
+                if (!playback || !playback.playing) { return; }
+                if (playback.lastTs !== null) {
+                    // 탭 비활성화 복귀 시 큰 델타로 순간이동하지 않도록 상한을 건다.
+                    var delta = Math.min(ts - playback.lastTs, PLAYBACK_FRAME_CAP_MS);
+                    playback.elapsed += delta * PLAYBACK_SPEEDS[playback.speedIndex];
+                }
+                playback.lastTs = ts;
+
+                var pos = playbackPositionAt(playback.plan, playback.elapsed);
+                var segs = playback.plan.segments;
+
+                // 진행선 = 지나온 구간 시작점들 + 현재 위치
+                var lineLatLngs = [];
+                for (var i = 0; i <= pos.segIndex; i++) { lineLatLngs.push(segs[i].from); }
+                lineLatLngs.push([pos.lat, pos.lng]);
+                playback.line.setLatLngs(lineLatLngs);
+                playback.marker.setLatLng([pos.lat, pos.lng]);
+
+                if (pos.done) {
+                    playback.playing = false;
+                    playback.rafId = null;
+                    playbackToggleEl.textContent = '▶ 다시 재생';
+                    return;
+                }
+                playback.rafId = requestAnimationFrame(playbackFrame);
+            }
+
             fetch(mapEl.dataset.routesUrl, { headers: { Accept: 'application/json' } })
                 .then(function (res) { return res.json(); })
                 .then(function (data) { render(data.dates || []); })
