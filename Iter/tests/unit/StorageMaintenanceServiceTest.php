@@ -60,14 +60,24 @@ final class StorageMaintenanceServiceTest extends CIUnitTestCase
         $newZip = $this->uploadsDir . '/fresh.zip';
         file_put_contents($newZip, 'x');
 
+        // 위치기록 업로드가 처리 중 치명적 오류로 finally 정리를 건너뛰면 남는 잔존 json.
+        $oldJson = $this->uploadsDir . '/stale-timeline.json';
+        file_put_contents($oldJson, '{}');
+        touch($oldJson, $old);
+
+        $newJson = $this->uploadsDir . '/fresh-timeline.json';
+        file_put_contents($newJson, '{}');
+
         // 1시간(3600초)보다 오래된 것만 삭제.
         $removed = $this->service()->pruneStaleUploads(3600);
 
-        $this->assertSame(2, $removed);
+        $this->assertSame(3, $removed);
         $this->assertDirectoryDoesNotExist($oldDir);
         $this->assertFileDoesNotExist($oldZip);
+        $this->assertFileDoesNotExist($oldJson);
         $this->assertDirectoryExists($newDir);
         $this->assertFileExists($newZip);
+        $this->assertFileExists($newJson);
     }
 
     public function testPruneOrphanThumbnailsRemovesFilesNotReferencedInDb(): void

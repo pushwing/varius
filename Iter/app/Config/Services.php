@@ -7,6 +7,7 @@ namespace Config;
 use App\Models\DayNoteModel;
 use App\Models\OAuthTokenModel;
 use App\Models\PhotoLocationModel;
+use App\Models\TimelinePointModel;
 use App\Models\TimeNoteModel;
 use App\Models\TripModel;
 use App\Models\UserModel;
@@ -19,7 +20,10 @@ use App\Services\Ingest\NativeExifReader;
 use App\Services\Ingest\NativeUploadedZipHandler;
 use App\Services\Ingest\PhotoExifParser;
 use App\Services\Ingest\TakeoutMetadataParser;
+use App\Services\Ingest\TimelineHistoryParser;
+use App\Services\Ingest\TimelineTrackDownsampler;
 use App\Services\Ingest\UploadedZipHandlerInterface;
+use App\Services\LocationHistoryService;
 use App\Services\PhotoManagementService;
 use App\Services\PlainZipIngestService;
 use App\Services\Poi\OverpassPoiLookup;
@@ -293,5 +297,21 @@ class Services extends BaseService
         }
 
         return new FootprintService(new PhotoLocationModel());
+    }
+
+    /**
+     * 위치기록(Timeline.json) 인제스트·트랙 조회 서비스.
+     */
+    public static function locationHistory(bool $getShared = true): LocationHistoryService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('locationHistory');
+        }
+
+        return new LocationHistoryService(
+            new TimelineHistoryParser(),
+            new TimelineTrackDownsampler(),
+            new TimelinePointModel(),
+        );
     }
 }

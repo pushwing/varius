@@ -50,6 +50,7 @@ class RouteController extends BaseController
             'uploadUrl' => site_url('upload'),
             'mapUrl' => site_url('map'),
             'logoutUrl' => site_url('auth/logout'),
+            'trackUrl' => site_url('location-history/track'),
         ]);
     }
 
