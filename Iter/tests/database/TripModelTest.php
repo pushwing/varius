@@ -131,4 +131,38 @@ final class TripModelTest extends CIUnitTestCase
 
         $this->assertNull($model->findOwned((int) $id, $this->userId));
     }
+
+    public function testFindByUserInYearIncludesTripsFullyWithinYear(): void
+    {
+        $model = new TripModel();
+        $model->insert([
+            'user_id' => $this->userId, 'title' => 'T', 'body' => '',
+            'start_date' => '2024-03-15', 'end_date' => '2024-03-17', 'cover_photo_id' => null,
+        ]);
+
+        $this->assertCount(1, $model->findByUserInYear($this->userId, 2024));
+    }
+
+    public function testFindByUserInYearIncludesTripsCrossingYearBoundary(): void
+    {
+        $model = new TripModel();
+        $model->insert([
+            'user_id' => $this->userId, 'title' => 'T', 'body' => '',
+            'start_date' => '2024-12-30', 'end_date' => '2025-01-02', 'cover_photo_id' => null,
+        ]);
+
+        $this->assertCount(1, $model->findByUserInYear($this->userId, 2024));
+        $this->assertCount(1, $model->findByUserInYear($this->userId, 2025));
+    }
+
+    public function testFindByUserInYearExcludesTripsInOtherYears(): void
+    {
+        $model = new TripModel();
+        $model->insert([
+            'user_id' => $this->userId, 'title' => 'T', 'body' => '',
+            'start_date' => '2023-03-15', 'end_date' => '2023-03-17', 'cover_photo_id' => null,
+        ]);
+
+        $this->assertCount(0, $model->findByUserInYear($this->userId, 2024));
+    }
 }

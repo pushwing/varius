@@ -386,4 +386,34 @@ final class TripControllerTest extends CIUnitTestCase
         $this->assertMatchesRegularExpression('#/t/[0-9a-f]{32}$#', $data['url']);
         $this->seeInDatabase('trip_share_links', ['trip_id' => $tripId]);
     }
+
+    public function testStatsRequiresLogin(): void
+    {
+        $result = $this->get('trips/stats');
+
+        $result->assertStatus(401);
+    }
+
+    public function testStatsReturnsThisYearsTravelDaysAndTopSpot(): void
+    {
+        $year = (int) date('Y');
+
+        (new PhotoLocationModel())->saveMany($this->userId, [
+            new PhotoLocation('ys1', 37.5665, 126.9780, $year . '-06-01 01:00:00'),
+        ]);
+        (new TripModel())->insert([
+            'user_id' => $this->userId, 'title' => 'T', 'body' => '',
+            'start_date' => $year . '-06-01', 'end_date' => $year . '-06-03', 'cover_photo_id' => null,
+        ]);
+
+        $result = $this->withSession(['user_id' => $this->userId])->get('trips/stats');
+
+        $result->assertStatus(200);
+        $data = json_decode($result->getJSON() ?? '', true);
+        $this->assertSame($year, $data['year']);
+        $this->assertSame(3, $data['travel_days']);
+        $this->assertSame([$year . '-06-01', $year . '-06-02', $year . '-06-03'], $data['heatmap_dates']);
+        $this->assertNotNull($data['top_spot']);
+        $this->assertSame(1, $data['top_spot']['visit_count']);
+    }
 }
