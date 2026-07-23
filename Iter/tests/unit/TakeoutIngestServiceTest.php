@@ -132,8 +132,10 @@ final class TakeoutIngestServiceTest extends CIUnitTestCase
         $this->assertSame(1, $result['totalCandidates']);
     }
 
-    public function testSkipsPhotosWithoutGpsInJson(): void
+    public function testIncludesPhotosWithoutGpsInJsonWhenTimestampPresent(): void
     {
+        // GPS 없이 촬영 시각만 있는 사진도 이제 후보에 포함된다(시간표 노출용) —
+        // 위치만 null 로 비워둔 PhotoLocation 이 나온다.
         $zipPath = $this->makeZip([
             'photo1.jpg' => $this->jpegBytes(),
             'photo1.jpg.json' => (string) json_encode(['photoTakenTime' => ['timestamp' => '1563490529']]),
@@ -142,7 +144,10 @@ final class TakeoutIngestServiceTest extends CIUnitTestCase
         $service = new TakeoutIngestService(new TakeoutMetadataParser());
         $result = $service->ingest($zipPath, 1);
 
-        $this->assertSame([], $result['locations']);
+        $this->assertCount(1, $result['locations']);
+        $this->assertNull($result['locations'][0]->lat);
+        $this->assertNull($result['locations'][0]->lng);
+        $this->assertSame('photo1.jpg', $result['locations'][0]->mediaItemId);
     }
 
     public function testCapsAtMaxItemsButReportsTotalCandidates(): void
@@ -163,15 +168,17 @@ final class TakeoutIngestServiceTest extends CIUnitTestCase
         $this->assertTrue($result['capped']);
     }
 
-    public function testNotCappedWhenSomeCandidatesLackGpsButUnderMaxItems(): void
+    public function testNotCappedWhenSomeCandidatesLackTimestampButUnderMaxItems(): void
     {
-        // 상한(200장)보다 훨씬 적은 3개 중 1개만 GPS 가 없어 제외되는 경우 —
-        // "상한까지만 처리됨"이 아니라 단순히 위치를 못 찾은 것으로 구분돼야 한다.
+        // 상한(200장)보다 훨씬 적은 2개 중 1개는 촬영 시각조차 없어 제외되는 경우 —
+        // "상한까지만 처리됨"이 아니라 단순히 시각을 못 찾은 것으로 구분돼야 한다.
+        // (GPS 없는 사진은 이제 시각만 있으면 포함되므로, 상한 오판정 시나리오는
+        // "시각 자체가 없는 사진"으로 재현해야 한다.)
         $zipPath = $this->makeZip([
             'photo1.jpg' => $this->jpegBytes(),
             'photo1.jpg.json' => $this->geoJson(37.5665, 126.9780, '1563490529'),
             'photo2.jpg' => $this->jpegBytes(),
-            'photo2.jpg.json' => (string) json_encode(['photoTakenTime' => ['timestamp' => '1563490529']]),
+            'photo2.jpg.json' => (string) json_encode(['geoData' => ['latitude' => 37.5, 'longitude' => 127.0]]), // 시각 없음
         ]);
 
         $service = new TakeoutIngestService(new TakeoutMetadataParser());
@@ -311,6 +318,26 @@ final class TakeoutIngestServiceTest extends CIUnitTestCase
 
         $ids = array_map(static fn ($l) => $l->mediaItemId, $result['locations']);
         $this->assertSame(['seoul1.jpg', 'seoul2.jpg'], $ids);
+    }
+
+    public function testGpsLessPhotoDoesNotBreakOutlierAnchoring(): void
+    {
+        // 서울 → GPS 없는 사진(시각만) → 부산(서울 기준 비현실적 속도) 순서.
+        // GPS 없는 사진은 항상 유지되고, 부산 사진의 이상치 판정은 여전히 서울을 기준으로 한다.
+        $zipPath = $this->makeZip([
+            'seoul.jpg' => $this->jpegBytes(),
+            'seoul.jpg.json' => $this->geoJson(37.5665, 126.9780, '1000000000'),
+            'nogeo.jpg' => $this->jpegBytes(),
+            'nogeo.jpg.json' => (string) json_encode(['photoTakenTime' => ['timestamp' => '1000000100']]),
+            'busan.jpg' => $this->jpegBytes(),
+            'busan.jpg.json' => $this->geoJson(35.1796, 129.0756, '1000000300'),
+        ]);
+
+        $service = new TakeoutIngestService(new TakeoutMetadataParser());
+        $result = $service->ingest($zipPath, 1);
+
+        $ids = array_map(static fn ($l) => $l->mediaItemId, $result['locations']);
+        $this->assertSame(['seoul.jpg', 'nogeo.jpg'], $ids); // busan 은 여전히 이상치로 제외.
     }
 
     public function testExtractedTempDirectoryIsRemovedAfterIngest(): void

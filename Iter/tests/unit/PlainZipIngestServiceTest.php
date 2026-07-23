@@ -164,6 +164,28 @@ final class PlainZipIngestServiceTest extends CIUnitTestCase
         $this->assertSame(1, $result['totalCandidates']);
     }
 
+    public function testIncludesPhotosWithoutGpsWhenTakenTimePresent(): void
+    {
+        $zipPath = $this->makeZip([
+            'a.jpg' => $this->jpegBytes(),
+            'b.jpg' => $this->jpegBytes(),
+        ]);
+
+        $reader = $this->fakeReader([
+            'a.jpg' => $this->exifFor(37.5, 127.0, '2019:07:18 09:00:00'),
+            'b.jpg' => ['DateTimeOriginal' => '2019:07:18 10:00:00'], // GPS 없음, 시각만 있음
+        ]);
+
+        $service = new PlainZipIngestService(new PhotoExifParser(), $reader);
+        $result = $service->ingest($zipPath, 1);
+
+        $this->assertCount(2, $result['locations']);
+        $noGps = array_values(array_filter($result['locations'], static fn ($l) => $l->mediaItemId === 'b.jpg'));
+        $this->assertCount(1, $noGps);
+        $this->assertNull($noGps[0]->lat);
+        $this->assertNull($noGps[0]->lng);
+    }
+
     public function testIgnoresNonPhotoFiles(): void
     {
         $zipPath = $this->makeZip([

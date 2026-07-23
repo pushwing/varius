@@ -131,4 +131,23 @@ final class TripStatsServiceTest extends CIUnitTestCase
         $this->assertSame(0.0, $stats['distance_km']);
         $this->assertSame(1, $stats['spot_count']);
     }
+
+    public function testExcludesRowsWithoutCoordinatesFromDistanceAndSpotCount(): void
+    {
+        $service = new TripStatsService($this->createMock(PhotoLocationModel::class));
+
+        $p1 = ['lat' => 37.5665, 'lng' => 126.9780];
+        $p2 = ['lat' => 37.4979, 'lng' => 127.0276];
+
+        $stats = $service->buildStatsFromRows([
+            ['lat' => (string) $p1['lat'], 'lng' => (string) $p1['lng'], 'taken_at' => '2024-03-15 01:00:00'],
+            ['lat' => null, 'lng' => null, 'taken_at' => '2024-03-15 01:30:00'],
+            ['lat' => (string) $p2['lat'], 'lng' => (string) $p2['lng'], 'taken_at' => '2024-03-15 02:00:00'],
+        ]);
+
+        $expectedDistance = GeoDistanceCalculator::kilometers($p1['lat'], $p1['lng'], $p2['lat'], $p2['lng']);
+
+        $this->assertEqualsWithDelta($expectedDistance, $stats['distance_km'], 0.0001);
+        $this->assertSame(2, $stats['spot_count']);
+    }
 }

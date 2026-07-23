@@ -62,33 +62,47 @@ final class PhotoExifParserTest extends CIUnitTestCase
         $this->assertEqualsWithDelta(37.55829, $result->lat, 0.0001);
     }
 
-    public function testReturnsNullWhenGpsMissing(): void
+    public function testReturnsLocationWithNullCoordsWhenGpsMissing(): void
     {
+        // GPS 가 없어도 촬영 시각이 있으면 사진 자체는 살려야 한다(시간표 노출용).
         $result = (new PhotoExifParser())->parse([
             'DateTimeOriginal' => '2019:07:18 22:55:29',
         ]);
 
-        $this->assertNull($result);
+        $this->assertNotNull($result);
+        $this->assertNull($result->lat);
+        $this->assertNull($result->lng);
+        $this->assertSame('2019-07-18 13:55:29', $result->takenAt);
     }
 
-    public function testReturnsNullWhenGpsMalformed(): void
+    public function testReturnsLocationWithNullCoordsWhenGpsMalformed(): void
     {
         $result = (new PhotoExifParser())->parse($this->exif([
             'GPSLatitude' => 'not-an-array',
         ]));
 
-        $this->assertNull($result);
+        $this->assertNotNull($result);
+        $this->assertNull($result->lat);
+        $this->assertNull($result->lng);
     }
 
-    public function testReturnsNullWhenCoordinatesAreZero(): void
+    public function testReturnsNullWhenNoGpsAndNoDateTime(): void
     {
-        // (0,0) 은 위치 없음으로 간주(Takeout 파서와 동일한 취급).
+        // 좌표도 촬영 시각도 없으면 동선에 쓸 수 없어 완전히 버려진다.
+        $this->assertNull((new PhotoExifParser())->parse([]));
+    }
+
+    public function testReturnsLocationWithNullCoordsWhenCoordinatesAreZero(): void
+    {
+        // (0,0) 은 위치 없음으로 간주(Takeout 파서와 동일한 취급) — 촬영 시각은 있으므로 살린다.
         $result = (new PhotoExifParser())->parse($this->exif([
             'GPSLatitude' => ['0/1', '0/1', '0/1'],
             'GPSLongitude' => ['0/1', '0/1', '0/1'],
         ]));
 
-        $this->assertNull($result);
+        $this->assertNotNull($result);
+        $this->assertNull($result->lat);
+        $this->assertNull($result->lng);
     }
 
     public function testTakenAtIsNullWhenNoDateTimePresent(): void

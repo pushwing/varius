@@ -55,6 +55,12 @@ final class RouteVisualizationService
                 continue;
             }
 
+            // 좌표 없는 사진(GPS 없이 촬영 시각만 있는 사진)은 지도에 표시할 수 없어
+            // 제외한다 — 시간표(TimelineService)에서만 노출한다.
+            if ($row['lat'] === null || $row['lng'] === null) {
+                continue;
+            }
+
             // 저장은 UTC — 표시·날짜 그룹핑은 한국시간(KST) 기준.
             $takenAt = TimeConverter::utcToKst($takenAt);
 

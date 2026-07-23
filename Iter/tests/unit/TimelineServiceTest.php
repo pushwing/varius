@@ -132,4 +132,47 @@ final class TimelineServiceTest extends CIUnitTestCase
 
         (new TimelineService($photoModel, $dayNoteModel, $timeNoteModel))->buildForDate(1, '2024-03-15');
     }
+
+    public function testPhotoWithoutCoordinatesJoinsPrecedingSegment(): void
+    {
+        $service = $this->service([
+            // UTC 09:00 = KST 18:00, 좌표 있음.
+            ['id' => 1, 'source_item_id' => 'm1', 'lat' => '37.5000000', 'lng' => '127.0000000', 'thumbnail_path' => null, 'taken_at' => '2024-03-15 09:00:00'],
+            // UTC 09:05 = KST 18:05, GPS 없음 — 직전 세그먼트(18:00)에 편입돼야 한다.
+            ['id' => 2, 'source_item_id' => 'm2', 'lat' => null, 'lng' => null, 'thumbnail_path' => null, 'taken_at' => '2024-03-15 09:05:00'],
+        ]);
+
+        $result = $service->buildForDate(1, '2024-03-15');
+
+        $this->assertCount(1, $result['slots']);
+        $this->assertCount(2, $result['slots'][0]['photos']);
+        $this->assertEqualsWithDelta(37.5, $result['slots'][0]['lat'], 0.0001);
+    }
+
+    public function testFirstPhotoOfDayWithoutCoordinatesOpensNullLocationSegment(): void
+    {
+        $service = $this->service([
+            ['id' => 1, 'source_item_id' => 'm1', 'lat' => null, 'lng' => null, 'thumbnail_path' => null, 'taken_at' => '2024-03-15 09:00:00'],
+        ]);
+
+        $result = $service->buildForDate(1, '2024-03-15');
+
+        $this->assertCount(1, $result['slots']);
+        $this->assertNull($result['slots'][0]['lat']);
+        $this->assertCount(1, $result['slots'][0]['photos']);
+    }
+
+    public function testPhotoWithCoordinatesAfterNullLocationSegmentStartsNewSegment(): void
+    {
+        $service = $this->service([
+            ['id' => 1, 'source_item_id' => 'm1', 'lat' => null, 'lng' => null, 'thumbnail_path' => null, 'taken_at' => '2024-03-15 09:00:00'],
+            ['id' => 2, 'source_item_id' => 'm2', 'lat' => '37.5000000', 'lng' => '127.0000000', 'thumbnail_path' => null, 'taken_at' => '2024-03-15 09:05:00'],
+        ]);
+
+        $result = $service->buildForDate(1, '2024-03-15');
+
+        $this->assertCount(2, $result['slots']);
+        $this->assertNull($result['slots'][0]['lat']);
+        $this->assertEqualsWithDelta(37.5, $result['slots'][1]['lat'], 0.0001);
+    }
 }

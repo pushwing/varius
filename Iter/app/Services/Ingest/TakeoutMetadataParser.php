@@ -19,11 +19,13 @@ class TakeoutMetadataParser
     public function parse(array $json): ?ExifLocation
     {
         $coords = $this->coordinates($json, 'geoData') ?? $this->coordinates($json, 'geoDataExif');
-        if ($coords === null) {
-            return null;
+        $takenAt = $this->takenAt($json);
+
+        if ($coords === null && $takenAt === null) {
+            return null; // 좌표도 촬영 시각도 없으면 동선에 쓸 수 없다.
         }
 
-        return new ExifLocation($coords[0], $coords[1], $this->takenAt($json));
+        return new ExifLocation($coords[0] ?? null, $coords[1] ?? null, $takenAt);
     }
 
     /**
