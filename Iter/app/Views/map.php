@@ -486,6 +486,8 @@ declare(strict_types=1);
                     document.querySelectorAll('.day-item.active').forEach(function (el) { el.classList.remove('active'); });
                     var dayItemEl = document.querySelector('.day-item[data-date="' + timelineDate + '"]');
                     if (dayItemEl) { dayItemEl.classList.add('active'); }
+                    // 시간표로 날짜를 바꿔도 selectDay 와 동일하게 재생 상태를 새 날짜 기준으로 동기화한다.
+                    preparePlayback(timelineDate);
 
                     openTimeline(timelineDate);
                     return;
@@ -626,6 +628,7 @@ declare(strict_types=1);
                 if (pos.done) { pulseClusterNear(segs[segs.length - 1].to); }
 
                 if (pos.done) {
+                    playback.elapsed = playback.plan.totalMs; // 재재생 가드(elapsed >= totalMs)가 부동소수 오차와 무관하게 성립하도록 고정
                     playback.playing = false;
                     playback.rafId = null;
                     playbackToggleEl.textContent = '▶ 다시 재생';
