@@ -51,6 +51,7 @@ declare(strict_types=1);
         .yearly-summary { font-size: 14px; color: #444; margin: 0 0 12px; }
         .top-spot-card { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
         .top-spot-thumb { width: 48px; height: 48px; object-fit: cover; border-radius: 8px; display: block; }
+        .top-spot-thumb[hidden] { display: none; }
         .heatmap-grid {
             display: grid; grid-template-rows: repeat(7, 12px); grid-auto-columns: 12px; grid-auto-flow: column;
             gap: 3px; overflow-x: auto; padding-bottom: 4px;
