@@ -17,6 +17,10 @@ $routes->get('upload', 'TakeoutController::form');
 $routes->post('takeout/upload', 'TakeoutController::upload', ['filter' => 'sessionRateLimit']); // Google Takeout(JSON 사이드카)
 $routes->post('photos/upload', 'TakeoutController::uploadPlain', ['filter' => 'sessionRateLimit']); // 일반 압축파일(사진 EXIF)
 
+// 위치기록(Timeline.json) — 업로드는 무거운 동기 처리라 레이트리밋 적용
+$routes->post('location-history/upload', 'LocationHistoryController::upload', ['filter' => 'sessionRateLimit']);
+$routes->get('location-history/track/(:segment)', 'LocationHistoryController::track/$1');
+
 // 동선 시각화
 $routes->get('routes', 'RouteController::data');
 $routes->get('map', 'RouteController::map');

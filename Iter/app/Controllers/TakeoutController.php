@@ -48,6 +48,7 @@ class TakeoutController extends BaseController
             'tripsUrl' => site_url('trips'),
             'uploadUrl' => site_url('takeout/upload'),
             'plainUploadUrl' => site_url('photos/upload'),
+            'locationHistoryUploadUrl' => site_url('location-history/upload'),
             'deleteUrl' => site_url('account/delete'),
         ]);
     }
