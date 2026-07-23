@@ -271,6 +271,7 @@ class PhotoLocationModel extends Model
             ->select('id, lat, lng')
             ->where('id >', $afterId)
             ->where('lat IS NOT NULL', null, false)
+            ->where('lng IS NOT NULL', null, false) // 한쪽만 있는 행이 (float) null → 0.0 으로 오판되는 것을 방어
             ->where('country_code IS NULL', null, false)
             ->orderBy('id', 'ASC')
             ->limit($limit)

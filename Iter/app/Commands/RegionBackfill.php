@@ -44,10 +44,15 @@ final class RegionBackfill extends BaseCommand
                 if ($region['countryCode'] === null) {
                     continue; // 바다 등 — null 유지
                 }
-                $model->update($row['id'], [
+                // DBDebug=false 운영에서 실패가 조용히 지나가지 않도록 반환값을 확인한다.
+                $updated = $model->update($row['id'], [
                     'country_code' => $region['countryCode'],
                     'region_code' => $region['regionCode'],
                 ]);
+                if (! $updated) {
+                    CLI::error("id {$row['id']} 갱신 실패 — 건너뜀");
+                    continue;
+                }
                 $resolved++;
             }
 
