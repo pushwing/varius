@@ -23,6 +23,14 @@ class TakeoutController extends BaseController
     private const MAX_UPLOAD_BYTES = 500 * 1024 * 1024; // 500MB
 
     /**
+     * 인제스트 처리(최대 200장 GD 썸네일 디코딩·리샘플링 포함) 허용 시간(초).
+     *
+     * 사진 수만큼 순차 누적되는 CPU 바운드 작업이라 PHP 기본 max_execution_time(보통 30초)을
+     * 쉽게 넘긴다 — 장당 넉넉히 6초를 잡아 상한(200장)까지 안전하게 처리한다.
+     */
+    private const MAX_PROCESSING_SECONDS = 1200;
+
+    /**
      * 사진 가져오기(업로드) 화면 — 로그인 사용자 전용(GET /upload).
      */
     public function form(): ResponseInterface|RedirectResponse|string
@@ -108,6 +116,10 @@ class TakeoutController extends BaseController
 
             return $this->response->setStatusCode(422)->setJSON(['error' => '업로드된 파일을 처리할 수 없습니다.']);
         }
+
+        // 200장 상한까지 GD 썸네일 생성이 누적되면 기본 실행시간 제한을 넘길 수 있어
+        // 이 요청에 한해 넉넉히 늘린다(무한루프가 아니라 정상적인 CPU 바운드 작업).
+        set_time_limit(self::MAX_PROCESSING_SECONDS);
 
         try {
             $result = service($ingestServiceName)->ingest($zipPath, $userId);
