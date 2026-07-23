@@ -213,6 +213,24 @@ declare(strict_types=1);
         .viewer-nav-btn[hidden] { display: none; }
         #photo-viewer-prev { left: 18px; }
         #photo-viewer-next { right: 18px; }
+
+        /* ── 동선 재생 컨트롤 ── */
+        #playback-bar {
+            position: absolute; left: 296px; bottom: 16px; z-index: 1000;
+            display: flex; align-items: center; gap: 8px;
+            background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+            padding: 8px 12px; font-size: 13px;
+        }
+        #playback-bar[hidden] { display: none; }
+        #playback-date { color: #555; }
+        #playback-toggle {
+            border: none; border-radius: 6px; background: #1a73e8; color: #fff;
+            padding: 6px 12px; cursor: pointer; font-size: 13px;
+        }
+        #playback-speed {
+            border: 1px solid #ccc; border-radius: 6px; background: #fff;
+            padding: 5px 10px; cursor: pointer; font-size: 13px; color: #333;
+        }
     </style>
 </head>
 <body>
@@ -225,6 +243,11 @@ declare(strict_types=1);
         </div>
         <div id="map" data-routes-url="<?= esc($routesUrl, 'attr') ?>" data-timeline-url="<?= esc($timelineUrl, 'attr') ?>" data-photos-url="<?= esc($photosUrl, 'attr') ?>"></div>
         <div id="empty">표시할 동선이 없습니다. 사진을 선택해 좌표를 적재하세요.</div>
+        <div id="playback-bar" hidden>
+            <span id="playback-date"></span>
+            <button type="button" id="playback-toggle">▶ 재생</button>
+            <button type="button" id="playback-speed" title="재생 속도">1x</button>
+        </div>
     </div>
 
     <div id="photo-layer" hidden>
@@ -287,6 +310,7 @@ declare(strict_types=1);
         src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""></script>
+    <script src="/assets/playback-core.js"></script>
     <script>
         (function () {
             var mapEl = document.getElementById('map');
@@ -462,6 +486,8 @@ declare(strict_types=1);
                     document.querySelectorAll('.day-item.active').forEach(function (el) { el.classList.remove('active'); });
                     var dayItemEl = document.querySelector('.day-item[data-date="' + timelineDate + '"]');
                     if (dayItemEl) { dayItemEl.classList.add('active'); }
+                    // 시간표로 날짜를 바꿔도 selectDay 와 동일하게 재생 상태를 새 날짜 기준으로 동기화한다.
+                    preparePlayback(timelineDate);
 
                     openTimeline(timelineDate);
                     return;
@@ -490,6 +516,137 @@ declare(strict_types=1);
 
                 document.querySelectorAll('.day-item.active').forEach(function (el) { el.classList.remove('active'); });
                 itemEl.classList.add('active');
+                preparePlayback(itemEl.dataset.date);
+            }
+
+            // ── 동선 재생 ─────────────────────────────────────
+            var PLAYBACK_DURATION_MS = 15000; // 1x 기준 하루 전체 재생 시간
+            var PLAYBACK_SPEEDS = [1, 2, 4];
+            var PLAYBACK_FRAME_CAP_MS = 100;  // 탭 복귀 시 순간이동 방지용 프레임 델타 상한
+            var PULSE_RADIUS_METERS = 30;     // 펄스 매칭 반경(클러스터 묶음 반경과 동일)
+
+            var playbackBarEl = document.getElementById('playback-bar');
+            var playbackDateEl = document.getElementById('playback-date');
+            var playbackToggleEl = document.getElementById('playback-toggle');
+            var playbackSpeedEl = document.getElementById('playback-speed');
+
+            var playback = null; // 진행 중인 재생 상태 — null 이면 재생 없음
+
+            // 날짜 선택 시 호출 — 기존 재생을 정리하고, 재생 가능한 날이면 컨트롤 바를 띄운다.
+            function preparePlayback(date) {
+                stopPlayback();
+                var entry = dateIndex[date];
+                var plan = entry ? buildPlaybackPlan(entry.latlngs, PLAYBACK_DURATION_MS) : null;
+                if (!plan) { playbackBarEl.hidden = true; return; }
+
+                playback = {
+                    date: date, entry: entry, plan: plan,
+                    elapsed: 0, speedIndex: 0, playing: false, rafId: null, lastTs: null,
+                    line: null, marker: null, pulsedMarkers: []
+                };
+                playbackDateEl.textContent = date;
+                playbackToggleEl.textContent = '▶ 재생';
+                playbackSpeedEl.textContent = '1x';
+                playbackBarEl.hidden = false;
+            }
+
+            // 재생 레이어·상태를 모두 정리하고 정적 경로선을 원복한다.
+            function stopPlayback() {
+                if (!playback) { return; }
+                if (playback.rafId !== null) { cancelAnimationFrame(playback.rafId); }
+                if (playback.line) { map.removeLayer(playback.line); }
+                if (playback.marker) { map.removeLayer(playback.marker); }
+                if (playback.entry.polyline) { playback.entry.polyline.setStyle({ opacity: 0.8 }); }
+                playback = null;
+            }
+
+            playbackToggleEl.addEventListener('click', function () {
+                if (!playback) { return; }
+                if (playback.playing) { pausePlayback(); return; }
+                if (playback.elapsed >= playback.plan.totalMs) { resetPlaybackProgress(); }
+                startPlayback();
+            });
+
+            playbackSpeedEl.addEventListener('click', function () {
+                if (!playback) { return; }
+                playback.speedIndex = (playback.speedIndex + 1) % PLAYBACK_SPEEDS.length;
+                playbackSpeedEl.textContent = PLAYBACK_SPEEDS[playback.speedIndex] + 'x';
+            });
+
+            function startPlayback() {
+                var entry = playback.entry;
+                if (!playback.line) {
+                    var color = entry.polyline ? entry.polyline.options.color : '#1a73e8';
+                    if (entry.polyline) { entry.polyline.setStyle({ opacity: 0.25 }); }
+                    playback.line = L.polyline([playback.plan.segments[0].from], {
+                        color: color, weight: 5, opacity: 1
+                    }).addTo(map);
+                    playback.marker = L.circleMarker(playback.plan.segments[0].from, {
+                        radius: 8, color: '#fff', weight: 2, fillColor: color, fillOpacity: 1
+                    }).addTo(map);
+                }
+                playback.playing = true;
+                playback.lastTs = null; // 일시정지 후 재개 시 델타 점프 방지
+                playbackToggleEl.textContent = '⏸ 일시정지';
+                playback.rafId = requestAnimationFrame(playbackFrame);
+            }
+
+            function pausePlayback() {
+                playback.playing = false;
+                if (playback.rafId !== null) { cancelAnimationFrame(playback.rafId); playback.rafId = null; }
+                playbackToggleEl.textContent = '▶ 재생';
+            }
+
+            // 끝까지 재생한 뒤 "다시 재생"을 위해 진행 상태만 초기화한다(레이어는 유지).
+            function resetPlaybackProgress() {
+                playback.elapsed = 0;
+                playback.pulsedMarkers = [];
+                if (playback.line) { playback.line.setLatLngs([playback.plan.segments[0].from]); }
+            }
+
+            function playbackFrame(ts) {
+                if (!playback || !playback.playing) { return; }
+                if (playback.lastTs !== null) {
+                    // 탭 비활성화 복귀 시 큰 델타로 순간이동하지 않도록 상한을 건다.
+                    var delta = Math.min(ts - playback.lastTs, PLAYBACK_FRAME_CAP_MS);
+                    playback.elapsed += delta * PLAYBACK_SPEEDS[playback.speedIndex];
+                }
+                playback.lastTs = ts;
+
+                var pos = playbackPositionAt(playback.plan, playback.elapsed);
+                var segs = playback.plan.segments;
+
+                // 진행선 = 지나온 구간 시작점들 + 현재 위치
+                var lineLatLngs = [];
+                for (var i = 0; i <= pos.segIndex; i++) { lineLatLngs.push(segs[i].from); }
+                lineLatLngs.push([pos.lat, pos.lng]);
+                playback.line.setLatLngs(lineLatLngs);
+                playback.marker.setLatLng([pos.lat, pos.lng]);
+
+                // 지나친 구간 경계(사진 지점)마다 근처 클러스터 펄스 — pulsedMarkers 가 중복을 막는다.
+                for (var j = 0; j < pos.segIndex; j++) { pulseClusterNear(segs[j].to); }
+                if (pos.done) { pulseClusterNear(segs[segs.length - 1].to); }
+
+                if (pos.done) {
+                    playback.elapsed = playback.plan.totalMs; // 재재생 가드(elapsed >= totalMs)가 부동소수 오차와 무관하게 성립하도록 고정
+                    playback.playing = false;
+                    playback.rafId = null;
+                    playbackToggleEl.textContent = '▶ 다시 재생';
+                    return;
+                }
+                playback.rafId = requestAnimationFrame(playbackFrame);
+            }
+
+            // 도달 지점 30m 이내의 클러스터 마커를 잠깐 확대했다 원복한다 — 마커당 1회만.
+            // (클러스터는 30m 반경으로 묶이므로 경로 지점과 좌표가 정확히 일치하지 않을 수 있다.)
+            function pulseClusterNear(latlng) {
+                playback.entry.clusterMarkers.forEach(function (cm) {
+                    if (playback.pulsedMarkers.indexOf(cm.marker) !== -1) { return; }
+                    if (haversineMeters(latlng, [cm.lat, cm.lng]) > PULSE_RADIUS_METERS) { return; }
+                    playback.pulsedMarkers.push(cm.marker);
+                    cm.marker.setRadius(11);
+                    setTimeout(function () { cm.marker.setRadius(6); }, 450);
+                });
             }
 
             fetch(mapEl.dataset.routesUrl, { headers: { Accept: 'application/json' } })
@@ -507,12 +664,14 @@ declare(strict_types=1);
                     var latlngs = group.points.map(function (p) { return [p.lat, p.lng]; });
                     bounds = bounds.concat(latlngs);
 
-                    // 경로선 — 같은 날짜의 이동 순서.
+                    // 경로선 — 같은 날짜의 이동 순서. 재생 시 흐리게 처리할 수 있도록 참조를 보관한다.
+                    var dayPolyline = null;
                     if (latlngs.length > 1) {
-                        L.polyline(latlngs, { color: group.color, weight: 3, opacity: 0.8 }).addTo(map);
+                        dayPolyline = L.polyline(latlngs, { color: group.color, weight: 3, opacity: 0.8 }).addTo(map);
                     }
 
                     var firstClusterIndex = null;
+                    var clusterMarkers = []; // 재생 시 펄스 강조용 — 이 날짜의 클러스터 마커 목록
 
                     // 마커 — 같은 장소(GPS 오차 감안 약 30m 이내) 사진은 클러스터 하나로 묶인다.
                     (group.clusters || []).forEach(function (c) {
@@ -535,9 +694,16 @@ declare(strict_types=1);
                         // 지점 액션은 클릭이 아니라 마우스오버로 연다(#27).
                         // 클릭(bindPopup 기본 동작)도 유지한다 — 터치 기기엔 hover 가 없다.
                         registryEntry.marker.on('mouseover', function () { this.openPopup(); });
+
+                        clusterMarkers.push({ lat: c.lat, lng: c.lng, marker: registryEntry.marker });
                     });
 
-                    dateIndex[group.date] = { latlngs: latlngs, firstClusterIndex: firstClusterIndex };
+                    dateIndex[group.date] = {
+                        latlngs: latlngs,
+                        firstClusterIndex: firstClusterIndex,
+                        polyline: dayPolyline,
+                        clusterMarkers: clusterMarkers
+                    };
                     dateOrder.push({ date: group.date, count: group.points.length, color: group.color });
                 });
 
