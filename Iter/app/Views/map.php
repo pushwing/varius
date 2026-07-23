@@ -849,6 +849,11 @@ declare(strict_types=1);
                     poiEl.className = 'timeline-poi';
                     contentEl.appendChild(poiEl);
                     poiTasks.push({ el: poiEl, lat: slotEntry.lat, lng: slotEntry.lng });
+                } else if (slotEntry.photos.length) {
+                    var noLocationEl = document.createElement('div');
+                    noLocationEl.className = 'timeline-poi';
+                    noLocationEl.textContent = '위치 정보 없음';
+                    contentEl.appendChild(noLocationEl);
                 }
 
                 if (slotEntry.photos.length) {
