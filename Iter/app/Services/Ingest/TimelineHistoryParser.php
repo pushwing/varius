@@ -74,6 +74,11 @@ final class TimelineHistoryParser
             return null;
         }
 
+        // 오프셋 없는 시각은 서버 타임존으로 암묵 해석돼 값이 슬쩍 틀어진다 — 형식 위반으로 간주해 스킵.
+        if (preg_match('/(Z|[+-]\d{2}:?\d{2})$/', $timeRaw) !== 1) {
+            return null;
+        }
+
         try {
             $utc = (new DateTimeImmutable($timeRaw))
                 ->setTimezone(new DateTimeZone('UTC'))

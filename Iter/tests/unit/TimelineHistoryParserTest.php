@@ -22,7 +22,7 @@ final class TimelineHistoryParserTest extends CIUnitTestCase
     {
         $points = (new TimelineHistoryParser())->parse($this->fixturePath());
 
-        // 유효 3건만: 불량 좌표·시각 누락·위도 범위 초과·visit-only 세그먼트는 제외
+        // 유효 3건만: 불량 좌표·시각 누락·위도 범위 초과·오프셋 누락·visit-only 세그먼트는 제외
         $this->assertCount(3, $points);
 
         $this->assertSame(37.5665, $points[0]->lat);
