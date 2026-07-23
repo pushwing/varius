@@ -20,16 +20,23 @@ final class AddRegionCodesToPhotoLocations extends Migration
             'country_code' => ['type' => 'VARCHAR', 'constraint' => 2, 'null' => true, 'after' => 'lng'],
             'region_code' => ['type' => 'VARCHAR', 'constraint' => 8, 'null' => true, 'after' => 'country_code'],
         ]);
-        // 인덱스는 사후 DDL로 생성 (운영 환경에서만 필요, 테스트 스킴은 기본 인덱스 전략 사용)
-        if (! str_contains($this->db::class, 'SQLite')) {
-            $this->db->query('CREATE INDEX idx_photo_locations_user_country ON photo_locations (user_id, country_code)');
-        }
+        // CREATE INDEX 표준 문법은 MySQL·SQLite 공통 — 테스트에서도 같은 DDL 이 실행되도록 분기하지 않는다.
+        // raw 쿼리는 DBPrefix 가 자동 적용되지 않으므로 prefixTable() 로 테이블명을 만든다(테스트 그룹은 'db_' 프리픽스 사용).
+        /** @phpstan-ignore-next-line */
+        $table = $this->db->prefixTable('photo_locations');
+        $this->db->query("CREATE INDEX idx_photo_locations_user_country ON {$table} (user_id, country_code)");
     }
 
     public function down(): void
     {
-        if (! str_contains($this->db::class, 'SQLite')) {
-            $this->db->query('ALTER TABLE photo_locations DROP INDEX idx_photo_locations_user_country');
+        /** @phpstan-ignore-next-line */
+        $table = $this->db->prefixTable('photo_locations');
+        // DROP INDEX 문법은 드라이버별로 다르다(MySQL 은 테이블 지정 필요).
+        /** @phpstan-ignore-next-line */
+        if ($this->db->DBDriver === 'SQLite3') {
+            $this->db->query('DROP INDEX idx_photo_locations_user_country');
+        } else {
+            $this->db->query("ALTER TABLE {$table} DROP INDEX idx_photo_locations_user_country");
         }
         $this->forge->dropColumn('photo_locations', 'country_code');
         $this->forge->dropColumn('photo_locations', 'region_code');
