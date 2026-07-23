@@ -212,4 +212,48 @@ class PhotoLocationModel extends Model
 
         return $set;
     }
+
+    /**
+     * 국가별 사진 수(판별된 것만) — 발자국 지도 집계용.
+     *
+     * @return list<array{code: string, photos: int}>
+     */
+    public function countByCountry(int $userId): array
+    {
+        /** @var list<array{code: string, photos: int|string}> $rows */
+        $rows = $this->builder()
+            ->select('country_code AS code, COUNT(*) AS photos')
+            ->where('user_id', $userId)
+            ->where('country_code IS NOT NULL', null, false)
+            ->groupBy('country_code')
+            ->orderBy('photos', 'DESC')
+            ->get()->getResultArray();
+
+        return array_map(
+            static fn (array $row): array => ['code' => (string) $row['code'], 'photos' => (int) $row['photos']],
+            $rows,
+        );
+    }
+
+    /**
+     * 국내 시·도별 사진 수(판별된 것만) — 발자국 지도 집계용.
+     *
+     * @return list<array{code: string, photos: int}>
+     */
+    public function countByRegion(int $userId): array
+    {
+        /** @var list<array{code: string, photos: int|string}> $rows */
+        $rows = $this->builder()
+            ->select('region_code AS code, COUNT(*) AS photos')
+            ->where('user_id', $userId)
+            ->where('region_code IS NOT NULL', null, false)
+            ->groupBy('region_code')
+            ->orderBy('photos', 'DESC')
+            ->get()->getResultArray();
+
+        return array_map(
+            static fn (array $row): array => ['code' => (string) $row['code'], 'photos' => (int) $row['photos']],
+            $rows,
+        );
+    }
 }
