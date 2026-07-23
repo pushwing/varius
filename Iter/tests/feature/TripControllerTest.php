@@ -188,6 +188,9 @@ final class TripControllerTest extends CIUnitTestCase
         // 인라인 시간표 펼치기에 필요한 timeline API URL과 토글 마크업이 포함돼야 한다.
         $this->assertStringContainsString('data-timeline-url', $body);
         $this->assertStringContainsString('day-timeline-toggle', $body);
+        // 시간표 사진 확대 뷰어(회전·삭제)에 필요한 photos API URL과 뷰어 마크업이 포함돼야 한다.
+        $this->assertStringContainsString('data-photos-url', $body);
+        $this->assertStringContainsString('id="photo-viewer"', $body);
     }
 
     // ── GET /trips/{id}/data ─────────────────────────────────────────
