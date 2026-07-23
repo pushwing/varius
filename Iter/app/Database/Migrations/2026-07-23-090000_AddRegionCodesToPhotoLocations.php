@@ -20,13 +20,17 @@ final class AddRegionCodesToPhotoLocations extends Migration
             'country_code' => ['type' => 'VARCHAR', 'constraint' => 2, 'null' => true, 'after' => 'lng'],
             'region_code' => ['type' => 'VARCHAR', 'constraint' => 8, 'null' => true, 'after' => 'country_code'],
         ]);
-        $this->forge->addKey(['user_id', 'country_code'], false, false, 'idx_photo_locations_user_country');
-        $this->forge->processIndexes('photo_locations');
+        // 인덱스는 사후 DDL로 생성 (운영 환경에서만 필요, 테스트 스킴은 기본 인덱스 전략 사용)
+        if (! str_contains($this->db::class, 'SQLite')) {
+            $this->db->query('CREATE INDEX idx_photo_locations_user_country ON photo_locations (user_id, country_code)');
+        }
     }
 
     public function down(): void
     {
-        $this->db->query('ALTER TABLE photo_locations DROP INDEX idx_photo_locations_user_country');
+        if (! str_contains($this->db::class, 'SQLite')) {
+            $this->db->query('ALTER TABLE photo_locations DROP INDEX idx_photo_locations_user_country');
+        }
         $this->forge->dropColumn('photo_locations', 'country_code');
         $this->forge->dropColumn('photo_locations', 'region_code');
     }
