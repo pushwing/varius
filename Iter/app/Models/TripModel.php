@@ -72,4 +72,21 @@ class TripModel extends Model
 
         return $builder->countAllResults() > 0;
     }
+
+    /**
+     * 그 해(KST)와 겹치는 여행을 조회한다(연간 통계용) — start_date 오름차순.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function findByUserInYear(int $userId, int $year): array
+    {
+        /** @var list<array<string, mixed>> $rows */
+        $rows = $this->where('user_id', $userId)
+            ->where('start_date <=', $year . '-12-31')
+            ->where('end_date >=', $year . '-01-01')
+            ->orderBy('start_date', 'ASC')
+            ->findAll();
+
+        return $rows;
+    }
 }
