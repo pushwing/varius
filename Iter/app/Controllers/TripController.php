@@ -44,6 +44,27 @@ class TripController extends BaseController
     }
 
     /**
+     * 올해(KST) 여행 통계 — 총 여행일수·캘린더 히트맵·가장 많이 방문한 지점(JSON, GET /trips/stats).
+     */
+    public function stats(): ResponseInterface
+    {
+        $userId = $this->currentUserId();
+        if ($userId === null) {
+            return $this->response->setStatusCode(401)->setJSON(['error' => '로그인이 필요합니다.']);
+        }
+
+        $year = (int) substr(TimeConverter::utcToKst(date('Y-m-d H:i:s')), 0, 4);
+        $stats = service('tripYearlyStats')->buildForYear($userId, $year);
+
+        return $this->response->setJSON([
+            'year' => $year,
+            'travel_days' => $stats['travel_days'],
+            'heatmap_dates' => $stats['heatmap_dates'],
+            'top_spot' => $stats['top_spot'],
+        ]);
+    }
+
+    /**
      * 저장된 여행 + 자동 제안 목록(JSON, GET /trips/data).
      */
     public function data(): ResponseInterface

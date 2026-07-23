@@ -40,6 +40,7 @@ $routes->post('photos/(:num)/delete', 'PhotoController::delete/$1', ['filter' =>
 // 여행 그룹핑
 $routes->get('trips', 'TripController::index');
 $routes->get('trips/data', 'TripController::data'); // (:num) 라우트보다 먼저 선언
+$routes->get('trips/stats', 'TripController::stats'); // (:num) 라우트보다 먼저 선언
 $routes->post('trips', 'TripController::create', ['filter' => 'sessionRateLimit:trips,120']);
 $routes->get('trips/(:num)', 'TripController::show/$1');
 $routes->get('trips/(:num)/data', 'TripController::showData/$1');
