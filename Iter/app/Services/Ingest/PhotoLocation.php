@@ -20,6 +20,8 @@ final readonly class PhotoLocation
         public ?float $lng,
         public string $takenAt,
         public ?string $thumbnailPath = null,
+        public ?string $countryCode = null,
+        public ?string $regionCode = null,
     ) {
     }
 
@@ -37,5 +39,21 @@ final readonly class PhotoLocation
             'taken_at' => $this->takenAt,
             'thumbnail_path' => $this->thumbnailPath,
         ];
+    }
+
+    /**
+     * 지역 판별 결과를 입힌 사본을 돌려준다(readonly 라 새 인스턴스).
+     */
+    public function withRegion(?string $countryCode, ?string $regionCode): self
+    {
+        return new self(
+            $this->mediaItemId,
+            $this->lat,
+            $this->lng,
+            $this->takenAt,
+            $this->thumbnailPath,
+            $countryCode,
+            $regionCode,
+        );
     }
 }

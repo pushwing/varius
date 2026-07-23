@@ -22,6 +22,10 @@ $routes->get('routes', 'RouteController::data');
 $routes->get('map', 'RouteController::map');
 $routes->get('thumbnails/(:num)', 'RouteController::thumbnail/$1');
 
+// 발자국 지도 — 방문 국가·시·도 시각화
+$routes->get('footprint', 'FootprintController::page');
+$routes->get('footprint/data', 'FootprintController::data');
+
 // 날짜별 시간 동선(여행 스케줄)
 $routes->get('timeline/poi', 'TimelineController::poi', ['filter' => 'sessionRateLimit:poi,300']); // (:segment) 라우트보다 먼저 선언해야 한다
 $routes->get('timeline/(:segment)', 'TimelineController::data/$1');
