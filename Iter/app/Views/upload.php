@@ -141,7 +141,7 @@ declare(strict_types=1);
                     <a href="https://takeout.google.com" target="_blank" rel="noopener">takeout.google.com</a>에서
                     "Google 포토"만 선택해 내보낸 뒤, 받은 zip 파일을 올려주세요.
                 </p>
-                <form id="takeout-form" data-upload-url="<?= esc($uploadUrl, 'attr') ?>" data-map-url="<?= esc($mapUrl, 'attr') ?>">
+                <form id="takeout-form" data-upload-url="<?= esc($uploadUrl, 'attr') ?>">
                     <label class="file-picker" for="takeout-file">
                         <input type="file" id="takeout-file" name="file" accept=".zip" class="sr-only">
                         <span class="icon" aria-hidden="true">📦</span>
@@ -167,7 +167,7 @@ declare(strict_types=1);
                     직접 다운로드한 원본에도 GPS가 남아 있어 그대로 인식됩니다. 사진에 위치 정보가
                     없으면 지도에 표시되지 않으니, 그런 경우 왼쪽 Takeout 방식을 써보세요.
                 </p>
-                <form id="plain-form" data-upload-url="<?= esc($plainUploadUrl, 'attr') ?>" data-map-url="<?= esc($mapUrl, 'attr') ?>">
+                <form id="plain-form" data-upload-url="<?= esc($plainUploadUrl, 'attr') ?>">
                     <label class="file-picker" for="plain-file">
                         <input type="file" id="plain-file" name="file" accept=".zip" class="sr-only">
                         <span class="icon" aria-hidden="true">🖼️</span>
