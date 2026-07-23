@@ -30,6 +30,7 @@ use App\Services\TimelineService;
 use App\Services\TripStatsService;
 use App\Services\TripSuggestionService;
 use App\Services\TripSummaryService;
+use App\Services\TripYearlyStatsService;
 use CodeIgniter\Config\BaseService;
 use League\OAuth2\Client\Provider\Google;
 
@@ -134,6 +135,18 @@ class Services extends BaseService
         }
 
         return new TripStatsService(new PhotoLocationModel());
+    }
+
+    /**
+     * 연간 통계 서비스 — 총 여행일수·캘린더 히트맵·가장 많이 방문한 지점.
+     */
+    public static function tripYearlyStats(bool $getShared = true): TripYearlyStatsService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('tripYearlyStats');
+        }
+
+        return new TripYearlyStatsService(new TripModel(), new PhotoLocationModel());
     }
 
     /**
