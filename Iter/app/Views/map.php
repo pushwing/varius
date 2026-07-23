@@ -661,7 +661,7 @@ declare(strict_types=1);
 
             // ── 위치기록 트랙(점선) ──────────────────────────
             var trackToggleEl = document.getElementById('track-toggle');
-            var trackCache = {};      // 날짜 → [[lat,lng],...] (빈 배열 = 트랙 없음)
+            var trackCache = {};      // 날짜 → [[lat,lng],...] | 'pending' | 없음(미조회)
             var trackLayer = null;    // 현재 그려진 점선 폴리라인
             var selectedTrackDate = null; // 현재 선택된 날짜(토글 시 재사용)
 
@@ -675,8 +675,10 @@ declare(strict_types=1);
                 if (trackLayer) { map.removeLayer(trackLayer); trackLayer = null; }
                 if (!date || !trackToggleEl.checked) { return; }
 
+                if (trackCache[date] === 'pending') { return; } // 이미 같은 날짜로 요청 중 — 중복 발사 방지
                 if (trackCache[date]) { drawTrack(date, trackCache[date]); return; }
 
+                trackCache[date] = 'pending';
                 fetch(mapEl.dataset.trackUrl + '/' + date, { headers: { Accept: 'application/json' } })
                     .then(function (res) { return res.ok ? res.json() : { points: [] }; })
                     .then(function (data) {
@@ -686,11 +688,12 @@ declare(strict_types=1);
                             drawTrack(date, trackCache[date]);
                         }
                     })
-                    .catch(function () { /* 트랙은 보조 정보 — 실패는 조용히 무시 */ });
+                    .catch(function () { delete trackCache[date]; }); // 실패는 캐시하지 않는다 — 재시도 가능하게
             }
 
             // 사진 동선(굵은 실선)과 구분되는 점선·얇은 선. 포인트 2개 미만이면 그리지 않는다.
             function drawTrack(date, points) {
+                if (trackLayer) { map.removeLayer(trackLayer); trackLayer = null; } // 중복 fetch 응답이 겹쳐도 유령 레이어 방지
                 if (points.length < 2) { return; }
                 var entry = dateIndex[date];
                 var color = entry && entry.polyline ? entry.polyline.options.color : '#666';
