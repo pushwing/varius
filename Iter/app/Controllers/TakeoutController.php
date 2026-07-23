@@ -122,7 +122,9 @@ class TakeoutController extends BaseController
         }
 
         try {
-            $saved = model(PhotoLocationModel::class)->saveMany($userId, $result['locations']);
+            // 발자국 지도용 지역 코드를 입힌 뒤 저장한다(좌표 없는 사진은 그대로 통과).
+            $enriched = service('regionResolver')->enrichAll($result['locations']);
+            $saved = model(PhotoLocationModel::class)->saveMany($userId, $enriched);
         } catch (Throwable $e) {
             log_message('error', '{ctx} 좌표 저장 실패: {msg}', ['ctx' => $context, 'msg' => $e->getMessage()]);
             // 저장이 실패하면 방금 만든 썸네일은 DB 참조가 없는 고아가 되므로 즉시 정리한다.

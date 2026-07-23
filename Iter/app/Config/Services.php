@@ -12,6 +12,7 @@ use App\Models\TripModel;
 use App\Models\UserModel;
 use App\Services\AccountDeletionService;
 use App\Services\Auth\GoogleTokenRevoker;
+use App\Services\FootprintService;
 use App\Services\GooglePhotosAuthService;
 use App\Services\Ingest\GdThumbnailGenerator;
 use App\Services\Ingest\NativeExifReader;
@@ -23,6 +24,7 @@ use App\Services\PhotoManagementService;
 use App\Services\PlainZipIngestService;
 use App\Services\Poi\OverpassPoiLookup;
 use App\Services\Poi\PoiLookupInterface;
+use App\Services\Region\RegionResolver;
 use App\Services\RouteVisualizationService;
 use App\Services\StorageMaintenanceService;
 use App\Services\TakeoutIngestService;
@@ -264,5 +266,32 @@ class Services extends BaseService
             WRITEPATH . 'uploads',
             WRITEPATH . 'uploads/thumbnails',
         );
+    }
+
+    /**
+     * 좌표→지역 오프라인 판별기(발자국 지도) — 인제스트·백필에서 사용.
+     */
+    public static function regionResolver(bool $getShared = true): RegionResolver
+    {
+        if ($getShared) {
+            return static::getSharedInstance('regionResolver');
+        }
+
+        return new RegionResolver(
+            FCPATH . 'assets/geo/world-countries.json',
+            FCPATH . 'assets/geo/kr-sido.json',
+        );
+    }
+
+    /**
+     * 발자국 지도 집계 서비스.
+     */
+    public static function footprint(bool $getShared = true): FootprintService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('footprint');
+        }
+
+        return new FootprintService(new PhotoLocationModel());
     }
 }
