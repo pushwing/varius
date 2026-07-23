@@ -24,6 +24,8 @@ class PhotoLocationModel extends Model
         'source_item_id',
         'lat',
         'lng',
+        'country_code',
+        'region_code',
         'thumbnail_path',
         'taken_at',
     ];
@@ -170,6 +172,8 @@ class PhotoLocationModel extends Model
                 'source_item_id' => $location->mediaItemId,
                 'lat' => $location->lat,
                 'lng' => $location->lng,
+                'country_code' => $location->countryCode,
+                'region_code' => $location->regionCode,
                 'thumbnail_path' => $location->thumbnailPath,
                 'taken_at' => $location->takenAt,
             ];
@@ -207,5 +211,75 @@ class PhotoLocationModel extends Model
         }
 
         return $set;
+    }
+
+    /**
+     * 국가별 사진 수(판별된 것만) — 발자국 지도 집계용.
+     *
+     * @return list<array{code: string, photos: int}>
+     */
+    public function countByCountry(int $userId): array
+    {
+        /** @var list<array{code: string, photos: int|string}> $rows */
+        $rows = $this->builder()
+            ->select('country_code AS code, COUNT(*) AS photos')
+            ->where('user_id', $userId)
+            ->where('country_code IS NOT NULL', null, false)
+            ->groupBy('country_code')
+            ->orderBy('photos', 'DESC')
+            ->get()->getResultArray();
+
+        return array_map(
+            static fn (array $row): array => ['code' => (string) $row['code'], 'photos' => (int) $row['photos']],
+            $rows,
+        );
+    }
+
+    /**
+     * 국내 시·도별 사진 수(판별된 것만) — 발자국 지도 집계용.
+     *
+     * @return list<array{code: string, photos: int}>
+     */
+    public function countByRegion(int $userId): array
+    {
+        /** @var list<array{code: string, photos: int|string}> $rows */
+        $rows = $this->builder()
+            ->select('region_code AS code, COUNT(*) AS photos')
+            ->where('user_id', $userId)
+            ->where('region_code IS NOT NULL', null, false)
+            ->groupBy('region_code')
+            ->orderBy('photos', 'DESC')
+            ->get()->getResultArray();
+
+        return array_map(
+            static fn (array $row): array => ['code' => (string) $row['code'], 'photos' => (int) $row['photos']],
+            $rows,
+        );
+    }
+
+    /**
+     * 지역 미판별(좌표는 있는) 행을 id 커서로 배치 조회한다 — region:backfill 용.
+     *
+     * country_code 가 끝내 null 로 남는 행(바다 등)이 있어도 커서가 전진하므로 무한 루프가 없다.
+     *
+     * @return list<array{id: int, lat: float, lng: float}>
+     */
+    public function findUnresolvedBatch(int $afterId, int $limit): array
+    {
+        /** @var list<array{id: int|string, lat: float|string, lng: float|string}> $rows */
+        $rows = $this->builder()
+            ->select('id, lat, lng')
+            ->where('id >', $afterId)
+            ->where('lat IS NOT NULL', null, false)
+            ->where('lng IS NOT NULL', null, false) // 한쪽만 있는 행이 (float) null → 0.0 으로 오판되는 것을 방어
+            ->where('country_code IS NULL', null, false)
+            ->orderBy('id', 'ASC')
+            ->limit($limit)
+            ->get()->getResultArray();
+
+        return array_map(
+            static fn (array $row): array => ['id' => (int) $row['id'], 'lat' => (float) $row['lat'], 'lng' => (float) $row['lng']],
+            $rows,
+        );
     }
 }
