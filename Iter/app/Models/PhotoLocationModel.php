@@ -256,4 +256,29 @@ class PhotoLocationModel extends Model
             $rows,
         );
     }
+
+    /**
+     * 지역 미판별(좌표는 있는) 행을 id 커서로 배치 조회한다 — region:backfill 용.
+     *
+     * country_code 가 끝내 null 로 남는 행(바다 등)이 있어도 커서가 전진하므로 무한 루프가 없다.
+     *
+     * @return list<array{id: int, lat: float, lng: float}>
+     */
+    public function findUnresolvedBatch(int $afterId, int $limit): array
+    {
+        /** @var list<array{id: int|string, lat: float|string, lng: float|string}> $rows */
+        $rows = $this->builder()
+            ->select('id, lat, lng')
+            ->where('id >', $afterId)
+            ->where('lat IS NOT NULL', null, false)
+            ->where('country_code IS NULL', null, false)
+            ->orderBy('id', 'ASC')
+            ->limit($limit)
+            ->get()->getResultArray();
+
+        return array_map(
+            static fn (array $row): array => ['id' => (int) $row['id'], 'lat' => (float) $row['lat'], 'lng' => (float) $row['lng']],
+            $rows,
+        );
+    }
 }
