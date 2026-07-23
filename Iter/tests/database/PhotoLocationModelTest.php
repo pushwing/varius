@@ -222,7 +222,7 @@ final class PhotoLocationModelTest extends CIUnitTestCase
         // 첫 배치: limit=2
         $batch1 = $model->findUnresolvedBatch(0, 2);
         $this->assertCount(2, $batch1);
-        $this->assertSame('b1', $batch1[0]['id'] === $batch1[0]['id'] ? 'b1' : 'skip');
+        $this->assertLessThan($batch1[1]['id'], $batch1[0]['id']); // id 오름차순 정렬 확인
         $lastIdBatch1 = $batch1[1]['id'];
 
         // 두 번째 배치: afterId = 첫 배치의 마지막 id
