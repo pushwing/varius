@@ -3,11 +3,13 @@
 declare(strict_types=1);
 
 /**
- * 여행 상세/편집 — 제목·설명·기간·커버 수정, 포함된 날짜 목록(인라인 시간표 펼치기 포함).
+ * 여행 상세/편집 — 제목·설명·기간·커버 수정, 포함된 날짜 목록(인라인 시간표 펼치기 포함),
+ * 시간표 사진 확대 뷰어(좌우 이동·회전·삭제).
  *
  * @var int    $tripId
  * @var string $tripsUrl
  * @var string $timelineUrl 시간별 동선 API URL 프리픽스(GET /timeline/{date} 등) — map.php 와 공유
+ * @var string $photosUrl   사진 관리 API URL 프리픽스(POST /photos/{id}/rotate 등) — map.php 와 공유
  * @var string $uploadUrl
  * @var string $mapUrl
  * @var string $logoutUrl
@@ -110,11 +112,47 @@ declare(strict_types=1);
             padding: 8px 10px; font-size: 13px; color: #333; cursor: pointer; border-radius: 6px;
         }
         .share-option:hover { background: #f4f6fb; }
+
+        /* ── 사진 확대 뷰어(시간표 썸네일 클릭 시 크게 표시) ── */
+        .timeline-photos img { cursor: zoom-in; }
+        #photo-viewer {
+            position: fixed; inset: 0; z-index: 3000; background: rgba(0, 0, 0, 0.88);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 24px; cursor: zoom-out;
+        }
+        #photo-viewer[hidden] { display: none; }
+        #photo-viewer img {
+            max-width: 92vw; max-height: 82vh; border-radius: 8px;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+        }
+        #photo-viewer-caption { margin-top: 12px; color: #ddd; font-size: 13px; }
+        #photo-viewer-controls { margin-top: 14px; display: flex; gap: 10px; cursor: default; }
+        .viewer-ctl-btn {
+            border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; background: rgba(255, 255, 255, 0.12);
+            color: #fff; font-size: 13px; padding: 8px 14px; cursor: pointer;
+        }
+        .viewer-ctl-btn:hover { background: rgba(255, 255, 255, 0.25); }
+        .viewer-ctl-btn:disabled { opacity: 0.5; cursor: default; }
+        .viewer-ctl-danger { border-color: rgba(255, 120, 120, 0.6); color: #ffb4b4; }
+        #photo-viewer-close {
+            position: absolute; top: 14px; right: 20px; border: none; background: none;
+            color: #fff; font-size: 28px; cursor: pointer; line-height: 1;
+        }
+        .viewer-nav-btn {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            border: none; border-radius: 50%; width: 46px; height: 46px;
+            background: rgba(255, 255, 255, 0.15); color: #fff; font-size: 20px;
+            cursor: pointer; line-height: 1; z-index: 1;
+        }
+        .viewer-nav-btn:hover { background: rgba(255, 255, 255, 0.3); }
+        .viewer-nav-btn[hidden] { display: none; }
+        #photo-viewer-prev { left: 18px; }
+        #photo-viewer-next { right: 18px; }
     </style>
 </head>
 <body>
     <?= view('partials/nav', ['uploadUrl' => $uploadUrl, 'mapUrl' => $mapUrl, 'tripsUrl' => $tripsUrl, 'logoutUrl' => $logoutUrl]) ?>
-    <main data-trips-url="<?= esc($tripsUrl, 'attr') ?>" data-trip-id="<?= (int) $tripId ?>" data-timeline-url="<?= esc($timelineUrl, 'attr') ?>">
+    <main data-trips-url="<?= esc($tripsUrl, 'attr') ?>" data-trip-id="<?= (int) $tripId ?>" data-timeline-url="<?= esc($timelineUrl, 'attr') ?>" data-photos-url="<?= esc($photosUrl, 'attr') ?>">
         <div class="header-row">
             <h1 id="trip-title-heading">여행</h1>
             <div class="header-actions">
@@ -162,6 +200,19 @@ declare(strict_types=1);
             <ul class="day-list" id="day-list"></ul>
         </div>
     </main>
+
+    <div id="photo-viewer" hidden>
+        <button type="button" id="photo-viewer-close" aria-label="닫기">&times;</button>
+        <button type="button" id="photo-viewer-prev" class="viewer-nav-btn" aria-label="이전 사진">&#10094;</button>
+        <button type="button" id="photo-viewer-next" class="viewer-nav-btn" aria-label="다음 사진">&#10095;</button>
+        <img id="photo-viewer-img" src="" alt="">
+        <div id="photo-viewer-caption"></div>
+        <div id="photo-viewer-controls">
+            <button type="button" class="viewer-ctl-btn" id="photo-viewer-rotate-left" title="왼쪽으로 회전">⟲ 왼쪽</button>
+            <button type="button" class="viewer-ctl-btn" id="photo-viewer-rotate-right" title="오른쪽으로 회전">⟳ 오른쪽</button>
+            <button type="button" class="viewer-ctl-btn viewer-ctl-danger" id="photo-viewer-delete" title="사진 삭제">🗑 삭제</button>
+        </div>
+    </div>
 
     <script>
         (function () {
@@ -513,6 +564,134 @@ declare(strict_types=1);
                         }, 1500);
                     });
             }
+
+            // ── 사진 확대 뷰어(시간표 썸네일 클릭 시 크게 표시, 좌우 이동·회전·삭제) ──
+
+            var photosUrl = mainEl.dataset.photosUrl;
+            var viewerEl = document.getElementById('photo-viewer');
+            var viewerImgEl = document.getElementById('photo-viewer-img');
+            var viewerCaptionEl = document.getElementById('photo-viewer-caption');
+            var viewerPrevEl = document.getElementById('photo-viewer-prev');
+            var viewerNextEl = document.getElementById('photo-viewer-next');
+            var viewerPhotoId = null;
+            var viewerList = [];   // 현재 열린 날짜 패널에서 넘겨볼 수 있는 썸네일 목록
+            var viewerIndex = -1;
+
+            // 클릭한 썸네일이 속한(현재 열린 날짜 패널의) 사진 목록을 수집해 그 위치부터 넘겨본다.
+            function openViewerFrom(imgEl) {
+                viewerList = Array.prototype.slice.call(document.querySelectorAll('.timeline-photos img'));
+                showViewerAt(viewerList.indexOf(imgEl));
+                viewerEl.hidden = false;
+            }
+
+            function showViewerAt(index) {
+                if (index < 0 || index >= viewerList.length) { return; }
+                viewerIndex = index;
+
+                var imgEl = viewerList[index];
+                viewerImgEl.src = imgEl.src;
+                viewerCaptionEl.textContent = imgEl.title || '';
+                // 회전·삭제 대상 식별 — 썸네일 URL(/thumbnails/{id})에서 id 를 뽑는다.
+                var match = imgEl.src.match(/\/thumbnails\/(\d+)/);
+                viewerPhotoId = match ? match[1] : null;
+
+                viewerPrevEl.hidden = index <= 0;
+                viewerNextEl.hidden = index >= viewerList.length - 1;
+            }
+
+            function closeViewer() {
+                viewerEl.hidden = true;
+                viewerImgEl.src = '';
+                viewerPhotoId = null;
+                viewerList = [];
+                viewerIndex = -1;
+            }
+
+            viewerPrevEl.addEventListener('click', function () { showViewerAt(viewerIndex - 1); });
+            viewerNextEl.addEventListener('click', function () { showViewerAt(viewerIndex + 1); });
+
+            // 컨트롤·이동 버튼 클릭은 닫힘으로 처리하지 않는다(닫기 버튼은 컨트롤 밖이라
+            // 클릭이 그대로 버블링돼 아래 배경 클릭 처리로 닫힌다).
+            viewerEl.addEventListener('click', function (evt) {
+                if (evt.target.closest('#photo-viewer-controls') || evt.target.closest('.viewer-nav-btn')) { return; }
+                closeViewer();
+            });
+            document.addEventListener('keydown', function (evt) {
+                if (viewerEl.hidden) { return; }
+                if (evt.key === 'Escape') { closeViewer(); }
+                if (evt.key === 'ArrowLeft') { showViewerAt(viewerIndex - 1); }
+                if (evt.key === 'ArrowRight') { showViewerAt(viewerIndex + 1); }
+            });
+
+            // 사진 썸네일은 날짜 패널이 열릴 때마다 새로 그려지므로 이벤트 위임으로 클릭을 잡는다.
+            document.body.addEventListener('click', function (evt) {
+                var photoImg = evt.target.closest('.timeline-photos img');
+                if (photoImg) { openViewerFrom(photoImg); }
+            });
+
+            // 회전 — 서버가 보관 썸네일을 90도 회전해 저장하면, 캐시를 우회해 다시 그린다.
+            function rotateViewerPhoto(direction, buttonEl) {
+                if (!viewerPhotoId) { return; }
+                buttonEl.disabled = true;
+                fetch(photosUrl + '/' + viewerPhotoId + '/rotate', {
+                    method: 'POST',
+                    headers: { Accept: 'application/json' },
+                    body: new URLSearchParams({ direction: direction })
+                })
+                    .then(function (res) {
+                        if (!res.ok) { throw new Error('rotate failed'); }
+                        var bust = '?v=' + Date.now();
+                        var freshSrc = '/thumbnails/' + viewerPhotoId + bust;
+                        viewerImgEl.src = freshSrc;
+                        // 열려 있는 날짜 패널의 같은 썸네일도 갱신한다.
+                        document.querySelectorAll('.timeline-photos img').forEach(function (img) {
+                            if (img.src.indexOf('/thumbnails/' + viewerPhotoId) !== -1) { img.src = freshSrc; }
+                        });
+                    })
+                    .catch(function () { alert('회전에 실패했습니다.'); })
+                    .then(function () { buttonEl.disabled = false; });
+            }
+
+            document.getElementById('photo-viewer-rotate-left').addEventListener('click', function () {
+                rotateViewerPhoto('left', this);
+            });
+            document.getElementById('photo-viewer-rotate-right').addEventListener('click', function () {
+                rotateViewerPhoto('right', this);
+            });
+
+            // 삭제 — 썸네일 파일과 위치 기록(DB)이 함께 삭제된다. 뷰어·열린 날짜 패널을 닫고,
+            // 그 날짜의 캐시를 지운 뒤 여행 데이터를 다시 불러와 통계·날짜 목록·표지 후보를 갱신한다.
+            document.getElementById('photo-viewer-delete').addEventListener('click', function () {
+                if (!viewerPhotoId) { return; }
+                if (!window.confirm('이 사진을 삭제할까요? 썸네일과 위치 기록이 함께 삭제됩니다.')) { return; }
+
+                var buttonEl = this;
+                var deletedDate = openTimelineDate;
+                buttonEl.disabled = true;
+                fetch(photosUrl + '/' + viewerPhotoId + '/delete', {
+                    method: 'POST',
+                    headers: { Accept: 'application/json' }
+                })
+                    .then(function (res) {
+                        if (!res.ok) { throw new Error('delete failed'); }
+                        closeViewer();
+
+                        if (deletedDate !== null) {
+                            var toggleEl = dayListEl.querySelector('.day-timeline-toggle[data-date="' + deletedDate + '"]');
+                            var panelEl = dayListEl.querySelector('.day-timeline-panel[data-date="' + deletedDate + '"]');
+                            if (panelEl) { panelEl.hidden = true; }
+                            if (toggleEl) { toggleEl.textContent = '시간표 보기'; }
+                            openTimelineDate = null;
+                            delete timelineCache[deletedDate];
+                        }
+
+                        return fetch(tripUrl + '/data', { headers: { Accept: 'application/json' } });
+                    })
+                    .then(function (res) { return res.json(); })
+                    .then(render)
+                    .catch(function () { alert('삭제에 실패했습니다.'); })
+                    .then(function () { buttonEl.disabled = false; });
+            });
 
             document.getElementById('save-btn').addEventListener('click', function () {
                 var btn = this;
