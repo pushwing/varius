@@ -213,6 +213,24 @@ declare(strict_types=1);
         .viewer-nav-btn[hidden] { display: none; }
         #photo-viewer-prev { left: 18px; }
         #photo-viewer-next { right: 18px; }
+
+        /* ── 동선 재생 컨트롤 ── */
+        #playback-bar {
+            position: absolute; left: 296px; bottom: 16px; z-index: 1000;
+            display: flex; align-items: center; gap: 8px;
+            background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+            padding: 8px 12px; font-size: 13px;
+        }
+        #playback-bar[hidden] { display: none; }
+        #playback-date { color: #555; }
+        #playback-toggle {
+            border: none; border-radius: 6px; background: #1a73e8; color: #fff;
+            padding: 6px 12px; cursor: pointer; font-size: 13px;
+        }
+        #playback-speed {
+            border: 1px solid #ccc; border-radius: 6px; background: #fff;
+            padding: 5px 10px; cursor: pointer; font-size: 13px; color: #333;
+        }
     </style>
 </head>
 <body>
@@ -225,6 +243,11 @@ declare(strict_types=1);
         </div>
         <div id="map" data-routes-url="<?= esc($routesUrl, 'attr') ?>" data-timeline-url="<?= esc($timelineUrl, 'attr') ?>" data-photos-url="<?= esc($photosUrl, 'attr') ?>"></div>
         <div id="empty">표시할 동선이 없습니다. 사진을 선택해 좌표를 적재하세요.</div>
+        <div id="playback-bar" hidden>
+            <span id="playback-date"></span>
+            <button type="button" id="playback-toggle">▶ 재생</button>
+            <button type="button" id="playback-speed" title="재생 속도">1x</button>
+        </div>
     </div>
 
     <div id="photo-layer" hidden>
@@ -491,6 +514,48 @@ declare(strict_types=1);
 
                 document.querySelectorAll('.day-item.active').forEach(function (el) { el.classList.remove('active'); });
                 itemEl.classList.add('active');
+                preparePlayback(itemEl.dataset.date);
+            }
+
+            // ── 동선 재생 ─────────────────────────────────────
+            var PLAYBACK_DURATION_MS = 15000; // 1x 기준 하루 전체 재생 시간
+            var PLAYBACK_SPEEDS = [1, 2, 4];
+            var PLAYBACK_FRAME_CAP_MS = 100;  // 탭 복귀 시 순간이동 방지용 프레임 델타 상한
+            var PULSE_RADIUS_METERS = 30;     // 펄스 매칭 반경(클러스터 묶음 반경과 동일)
+
+            var playbackBarEl = document.getElementById('playback-bar');
+            var playbackDateEl = document.getElementById('playback-date');
+            var playbackToggleEl = document.getElementById('playback-toggle');
+            var playbackSpeedEl = document.getElementById('playback-speed');
+
+            var playback = null; // 진행 중인 재생 상태 — null 이면 재생 없음
+
+            // 날짜 선택 시 호출 — 기존 재생을 정리하고, 재생 가능한 날이면 컨트롤 바를 띄운다.
+            function preparePlayback(date) {
+                stopPlayback();
+                var entry = dateIndex[date];
+                var plan = entry ? buildPlaybackPlan(entry.latlngs, PLAYBACK_DURATION_MS) : null;
+                if (!plan) { playbackBarEl.hidden = true; return; }
+
+                playback = {
+                    date: date, entry: entry, plan: plan,
+                    elapsed: 0, speedIndex: 0, playing: false, rafId: null, lastTs: null,
+                    line: null, marker: null, pulsedMarkers: []
+                };
+                playbackDateEl.textContent = date;
+                playbackToggleEl.textContent = '▶ 재생';
+                playbackSpeedEl.textContent = '1x';
+                playbackBarEl.hidden = false;
+            }
+
+            // 재생 레이어·상태를 모두 정리하고 정적 경로선을 원복한다.
+            function stopPlayback() {
+                if (!playback) { return; }
+                if (playback.rafId !== null) { cancelAnimationFrame(playback.rafId); }
+                if (playback.line) { map.removeLayer(playback.line); }
+                if (playback.marker) { map.removeLayer(playback.marker); }
+                if (playback.entry.polyline) { playback.entry.polyline.setStyle({ opacity: 0.8 }); }
+                playback = null;
             }
 
             fetch(mapEl.dataset.routesUrl, { headers: { Accept: 'application/json' } })
