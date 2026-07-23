@@ -48,6 +48,15 @@ declare(strict_types=1);
         }
         .btn:disabled { background: #9db8e8; cursor: not-allowed; }
         .empty { color: #777; font-size: 13px; padding: 12px 0; }
+        .yearly-summary { font-size: 14px; color: #444; margin: 0 0 12px; }
+        .top-spot-card { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+        .top-spot-thumb { width: 48px; height: 48px; object-fit: cover; border-radius: 8px; display: block; }
+        .heatmap-grid {
+            display: grid; grid-template-rows: repeat(7, 12px); grid-auto-columns: 12px; grid-auto-flow: column;
+            gap: 3px; overflow-x: auto; padding-bottom: 4px;
+        }
+        .heatmap-cell { width: 12px; height: 12px; border-radius: 2px; background: #ebedf0; }
+        .heatmap-cell.active { background: #1a73e8; }
     </style>
 </head>
 <body>
@@ -55,6 +64,16 @@ declare(strict_types=1);
     <main data-trips-url="<?= esc($tripsUrl, 'attr') ?>">
         <h1 class="page-title">내 여행</h1>
         <p class="page-lead">연속된 날짜를 하나의 여행으로 묶어 커버 사진·기간·사진 수를 한눈에 봅니다.</p>
+
+        <section class="yearly-stats" id="yearly-stats" hidden>
+            <h2 class="section-title" id="yearly-stats-title"></h2>
+            <p class="yearly-summary" id="yearly-summary"></p>
+            <div class="top-spot-card" id="top-spot-card" hidden>
+                <img class="top-spot-thumb" id="top-spot-thumb" alt="" hidden>
+                <span id="top-spot-label"></span>
+            </div>
+            <div class="heatmap-grid" id="heatmap-grid"></div>
+        </section>
 
         <h2 class="section-title">저장된 여행</h2>
         <div class="trip-grid" id="saved-trips"></div>
@@ -81,6 +100,76 @@ declare(strict_types=1);
                     savedEmptyEl.textContent = '여행 목록을 불러오지 못했습니다.';
                     savedEmptyEl.hidden = false;
                 });
+
+            fetch(tripsUrl + '/stats', { headers: { Accept: 'application/json' } })
+                .then(function (res) { return res.json(); })
+                .then(renderYearlyStats)
+                .catch(function () { /* 통계 로딩 실패는 조용히 무시 — 여행 목록은 별개로 동작 */ });
+
+            function renderYearlyStats(stats) {
+                var sectionEl = document.getElementById('yearly-stats');
+                var titleEl = document.getElementById('yearly-stats-title');
+                var summaryEl = document.getElementById('yearly-summary');
+                var topSpotCardEl = document.getElementById('top-spot-card');
+                var topSpotThumbEl = document.getElementById('top-spot-thumb');
+                var topSpotLabelEl = document.getElementById('top-spot-label');
+                var gridEl = document.getElementById('heatmap-grid');
+
+                sectionEl.hidden = false;
+                titleEl.textContent = stats.year + '년 여행 기록';
+                summaryEl.textContent = '총 여행일수 ' + stats.travel_days + '일';
+
+                if (stats.top_spot) {
+                    topSpotCardEl.hidden = false;
+                    if (stats.top_spot.thumbnail_url) {
+                        topSpotThumbEl.src = stats.top_spot.thumbnail_url;
+                        topSpotThumbEl.hidden = false;
+                    } else {
+                        topSpotThumbEl.hidden = true;
+                    }
+                    topSpotLabelEl.textContent = '가장 많이 방문한 곳 · ' + stats.top_spot.visit_count + '번 방문';
+                } else {
+                    topSpotCardEl.hidden = true;
+                }
+
+                renderHeatmap(gridEl, stats.year, stats.heatmap_dates);
+            }
+
+            function renderHeatmap(gridEl, year, activeDates) {
+                gridEl.innerHTML = '';
+                var activeSet = {};
+                activeDates.forEach(function (d) { activeSet[d] = true; });
+
+                var start = new Date(year, 0, 1);
+                var end = new Date(year, 11, 31);
+
+                // 1월 1일이 속한 주의 일요일부터 그리드를 시작한다(GitHub 스타일 정렬).
+                var gridStart = new Date(start);
+                gridStart.setDate(gridStart.getDate() - gridStart.getDay());
+
+                var cursor = new Date(gridStart);
+                while (cursor <= end) {
+                    var cell = document.createElement('div');
+                    cell.className = 'heatmap-cell';
+
+                    if (cursor >= start && cursor <= end) {
+                        var dateStr = formatDate(cursor);
+                        if (activeSet[dateStr]) {
+                            cell.classList.add('active');
+                            cell.title = dateStr;
+                        }
+                    }
+
+                    gridEl.appendChild(cell);
+                    cursor.setDate(cursor.getDate() + 1);
+                }
+            }
+
+            function formatDate(d) {
+                var mm = String(d.getMonth() + 1).padStart(2, '0');
+                var dd = String(d.getDate()).padStart(2, '0');
+                return d.getFullYear() + '-' + mm + '-' + dd;
+            }
 
             function render(data) {
                 renderSaved(data.trips || []);
