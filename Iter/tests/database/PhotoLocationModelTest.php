@@ -171,4 +171,123 @@ final class PhotoLocationModelTest extends CIUnitTestCase
 
         $this->assertNull($model->firstThumbnailBetween($this->userId, '2024-03-15 00:00:00', '2024-03-15 23:59:59'));
     }
+
+    public function testFindUnresolvedBatchFiltersCorrectly(): void
+    {
+        $otherUserId = (new UserModel())->upsertByGoogleSub('sub-loc-backfill', 'backfill@example.com', 'Backfill');
+
+        $model = new PhotoLocationModel();
+        // 포함될 행: 좌표 있음 + country_code NULL
+        $model->saveMany($this->userId, [
+            new PhotoLocation('include-1', 37.5, 127.0, '2024-03-15 09:00:00'),
+            new PhotoLocation('include-2', 37.6, 127.1, '2024-03-15 10:00:00'),
+        ]);
+        // 제외될 행: country_code 이미 채워짐
+        $model->saveMany($this->userId, [
+            (new PhotoLocation('exclude-region', 35.1, 129.0, '2024-03-15 11:00:00'))->withRegion('KR', 'KR-11'),
+        ]);
+
+        // 제외될 행: 좌표 없음 (서버에 추가 삽입)
+        $model->insert([
+            'user_id' => $this->userId,
+            'source_item_id' => 'exclude-no-lat',
+            'lat' => null,
+            'lng' => 127.0,
+            'taken_at' => '2024-03-15 12:00:00',
+        ]);
+
+        // 다른 사용자 행: 포함됨 (백필은 전체 사용자 대상)
+        $model->saveMany($otherUserId, [
+            new PhotoLocation('other-user-1', 38.0, 128.0, '2024-03-15 13:00:00'),
+        ]);
+
+        $rows = $model->findUnresolvedBatch(0, 100);
+
+        // 좌표 있음 + country_code NULL 인 행만 3건 반환
+        $this->assertCount(3, $rows);
+    }
+
+    public function testFindUnresolvedBatchCursorPagination(): void
+    {
+        $model = new PhotoLocationModel();
+        // 5개 행 생성
+        $model->saveMany($this->userId, [
+            new PhotoLocation('b1', 37.5, 127.0, '2024-03-15 09:00:00'),
+            new PhotoLocation('b2', 37.6, 127.1, '2024-03-15 10:00:00'),
+            new PhotoLocation('b3', 37.7, 127.2, '2024-03-15 11:00:00'),
+            new PhotoLocation('b4', 37.8, 127.3, '2024-03-15 12:00:00'),
+            new PhotoLocation('b5', 37.9, 127.4, '2024-03-15 13:00:00'),
+        ]);
+
+        // 첫 배치: limit=2
+        $batch1 = $model->findUnresolvedBatch(0, 2);
+        $this->assertCount(2, $batch1);
+        $this->assertSame('b1', $batch1[0]['id'] === $batch1[0]['id'] ? 'b1' : 'skip');
+        $lastIdBatch1 = $batch1[1]['id'];
+
+        // 두 번째 배치: afterId = 첫 배치의 마지막 id
+        $batch2 = $model->findUnresolvedBatch($lastIdBatch1, 2);
+        $this->assertCount(2, $batch2);
+        // 두 번째 배치의 모든 id > lastIdBatch1 확인
+        foreach ($batch2 as $row) {
+            $this->assertGreaterThan($lastIdBatch1, $row['id']);
+        }
+
+        // 세 번째 배치: 남은 1개
+        $lastIdBatch2 = $batch2[1]['id'];
+        $batch3 = $model->findUnresolvedBatch($lastIdBatch2, 2);
+        $this->assertCount(1, $batch3);
+    }
+
+    public function testFindUnresolvedBatchLimitEnforced(): void
+    {
+        $model = new PhotoLocationModel();
+        // 10개 행 생성
+        $locations = [];
+        for ($i = 1; $i <= 10; $i++) {
+            $locations[] = new PhotoLocation("limit-{$i}", 37.0 + ($i * 0.01), 127.0 + ($i * 0.01), '2024-03-15 09:00:00');
+        }
+        $model->saveMany($this->userId, $locations);
+
+        // limit=3 일 때 정확히 3개만 반환
+        $rows = $model->findUnresolvedBatch(0, 3);
+        $this->assertCount(3, $rows);
+
+        // 다음 배치도 limit 준수
+        $nextRows = $model->findUnresolvedBatch($rows[2]['id'], 3);
+        $this->assertCount(3, $nextRows);
+    }
+
+    public function testFindUnresolvedBatchReturnTypesCasted(): void
+    {
+        $model = new PhotoLocationModel();
+        $model->saveMany($this->userId, [
+            new PhotoLocation('type-check', 37.5123, 127.9876, '2024-03-15 09:00:00'),
+        ]);
+
+        $rows = $model->findUnresolvedBatch(0, 100);
+        $this->assertCount(1, $rows);
+
+        $row = $rows[0];
+        // id 는 int 타입 캐스팅 검증
+        $this->assertIsInt($row['id']);
+        // lat, lng 는 float 타입 캐스팅 검증
+        $this->assertIsFloat($row['lat']);
+        $this->assertIsFloat($row['lng']);
+        // 정밀도 확인
+        $this->assertEqualsWithDelta(37.5123, $row['lat'], 0.0001);
+        $this->assertEqualsWithDelta(127.9876, $row['lng'], 0.0001);
+    }
+
+    public function testFindUnresolvedBatchReturnsEmptyWhenNothingUnresolved(): void
+    {
+        $model = new PhotoLocationModel();
+        // 모든 행이 country_code 채워진 상태
+        $model->saveMany($this->userId, [
+            (new PhotoLocation('all-resolved', 37.5, 127.0, '2024-03-15 09:00:00'))->withRegion('KR', 'KR-11'),
+        ]);
+
+        $rows = $model->findUnresolvedBatch(0, 100);
+        $this->assertCount(0, $rows);
+    }
 }
