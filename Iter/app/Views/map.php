@@ -621,6 +621,10 @@ declare(strict_types=1);
                 playback.line.setLatLngs(lineLatLngs);
                 playback.marker.setLatLng([pos.lat, pos.lng]);
 
+                // 지나친 구간 경계(사진 지점)마다 근처 클러스터 펄스 — pulsedMarkers 가 중복을 막는다.
+                for (var j = 0; j < pos.segIndex; j++) { pulseClusterNear(segs[j].to); }
+                if (pos.done) { pulseClusterNear(segs[segs.length - 1].to); }
+
                 if (pos.done) {
                     playback.playing = false;
                     playback.rafId = null;
@@ -628,6 +632,18 @@ declare(strict_types=1);
                     return;
                 }
                 playback.rafId = requestAnimationFrame(playbackFrame);
+            }
+
+            // 도달 지점 30m 이내의 클러스터 마커를 잠깐 확대했다 원복한다 — 마커당 1회만.
+            // (클러스터는 30m 반경으로 묶이므로 경로 지점과 좌표가 정확히 일치하지 않을 수 있다.)
+            function pulseClusterNear(latlng) {
+                playback.entry.clusterMarkers.forEach(function (cm) {
+                    if (playback.pulsedMarkers.indexOf(cm.marker) !== -1) { return; }
+                    if (haversineMeters(latlng, [cm.lat, cm.lng]) > PULSE_RADIUS_METERS) { return; }
+                    playback.pulsedMarkers.push(cm.marker);
+                    cm.marker.setRadius(11);
+                    setTimeout(function () { cm.marker.setRadius(6); }, 450);
+                });
             }
 
             fetch(mapEl.dataset.routesUrl, { headers: { Accept: 'application/json' } })
