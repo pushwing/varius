@@ -287,6 +287,7 @@ declare(strict_types=1);
         src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""></script>
+    <script src="/assets/playback-core.js"></script>
     <script>
         (function () {
             var mapEl = document.getElementById('map');
@@ -507,12 +508,14 @@ declare(strict_types=1);
                     var latlngs = group.points.map(function (p) { return [p.lat, p.lng]; });
                     bounds = bounds.concat(latlngs);
 
-                    // 경로선 — 같은 날짜의 이동 순서.
+                    // 경로선 — 같은 날짜의 이동 순서. 재생 시 흐리게 처리할 수 있도록 참조를 보관한다.
+                    var dayPolyline = null;
                     if (latlngs.length > 1) {
-                        L.polyline(latlngs, { color: group.color, weight: 3, opacity: 0.8 }).addTo(map);
+                        dayPolyline = L.polyline(latlngs, { color: group.color, weight: 3, opacity: 0.8 }).addTo(map);
                     }
 
                     var firstClusterIndex = null;
+                    var clusterMarkers = []; // 재생 시 펄스 강조용 — 이 날짜의 클러스터 마커 목록
 
                     // 마커 — 같은 장소(GPS 오차 감안 약 30m 이내) 사진은 클러스터 하나로 묶인다.
                     (group.clusters || []).forEach(function (c) {
@@ -535,9 +538,16 @@ declare(strict_types=1);
                         // 지점 액션은 클릭이 아니라 마우스오버로 연다(#27).
                         // 클릭(bindPopup 기본 동작)도 유지한다 — 터치 기기엔 hover 가 없다.
                         registryEntry.marker.on('mouseover', function () { this.openPopup(); });
+
+                        clusterMarkers.push({ lat: c.lat, lng: c.lng, marker: registryEntry.marker });
                     });
 
-                    dateIndex[group.date] = { latlngs: latlngs, firstClusterIndex: firstClusterIndex };
+                    dateIndex[group.date] = {
+                        latlngs: latlngs,
+                        firstClusterIndex: firstClusterIndex,
+                        polyline: dayPolyline,
+                        clusterMarkers: clusterMarkers
+                    };
                     dateOrder.push({ date: group.date, count: group.points.length, color: group.color });
                 });
 
