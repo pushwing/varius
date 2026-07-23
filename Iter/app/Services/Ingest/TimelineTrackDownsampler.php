@@ -36,7 +36,8 @@ final class TimelineTrackDownsampler
 
         for ($i = 1; $i < $count; $i++) {
             $current = $points[$i];
-            // 같은 UTC 문자열 포맷끼리의 차이라 타임존과 무관하게 초 차이가 정확하다.
+            // 두 값 모두 같은 서버 타임존으로 해석되므로 차이는 정확하다(단, 두 시각 사이에
+            // DST 전환이 끼면 실제 경과와 최대 1시간까지 어긋날 수 있다 — 60초 임계값 대비 극히 드문 경우).
             $elapsed = strtotime($current->recordedAt) - strtotime($last->recordedAt);
             $meters = GeoDistanceCalculator::kilometers($last->lat, $last->lng, $current->lat, $current->lng) * 1000.0;
 

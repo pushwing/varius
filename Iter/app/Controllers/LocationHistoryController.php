@@ -80,12 +80,25 @@ final class LocationHistoryController extends BaseController
             return $this->response->setStatusCode(401)->setJSON(['error' => '로그인이 필요합니다.']);
         }
 
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) !== 1) {
+        if (! $this->isValidDate($date)) {
             return $this->response->setStatusCode(422)->setJSON(['error' => '날짜 형식이 올바르지 않습니다(YYYY-MM-DD).']);
         }
 
         return $this->response->setJSON([
             'points' => service('locationHistory')->trackForDate($userId, $date),
         ]);
+    }
+
+    /**
+     * YYYY-MM-DD 형식이면서 실제 존재하는 날짜인지 검증한다(TimelineController 와 동일 관례 —
+     * 형식만 통과하고 실존하지 않는 날짜(예: 2026-13-01)가 TimeConverter 에서 예외로 500 되는 것을 막는다).
+     */
+    private function isValidDate(string $date): bool
+    {
+        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $date, $m) !== 1) {
+            return false;
+        }
+
+        return checkdate((int) $m[2], (int) $m[3], (int) $m[1]);
     }
 }

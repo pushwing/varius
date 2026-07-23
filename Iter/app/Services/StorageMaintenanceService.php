@@ -25,7 +25,7 @@ final class StorageMaintenanceService
     }
 
     /**
-     * 지정 기간보다 오래된 업로드 임시물(takeout_* 디렉터리, 잔존 zip)을 삭제한다.
+     * 지정 기간보다 오래된 업로드 임시물(takeout_* 디렉터리, 잔존 zip·위치기록 json)을 삭제한다.
      *
      * @return int 삭제한 항목 수
      */
@@ -44,6 +44,15 @@ final class StorageMaintenanceService
         foreach ($this->glob($this->uploadsDir . '/*.zip') as $zip) {
             if (is_file($zip) && $this->modifiedBefore($zip, $threshold)) {
                 unlink($zip);
+                $removed++;
+            }
+        }
+
+        // 위치기록(Timeline.json) 업로드도 컨트롤러가 finally 에서 즉시 지우지만,
+        // 치명적 오류로 그 정리가 건너뛰어지면 잔존 json 이 남을 수 있다.
+        foreach ($this->glob($this->uploadsDir . '/*.json') as $json) {
+            if (is_file($json) && $this->modifiedBefore($json, $threshold)) {
+                unlink($json);
                 $removed++;
             }
         }
