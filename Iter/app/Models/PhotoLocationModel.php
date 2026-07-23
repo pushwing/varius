@@ -24,6 +24,8 @@ class PhotoLocationModel extends Model
         'source_item_id',
         'lat',
         'lng',
+        'country_code',
+        'region_code',
         'thumbnail_path',
         'taken_at',
     ];
@@ -170,6 +172,8 @@ class PhotoLocationModel extends Model
                 'source_item_id' => $location->mediaItemId,
                 'lat' => $location->lat,
                 'lng' => $location->lng,
+                'country_code' => $location->countryCode,
+                'region_code' => $location->regionCode,
                 'thumbnail_path' => $location->thumbnailPath,
                 'taken_at' => $location->takenAt,
             ];
