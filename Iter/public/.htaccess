@@ -2,15 +2,20 @@
 Options -Indexes
 
 # ----------------------------------------------------------------------
-# Takeout zip 업로드 용량 상한 (mod_php 전용)
+# 업로드 용량 상한·메모리 한도 (mod_php 전용)
 # ----------------------------------------------------------------------
 # .user.ini 는 CGI/FastCGI(PHP-FPM 포함) SAPI 에서만 처리되고 mod_php 에서는
-# 무시된다 — mod_php 환경에서 upload_max_filesize/post_max_size 를 올리는
-# 유일한 방법은 이 php_value 지시자다(TakeoutController::MAX_UPLOAD_BYTES=500MB 와 맞춤).
-# php_module 이 없는 환경(PHP-FPM 등)에서는 이 블록이 조용히 무시된다.
+# 무시된다 — mod_php 환경에서 이 지시자들을 올리는 유일한 방법은 이 php_value 다
+# (upload_max_filesize/post_max_size 는 TakeoutController::MAX_UPLOAD_BYTES=500MB 와 맞춤).
+# memory_limit: LocationHistoryService::ingestFile() 이 위치기록 Timeline.json(최대 64MB,
+# LocationHistoryController::MAX_UPLOAD_BYTES)을 file_get_contents + json_decode 로 통짜
+# 파싱한다 — 디코딩된 배열은 원본 대비 5~10배까지 부풀 수 있어 기본 128M 로는 OOM 위험이
+# 있다. 이 값을 .user.ini 에도 뒀지만 mod_php 에서는 무시되므로 여기가 실제 적용 지점이다.
+# php_module 이 없는 환경(PHP-FPM 등)에서는 이 블록이 조용히 무시되고 .user.ini 가 대신 적용된다.
 <IfModule php_module>
 	php_value upload_max_filesize 500M
 	php_value post_max_size 520M
+	php_value memory_limit 512M
 </IfModule>
 
 # ----------------------------------------------------------------------
