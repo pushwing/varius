@@ -3,14 +3,15 @@
 declare(strict_types=1);
 
 /**
- * 사진 가져오기 화면 — Takeout zip / 일반 압축파일 업로드 폼(로그인 사용자 전용, GET /upload).
+ * 사진 가져오기 화면 — Takeout zip / 일반 압축파일 / 위치기록 업로드 폼(로그인 사용자 전용, GET /upload).
  *
  * @var string $loginUrl
  * @var string $logoutUrl
  * @var string $mapUrl
  * @var string $tripsUrl
- * @var string $uploadUrl      Takeout 업로드 엔드포인트(POST /takeout/upload)
- * @var string $plainUploadUrl 일반 압축파일 업로드 엔드포인트(POST /photos/upload)
+ * @var string $uploadUrl              Takeout 업로드 엔드포인트(POST /takeout/upload)
+ * @var string $plainUploadUrl         일반 압축파일 업로드 엔드포인트(POST /photos/upload)
+ * @var string $locationHistoryUploadUrl 위치기록 업로드 엔드포인트(POST /location-history/upload)
  * @var string $deleteUrl
  */
 ?>
@@ -140,7 +141,7 @@ declare(strict_types=1);
                     <a href="https://takeout.google.com" target="_blank" rel="noopener">takeout.google.com</a>에서
                     "Google 포토"만 선택해 내보낸 뒤, 받은 zip 파일을 올려주세요.
                 </p>
-                <form id="takeout-form" data-upload-url="<?= esc($uploadUrl, 'attr') ?>" data-map-url="<?= esc($mapUrl, 'attr') ?>">
+                <form id="takeout-form" data-upload-url="<?= esc($uploadUrl, 'attr') ?>">
                     <label class="file-picker" for="takeout-file">
                         <input type="file" id="takeout-file" name="file" accept=".zip" class="sr-only">
                         <span class="icon" aria-hidden="true">📦</span>
@@ -166,7 +167,7 @@ declare(strict_types=1);
                     직접 다운로드한 원본에도 GPS가 남아 있어 그대로 인식됩니다. 사진에 위치 정보가
                     없으면 지도에 표시되지 않으니, 그런 경우 왼쪽 Takeout 방식을 써보세요.
                 </p>
-                <form id="plain-form" data-upload-url="<?= esc($plainUploadUrl, 'attr') ?>" data-map-url="<?= esc($mapUrl, 'attr') ?>">
+                <form id="plain-form" data-upload-url="<?= esc($plainUploadUrl, 'attr') ?>">
                     <label class="file-picker" for="plain-file">
                         <input type="file" id="plain-file" name="file" accept=".zip" class="sr-only">
                         <span class="icon" aria-hidden="true">🖼️</span>
@@ -178,11 +179,36 @@ declare(strict_types=1);
                 <div class="status-box" data-role="status" hidden></div>
                 <div class="error-box" data-role="error" hidden></div>
             </div>
+
+            <!-- 위치기록 -->
+            <div class="upload-card">
+                <span class="badge">위치기록</span>
+                <h2>위치기록 Timeline.json</h2>
+                <p class="lead-text">
+                    사진 사이 빈 구간의 이동 경로까지 지도에 점선으로 보여드립니다.
+                    사진과 별개로 저장되며, 같은 파일을 다시 올려도 중복 저장되지 않습니다.
+                </p>
+                <p class="help">
+                    휴대폰 <strong>설정 → 위치 → 타임라인</strong>에서 내보낸
+                    <code>Timeline.json</code> 파일을 그대로 올려주세요.
+                </p>
+                <form id="timeline-history-form" data-upload-url="<?= esc($locationHistoryUploadUrl, 'attr') ?>">
+                    <label class="file-picker" for="timeline-history-file">
+                        <input type="file" id="timeline-history-file" name="file" accept=".json" class="sr-only">
+                        <span class="icon" aria-hidden="true">🧭</span>
+                        <span class="primary-text" data-default="Timeline.json 선택">Timeline.json 선택</span>
+                        <span class="hint">최대 64MB</span>
+                    </label>
+                    <button type="submit" class="btn btn-block" data-role="submit">가져오기</button>
+                </form>
+                <div class="status-box" data-role="status" hidden></div>
+                <div class="error-box" data-role="error" hidden></div>
+            </div>
         </div>
 
         <ul class="upload-notes">
-            <li>두 방식 모두 zip은 최대 500MB, 좌표는 사용자당 최대 200장까지 추출합니다.</li>
-            <li>업로드된 zip은 좌표 추출이 끝나는 즉시 서버에서 삭제되며, 원본 사진 파일은 저장하지 않습니다(지도 미리보기용 썸네일만 보관).</li>
+            <li>Takeout·일반 압축 zip은 최대 500MB, 위치기록 Timeline.json은 최대 64MB이며, 좌표는 사용자당 최대 200장까지 추출합니다.</li>
+            <li>업로드된 원본 파일은 처리가 끝나는 즉시 서버에서 삭제되며, 사진 원본은 저장하지 않습니다(지도 미리보기용 썸네일만 보관).</li>
             <li>위치 정보가 없는 사진은 지도에 표시되지 않으며, 업로드는 시간당 일정 횟수로 제한됩니다.</li>
         </ul>
 
@@ -203,7 +229,8 @@ declare(strict_types=1);
             var loginUrl = '<?= esc($loginUrl, 'js') ?>';
 
             // 카드 하나(폼 + 파일선택 + 상태/에러 박스)를 업로드 동작에 연결한다.
-            function wireUpload(form) {
+            // buildSuccessMessage(data): 성공 응답 → { message, actionHref, actionLabel } — 카드마다 다른 응답 모양에 대응.
+            function wireUpload(form, buildSuccessMessage) {
                 var fileInput = form.querySelector('input[type=file]');
                 var pickerText = form.querySelector('.primary-text');
                 var submitBtn = form.querySelector('[data-role=submit]');
@@ -211,7 +238,6 @@ declare(strict_types=1);
                 var statusEl = card.querySelector('[data-role=status]');
                 var errorEl = card.querySelector('[data-role=error]');
                 var uploadUrl = form.dataset.uploadUrl;
-                var mapUrl = form.dataset.mapUrl;
                 var defaultPickerText = pickerText.dataset.default;
 
                 fileInput.addEventListener('change', function () {
@@ -222,7 +248,7 @@ declare(strict_types=1);
                     evt.preventDefault();
 
                     if (!fileInput.files || fileInput.files.length === 0) {
-                        showError('zip 파일을 선택해주세요');
+                        showError('파일을 선택해주세요');
                         return;
                     }
 
@@ -236,15 +262,8 @@ declare(strict_types=1);
                     fetch(uploadUrl, { method: 'POST', body: body, headers: { Accept: 'application/json' } })
                         .then(handleJson)
                         .then(function (data) {
-                            var message = data.saved + '장 저장됨';
-                            if (data.capped) {
-                                message += ' (' + data.totalCandidates + '장 중 상한까지만 처리됨)';
-                            } else if (data.totalCandidates > data.saved) {
-                                message += ' (위치 정보를 찾지 못한 ' + (data.totalCandidates - data.saved) + '장 제외)';
-                            }
-                            // 방금 업로드한 사진 중 가장 늦은 날짜로 지도가 바로 포커스되게 한다.
-                            var mapHref = data.latestDate ? mapUrl + '?date=' + encodeURIComponent(data.latestDate) : mapUrl;
-                            showStatus(message, mapHref, '지도에서 보기');
+                            var result = buildSuccessMessage(data);
+                            showStatus(result.message, result.actionHref, result.actionLabel);
                             setBusy(false);
                         })
                         .catch(onError);
@@ -317,8 +336,29 @@ declare(strict_types=1);
                 }
             }
 
-            wireUpload(document.getElementById('takeout-form'));
-            wireUpload(document.getElementById('plain-form'));
+            function takeoutSuccessMessage(data, mapUrl) {
+                var message = data.saved + '장 저장됨';
+                if (data.capped) {
+                    message += ' (' + data.totalCandidates + '장 중 상한까지만 처리됨)';
+                } else if (data.totalCandidates > data.saved) {
+                    message += ' (위치 정보를 찾지 못한 ' + (data.totalCandidates - data.saved) + '장 제외)';
+                }
+                var mapHref = data.latestDate ? mapUrl + '?date=' + encodeURIComponent(data.latestDate) : mapUrl;
+                return { message: message, actionHref: mapHref, actionLabel: '지도에서 보기' };
+            }
+
+            wireUpload(document.getElementById('takeout-form'), function (data) {
+                return takeoutSuccessMessage(data, '<?= esc($mapUrl, 'js') ?>');
+            });
+            wireUpload(document.getElementById('plain-form'), function (data) {
+                return takeoutSuccessMessage(data, '<?= esc($mapUrl, 'js') ?>');
+            });
+            wireUpload(document.getElementById('timeline-history-form'), function (data) {
+                var message = data.saved + '개 지점 저장';
+                if (data.skipped) { message += ' (중복 ' + data.skipped + '개 건너뜀)'; }
+                if (data.first_date) { message += ' · 기간 ' + data.first_date + ' ~ ' + data.last_date; }
+                return { message: message, actionHref: null, actionLabel: null };
+            });
 
             var deleteForm = document.getElementById('delete-form');
             if (deleteForm) {

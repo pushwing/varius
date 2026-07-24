@@ -12,6 +12,7 @@ declare(strict_types=1);
  * @var string $mapUrl
  * @var string $tripsUrl
  * @var string $logoutUrl
+ * @var string $trackUrl    위치기록 트랙 API URL 프리픽스(GET /location-history/track/{date})
  */
 ?>
 <!DOCTYPE html>
@@ -231,6 +232,10 @@ declare(strict_types=1);
             border: 1px solid #ccc; border-radius: 6px; background: #fff;
             padding: 5px 10px; cursor: pointer; font-size: 13px; color: #333;
         }
+        #track-toggle-row {
+            display: flex; align-items: center; gap: 6px; padding: 8px 16px;
+            font-size: 12.5px; color: #555; border-bottom: 1px solid #eee; cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -238,10 +243,13 @@ declare(strict_types=1);
     <div id="map-container">
         <div id="route-sidebar">
             <div id="route-sidebar-header">동선 목록</div>
+            <label id="track-toggle-row">
+                <input type="checkbox" id="track-toggle"> 위치기록 트랙 표시
+            </label>
             <div id="route-sidebar-body"></div>
             <div id="route-sidebar-footer">날짜를 클릭하면 그 날의 첫 번째 장소로 이동합니다.</div>
         </div>
-        <div id="map" data-routes-url="<?= esc($routesUrl, 'attr') ?>" data-timeline-url="<?= esc($timelineUrl, 'attr') ?>" data-photos-url="<?= esc($photosUrl, 'attr') ?>"></div>
+        <div id="map" data-routes-url="<?= esc($routesUrl, 'attr') ?>" data-timeline-url="<?= esc($timelineUrl, 'attr') ?>" data-photos-url="<?= esc($photosUrl, 'attr') ?>" data-track-url="<?= esc($trackUrl, 'attr') ?>"></div>
         <div id="empty">표시할 동선이 없습니다. 사진을 선택해 좌표를 적재하세요.</div>
         <div id="playback-bar" hidden>
             <span id="playback-date"></span>
@@ -488,6 +496,7 @@ declare(strict_types=1);
                     if (dayItemEl) { dayItemEl.classList.add('active'); }
                     // 시간표로 날짜를 바꿔도 selectDay 와 동일하게 재생 상태를 새 날짜 기준으로 동기화한다.
                     preparePlayback(timelineDate);
+                    refreshTrackLayer(timelineDate);
 
                     openTimeline(timelineDate);
                     return;
@@ -517,6 +526,7 @@ declare(strict_types=1);
                 document.querySelectorAll('.day-item.active').forEach(function (el) { el.classList.remove('active'); });
                 itemEl.classList.add('active');
                 preparePlayback(itemEl.dataset.date);
+                refreshTrackLayer(itemEl.dataset.date);
             }
 
             // ── 동선 재생 ─────────────────────────────────────
@@ -647,6 +657,49 @@ declare(strict_types=1);
                     cm.marker.setRadius(11);
                     setTimeout(function () { cm.marker.setRadius(6); }, 450);
                 });
+            }
+
+            // ── 위치기록 트랙(점선) ──────────────────────────
+            var trackToggleEl = document.getElementById('track-toggle');
+            var trackCache = {};      // 날짜 → [[lat,lng],...] | 'pending' | 없음(미조회)
+            var trackLayer = null;    // 현재 그려진 점선 폴리라인
+            var selectedTrackDate = null; // 현재 선택된 날짜(토글 시 재사용)
+
+            trackToggleEl.addEventListener('change', function () {
+                refreshTrackLayer(selectedTrackDate);
+            });
+
+            // 날짜 선택·토글 변경 시 호출 — 기존 레이어를 정리하고 필요하면 다시 그린다.
+            function refreshTrackLayer(date) {
+                selectedTrackDate = date;
+                if (trackLayer) { map.removeLayer(trackLayer); trackLayer = null; }
+                if (!date || !trackToggleEl.checked) { return; }
+
+                if (trackCache[date] === 'pending') { return; } // 이미 같은 날짜로 요청 중 — 중복 발사 방지
+                if (trackCache[date]) { drawTrack(date, trackCache[date]); return; }
+
+                trackCache[date] = 'pending';
+                fetch(mapEl.dataset.trackUrl + '/' + date, { headers: { Accept: 'application/json' } })
+                    .then(function (res) { return res.ok ? res.json() : { points: [] }; })
+                    .then(function (data) {
+                        trackCache[date] = data.points || [];
+                        // 응답 대기 중 날짜·토글이 바뀌었으면 그리지 않는다.
+                        if (selectedTrackDate === date && trackToggleEl.checked) {
+                            drawTrack(date, trackCache[date]);
+                        }
+                    })
+                    .catch(function () { delete trackCache[date]; }); // 실패는 캐시하지 않는다 — 재시도 가능하게
+            }
+
+            // 사진 동선(굵은 실선)과 구분되는 점선·얇은 선. 포인트 2개 미만이면 그리지 않는다.
+            function drawTrack(date, points) {
+                if (trackLayer) { map.removeLayer(trackLayer); trackLayer = null; } // 중복 fetch 응답이 겹쳐도 유령 레이어 방지
+                if (points.length < 2) { return; }
+                var entry = dateIndex[date];
+                var color = entry && entry.polyline ? entry.polyline.options.color : '#666';
+                trackLayer = L.polyline(points, {
+                    color: color, weight: 2, opacity: 0.7, dashArray: '4 6'
+                }).addTo(map);
             }
 
             fetch(mapEl.dataset.routesUrl, { headers: { Accept: 'application/json' } })
