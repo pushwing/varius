@@ -7,8 +7,8 @@
 ## 구성
 
 - **CI4 API** — 인증, LiveKit 액세스 토큰(JWT) 발급
-- **LiveKit (SFU)** — WebRTC 시그널링·미디어 라우팅, 내장 TURN 사용
-- **coturn (TURN)** — NAT 통과. 인프라만 구축된 상태이며 현재는 LiveKit 내장 TURN을 대신 사용 중(미연동, `ARCHITECTURE.md` 4절 참고)
+- **LiveKit (SFU)** — WebRTC 시그널링·미디어 라우팅, 내장 TURN 사용([`livekit/`](livekit/) 참고)
+- **coturn (TURN)** — NAT 통과. 인프라만 구축된 상태이며 현재는 LiveKit 내장 TURN을 대신 사용 중(미연동, [`coturn/`](coturn/), `ARCHITECTURE.md` 4절 참고)
 - **리눅스 데몬** — Python + GStreamer로 클라이언트 오디오를 디코딩해 스피커 출력 + (양방향) 자택 마이크 오디오를 인코딩해 LiveKit에 퍼블리시([`daemon/`](daemon/) 참고)
 - **네트워크/TLS** — Caddy 리버스 프록시(자동 Let's Encrypt), ufw 방화벽, DDNS([`infra/`](infra/) 참고)
 - **외부용 앱** — 바닐라 JS + livekit-client, 로그인·목소리 전송·자택 마이크 오디오 수신 재생·리턴 메시지 표시([`web/`](web/) 참고)
@@ -31,3 +31,4 @@ Claude Code 작업 규칙은 [`CLAUDE.md`](CLAUDE.md)를 참고하세요.
 - [x] 리눅스 데몬 리턴 메시지 발신(LiveKit 텍스트 스트림)
 - [x] 통합 테스트 — 토큰 재발급 자동화 테스트 + 실배포 후 수동 검증 런북([`INTEGRATION-TEST-RUNBOOK.md`](INTEGRATION-TEST-RUNBOOK.md))
 - [x] **양방향 인터콤** — 자택 마이크 → 앱 역방향 오디오 경로(데몬 퍼블리시 + 앱 수신 재생), 실서버 동작 확인(#11)
+- [x] 데몬 파이프라인별 독립 재시작 — 한 방향 오디오 끊김이 다른 방향까지 죽이지 않도록 지수 백오프 in-process 자가복구(`SupervisedPipeline`, 이슈 #11)

@@ -11,3 +11,4 @@
 | 디렉토리 | 설명 |
 |---|---|
 | [`rtic/`](rtic/) | Realtime Intercom — 외부 공중 인터넷 클라이언트와 자택 리눅스 서버 간 음성을 실시간으로 주고받는 WebRTC 기반 **양방향** 인터콤 시스템(클라이언트 → 자택 스피커, 자택 마이크 → 클라이언트) |
+| [`Iter/`](Iter/) | Google Photos GPS 동선 시각화 — Google Takeout 사진 zip·기기 위치기록(Timeline.json)에서 GPS를 추출해 지도에 날짜별 이동 동선으로 시각화하고, 시간표·여행 단위 통계·공유 기능을 제공 |
