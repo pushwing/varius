@@ -127,3 +127,8 @@ _modules/*
 
 # PHP CS Fixer
 .php-cs-fixer.cache
+
+#-------------------------
+# Claude Code (로컬 세션 전용 설정)
+#-------------------------
+.claude/
