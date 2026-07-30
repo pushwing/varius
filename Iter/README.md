@@ -41,6 +41,18 @@ GPS 좌표를 추출해 지도에 표시하고, **날짜별 이동 동선**(마�
 - 사진 로딩(썸네일)을 주변 업장 조회보다 먼저 마치도록 순차 처리해 응답이 밀리지 않게
   합니다.
 
+### 위치기록 트랙 표시 (Timeline.json, `POST /location-history/upload`)
+
+- Google Takeout 사진 zip과는 별개로, 기기(Android)에서 내보낸 **위치기록(Timeline.json)**
+  파일을 업로드하면 `semanticSegments[].timelinePath[]` 좌표를 파싱해 저장합니다. 사진이 없는
+  구간도 포함한 하루 전체의 실제 이동 경로를 확보하기 위한 보완 데이터입니다.
+- 정지 구간(60초 미만·10m 미만 이동)은 다운샘플링으로 압축해 저장량과 렌더 부담을 줄이고,
+  같은 사용자·시각의 재업로드는 idempotent하게 무시됩니다.
+- 지도 페이지의 **"위치기록 트랙 표시"** 체크박스를 켜면 선택된 날짜의 트랙이 점선 폴리라인으로
+  오버레이됩니다(`GET /location-history/track/{date}`, 날짜별 지연 로딩·캐시).
+- 업로드 파일은 최대 **64MB**이며, 사진 zip 업로드와 동일한 레이트 리밋(사용자당 시간당 기본
+  10회)을 공유합니다.
+
 ### 여행(Trip) 관리 (`GET /trips`)
 
 - 촬영 날짜 사이 공백이 3일 이상이면 자동으로 "여행" 후보(기간·사진 수·제목)를 제안하고,
@@ -62,17 +74,20 @@ GPS 좌표를 추출해 지도에 표시하고, **날짜별 이동 동선**(마�
   - `PhotoManagementService` — 개별 사진 썸네일 회전·삭제
   - `TimelineService` + `Poi\OverpassPoiLookup` — 하루 좌표를 장소 세그먼트로 그룹핑, 날짜·세그먼트 메모 병합, 주변 업장 조회(좌표당 캐싱)
   - `TripSummaryService` / `TripSuggestionService` / `TripStatsService` — 여행 날짜별 사진 요약·커버 결정 / 3일 공백 규칙 자동 제안 / 이동거리·방문 지점 통계 계산
+  - `LocationHistoryService` + `Ingest\TimelineHistoryParser` / `Ingest\TimelineTrackDownsampler` — 위치기록(Timeline.json) 파싱·정지 구간 다운샘플링·날짜별 트랙 조회
 - **DB** — MySQL
   - `users`, `oauth_tokens`, `photo_locations` — 원본 이미지는 저장하지 않고 좌표·시간·참조 파일명·썸네일 경로만 보관
   - `day_notes`, `time_notes` — 날짜·시간대별 메모, `share_links` — 시간표 공개 공유 토큰
   - `trips`, `trip_share_links` — 여행(날짜 범위) 그룹, 여행 단위 공개 공유 토큰
+  - `timeline_points` — 위치기록 트랙 좌표(user_id·recorded_at 유니크로 재업로드 idempotency 보장)
 - **프론트엔드** — Leaflet.js + OpenStreetMap
   - 로그인 후 공통 상단 내비게이션 바(지도·업로드·내 여행 페이지 공유)
 
 ## 제약
 
 - 업로드 zip 은 요청당 최대 **500MB**, 추출 좌표는 사용자당 **200장** 상한(동기 처리, 큐 인프라 없음).
-- 업로드는 사용자당(미로그인 시 IP당) 시간당 기본 **10회**로 레이트 리밋(`ratelimit.session.per_hour`, `SessionRateLimitFilter`).
+- 위치기록 Timeline.json 업로드는 요청당 최대 **64MB**.
+- 업로드는 사용자당(미로그인 시 IP당) 시간당 기본 **10회**로 레이트 리밋(`ratelimit.session.per_hour`, `SessionRateLimitFilter`) — 사진 zip·위치기록 업로드가 동일 한도를 공유.
 - 원본 이미지·업로드 zip·압축 해제용 임시 디렉터리는 처리 완료(성공·실패 무관) 즉시 삭제 — 좌표 추출에 성공한 지점의 300px 썸네일만 예외적으로 보관.
 
 상세 명세는 [`docs/photo-gps-tracker-spec.md`](docs/photo-gps-tracker-spec.md)를(단, GPS 획득 방식은
@@ -86,7 +101,7 @@ Takeout zip 업로드로 대체됨), Claude Code 작업 규칙은 [`CLAUDE.md`](
 composer install
 cp env .env
 php spark key:generate      # encryption.key 설정 (토큰 암호화에 필수)
-php spark migrate           # users / oauth_tokens / photo_locations / day_notes / time_notes / trips 등 전체 마이그레이션
+php spark migrate           # users / oauth_tokens / photo_locations / day_notes / time_notes / trips / timeline_points 등 전체 마이그레이션
 php spark serve
 ```
 
@@ -102,5 +117,5 @@ composer ci      # CS Fixer → PHPStan → PHPUnit 순차 실행(머지 전 필
 
 zip 업로드의 "성공 경로"(실제 파일 이동)는 PHP `is_uploaded_file()` 제약으로 자동화 테스트가
 불가능해 실제 브라우저로 수동 확인합니다. 그 외 사이드카 파싱·이상치 필터링·OAuth 흐름·동선 조합·
-시간표 그룹핑·여행 자동 제안·이동거리 통계 로직은 `tests/unit`·`tests/feature`·`tests/database`가
-커버합니다.
+시간표 그룹핑·여행 자동 제안·이동거리 통계·위치기록 파싱(Timeline.json)·다운샘플링 로직은
+`tests/unit`·`tests/feature`·`tests/database`가 커버합니다.
