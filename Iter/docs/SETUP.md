@@ -1,7 +1,7 @@
 # 로컬 개발 환경 셋업
 
 Iter 프로젝트를 로컬에서 처음 구동하는 개발자를 위한 절차입니다. 프로젝트 개요·아키텍처는
-[`../README.md`](../README.md)와 [`../CLAUDE.md`](../CLAUDE.md)를 먼저 읽어두세요.
+[`../README.md`](../README.md)와 [`../AGENTS.md`](../AGENTS.md)를 먼저 읽어두세요.
 
 ## 1. 사전 준비물
 
@@ -111,7 +111,7 @@ composer analyse  # PHPStan 정적 분석
 composer test     # PHPUnit
 ```
 
-이 저장소는 CI/CD 파이프라인을 두지 않으므로([`../../CLAUDE.md`](../../CLAUDE.md) 참고),
+이 저장소는 CI/CD 파이프라인을 두지 않으므로([`../../AGENTS.md`](../../AGENTS.md) 참고),
 위 검증은 머지 전 로컬에서 직접 실행해야 합니다.
 
 ## 트러블슈팅

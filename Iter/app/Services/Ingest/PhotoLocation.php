@@ -10,7 +10,7 @@ namespace App\Services\Ingest;
  * TakeoutIngestService/PlainZipIngestService 의 출력 단위이며, 후속 저장 단계에서
  * photo_locations 로 적재된다. lat/lng 는 GPS 없이 촬영 시각만 있는 사진도 시간표에
  * 노출하기 위해 nullable 이다(지도·이동거리 통계에서는 좌표 있는 사진만 사용한다).
- * 썸네일은 지도 미리보기 표시용 예외 보관 대상이다(Iter/CLAUDE.md 저장 정책).
+ * 썸네일은 지도 미리보기 표시용 예외 보관 대상이다(Iter/AGENTS.md 저장 정책).
  */
 final readonly class PhotoLocation
 {

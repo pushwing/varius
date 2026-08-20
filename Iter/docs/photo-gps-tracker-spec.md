@@ -30,7 +30,7 @@ Google Photos API의 `mediaMetadata`는 `creationTime`, `width`, `height`, 카�
 - EXIF 파싱: PHP 내장 `exif_read_data()` + HEIC 등 예외 포맷은 `exiftool` 바이너리 병행
 - DB: MySQL (또는 기존 프로젝트 표준에 맞춤)
 - 지도 시각화: Leaflet.js + OpenStreetMap
-- 개발 도구: Claude Code, PHPUnit, PHPStan, GitHub Actions CI/CD
+- 개발 도구: Codex, PHPUnit, PHPStan, 로컬 검증
 
 ---
 
@@ -204,7 +204,7 @@ CREATE TABLE oauth_tokens (
 
 ---
 
-## 8. 구현 작업 순서 (Claude Code 작업용 체크리스트)
+## 8. 구현 작업 순서 (Codex 작업용 체크리스트)
 
 - [ ] 1. `GooglePhotosAuthService` — OAuth2 로그인/콜백/토큰 갱신 구현
 - [ ] 2. `oauth_tokens` 테이블 마이그레이션 작성 및 토큰 암호화 저장 로직

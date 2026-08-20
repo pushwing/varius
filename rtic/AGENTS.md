@@ -14,7 +14,7 @@
 - **SFU/시그널링**: LiveKit 셀프호스팅, 내장 TURN 사용
 - **TURN**: LiveKit 내장 TURN 사용. 별도 coturn(`use-auth-secret` + HMAC)은 인프라만 구축된 미연동 상태다. 자세한 내용은 `ARCHITECTURE.md` 4절 참고.
 - **리눅스 수신 데몬**: Python + PyGObject(GStreamer, `livekitwebrtcsrc`) → ALSA/PulseAudio, systemd 상주 (`daemon/` 참고)
-- **외부용 앱**: 바닐라 JS + Vite + `livekit-client` (`web/` 참고)
+- **외부용 앱**: 바닐라 JS + Vite + `livekit-client` (`web/` 참고). 가족용 인터콤 규모에서는 React 같은 프레임워크를 도입하지 않고 최소 구성으로 유지한다.
 - **인프라**: 온프레미스 자택 우분투 서버. coturn, LiveKit, CI4 API, 수신 데몬을 모두 이 서버에 설치하며 클라우드는 사용하지 않는다.
 
 PHP(CodeIgniter 4) 코드는 프로젝트 및 상위 작업 지침의 PHP 보안·스타일·테스트 규칙을 따른다.

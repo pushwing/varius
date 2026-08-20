@@ -34,7 +34,7 @@ class GoogleOAuth extends BaseConfig
      *
      * 사용자 식별(sub·email·name)용. Google Photos API(Picker/Library)는 다운로드
      * 원본에서 GPS EXIF 를 의도적으로 제거하므로 더는 호출하지 않는다 — GPS 는
-     * Google Takeout zip 업로드로 얻는다(Iter/CLAUDE.md 참고).
+     * Google Takeout zip 업로드로 얻는다(Iter/AGENTS.md 참고).
      *
      * @var list<string>
      */

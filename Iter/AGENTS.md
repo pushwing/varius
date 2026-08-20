@@ -40,7 +40,7 @@ Google Photos Picker API와 Library API는 다운로드 원본에서 GPS EXIF를
 - 테이블: `photo_locations`(좌표, 시간, `source_item_id`, `thumbnail_path`), `oauth_tokens`(refresh/access 토큰 암호화 저장)
 - `source_item_id`는 Google mediaItemId가 아니라 업로드 zip의 사진 파일명이며, 사용자별 유니크로 재업로드 idempotency를 보장한다.
 - 원본 이미지 파일은 저장하지 않는다. zip 처리용 임시 디렉터리와 업로드 zip은 성공·실패와 무관하게 처리 완료 즉시 삭제한다.
-- 예외적으로 가로 300px 썸네일만 `writable/uploads/thumbnails/`에 보관하고 `photo_locations.thumbnail_path`에 기록한다.
+- 예외적으로 좌표 추출 성공 지점의 가로 300px 썸네일만 `writable/uploads/thumbnails/`에 보관하고 `photo_locations.thumbnail_path`에 기록한다. 지도 미리보기를 재조회 없이 즉시 제공하기 위한 유일한 캐싱 예외다.
 - 직전 지점 대비 시속 200km 초과 같은 좌표 이상치는 필터링한다.
 
 ## 로컬 검증
@@ -52,7 +52,7 @@ Google Photos Picker API와 Library API는 다운로드 원본에서 GPS EXIF를
 
 ## 보안 유의사항
 
-- OAuth refresh token은 암호화해 `oauth_tokens`에 저장한다. 토큰을 응답이나 로그에 노출하지 않는다.
+- OAuth refresh token은 암호화해 `oauth_tokens`에 저장하며 AES를 우선 검토한다. 토큰을 응답이나 로그에 노출하지 않는다.
 - Google Client ID/Secret 및 암호화 키는 `.env`에서만 관리하며 코드에 하드코딩하지 않는다.
-- 무거운 동기 처리인 zip 업로드에는 사용자별 시간당 업로드 횟수 제한을 적용한다.
+- 무거운 동기 처리인 zip 업로드에는 CI4 필터 `SessionRateLimitFilter`를 재사용해 사용자별 시간당 업로드 횟수 제한을 적용한다.
 - 업로드 zip 크기와 사진 수 200장 상한을 애플리케이션 레벨에서 강제한다.

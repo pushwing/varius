@@ -102,5 +102,5 @@ curl -s http://localhost:7880/  # LiveKit HTTP 헬스체크(연결만 되면 됨
 ```
 
 CI4 API(`php spark serve`)를 띄우고 `/api/v1/tokens`에 로그인 요청을 보내면
-LiveKit 접속 토큰이 발급되는지 확인할 수 있다(`../CLAUDE.md`, `../ARCHITECTURE.md`
+LiveKit 접속 토큰이 발급되는지 확인할 수 있다(`../AGENTS.md`, `../ARCHITECTURE.md`
 3절 참고).
