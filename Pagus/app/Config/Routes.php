@@ -2,6 +2,8 @@
 
 namespace Config;
 
+$routes = Services::routes();
+
 $routes->get('/', 'AdminAuthController::login');
 $routes->get('login', 'AdminAuthController::login');
 $routes->post('login', 'AdminAuthController::authenticate');
