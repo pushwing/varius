@@ -1,0 +1,1 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>파구스 운영</title></head><body><h1>파구스 운영자 화면</h1><p><?= esc(session('user_name')) ?>님</p><form method="post" action="/logout"><?= csrf_field() ?><button type="submit">로그아웃</button></form></body></html>

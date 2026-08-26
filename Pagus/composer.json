@@ -1,0 +1,20 @@
+{
+    "name": "pushwing/pagus",
+    "description": "파주 로컬 맛집 지도 서비스",
+    "type": "project",
+    "require": {
+        "php": ">=8.2",
+        "codeigniter4/framework": "^4.6"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.0",
+        "phpstan/phpstan": "^2.0",
+        "phpunit/phpunit": "^11.0"
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit tests",
+        "analyse": "vendor/bin/phpstan analyse --debug --memory-limit=512M",
+        "check": "vendor/bin/php-cs-fixer fix --sequential --dry-run --diff && git diff --check",
+        "format": "vendor/bin/php-cs-fixer fix --sequential"
+    }
+}
