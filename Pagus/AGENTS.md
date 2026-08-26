@@ -69,12 +69,16 @@ Pagus는 CodeIgniter 4와 MySQL로 만드는 파주 로컬 맛집 지도 서비�
 
 ## 완료 전 검증
 
-변경 위험도에 맞춰 최소한 다음을 실행하고 결과를 기록한다.
+에이전트는 코드·설정·마이그레이션 변경 후 다음 순서로 품질 검증을 실행하고 결과를 기록한다. 하나라도 실패하면 원인을 수정한 뒤 처음부터 다시 검증한다.
 
 ```bash
-composer test
-composer analyse
 composer check
+composer analyse
+composer test
 ```
+
+- `composer check`: PHP-CS-Fixer의 dry-run과 diff 공백 오류를 검사한다.
+- `composer analyse`: PHPStan 정적 분석을 실행한다.
+- `composer test`: PHPUnit Unit Test를 실행한다.
 
 명령이 아직 정의되지 않은 초기 상태라면 `composer.json`의 실제 스크립트를 먼저 확인하고, 가능한 범위에서 `vendor/bin/phpunit`, migration 점검, PHP 문법 검사를 수행한다. UI 변경은 실제 `http://pagus.test/` 화면에서 확인하고, 지도·검색·권한·공개 상태 필터의 동작을 함께 검증한다.
