@@ -31,11 +31,12 @@
     <?php if ($photos !== []): ?>
         <section aria-label="사진">
             <div class="photo-grid">
-                <?php foreach ($photos as $photo): ?>
+                <?php foreach ($photos as $photoIndex => $photo): ?>
                     <?php $photoAlt = (string) $restaurant['name'] . ' 사진'; ?>
                     <button
                         class="photo-trigger"
                         type="button"
+                        data-photo-index="<?= (int) $photoIndex ?>"
                         data-photo-url="/photos/<?= (int) $photo['id'] ?>"
                         data-photo-alt="<?= esc($photoAlt, 'attr') ?>"
                         aria-label="<?= esc($photoAlt) ?> 크게 보기"
@@ -65,21 +66,59 @@
         <h2 id="photo-dialog-title">사진 크게 보기</h2>
         <button type="button" class="btn-ghost btn-sm" data-photo-close>닫기</button>
     </div>
-    <img id="photo-dialog-image" src="" alt="">
+    <div class="photo-dialog__viewer">
+        <?php if (count($photos) > 1): ?>
+            <button type="button" class="photo-nav photo-nav--previous" data-photo-previous aria-label="이전 사진"><span aria-hidden="true">←</span></button>
+        <?php endif; ?>
+        <img id="photo-dialog-image" src="" alt="">
+        <?php if (count($photos) > 1): ?>
+            <button type="button" class="photo-nav photo-nav--next" data-photo-next aria-label="다음 사진"><span aria-hidden="true">→</span></button>
+        <?php endif; ?>
+    </div>
 </dialog>
 <script>
     const photoDialog = document.getElementById('photo-dialog');
     const photoDialogImage = document.getElementById('photo-dialog-image');
+    const photoTriggers = [...document.querySelectorAll('.photo-trigger')];
+    const previousPhotoButton = document.querySelector('[data-photo-previous]');
+    const nextPhotoButton = document.querySelector('[data-photo-next]');
+    let currentPhotoIndex = 0;
 
-    document.querySelectorAll('.photo-trigger').forEach((trigger) => {
+    const showPhoto = (index) => {
+        const trigger = photoTriggers[index];
+        if (!trigger) {
+            return;
+        }
+
+        currentPhotoIndex = index;
+        photoDialogImage.src = trigger.dataset.photoUrl;
+        photoDialogImage.alt = trigger.dataset.photoAlt;
+        if (previousPhotoButton && nextPhotoButton) {
+            previousPhotoButton.disabled = currentPhotoIndex === 0;
+            nextPhotoButton.disabled = currentPhotoIndex === photoTriggers.length - 1;
+        }
+    };
+
+    photoTriggers.forEach((trigger) => {
         trigger.addEventListener('click', () => {
-            photoDialogImage.src = trigger.dataset.photoUrl;
-            photoDialogImage.alt = trigger.dataset.photoAlt;
+            showPhoto(Number(trigger.dataset.photoIndex));
             photoDialog.showModal();
         });
     });
 
     document.querySelector('[data-photo-close]').addEventListener('click', () => photoDialog.close());
+    previousPhotoButton?.addEventListener('click', () => showPhoto(currentPhotoIndex - 1));
+    nextPhotoButton?.addEventListener('click', () => showPhoto(currentPhotoIndex + 1));
+    photoDialog.addEventListener('click', (event) => {
+        if (event.target !== photoDialog) {
+            return;
+        }
+
+        const bounds = photoDialog.getBoundingClientRect();
+        if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) {
+            photoDialog.close();
+        }
+    });
     photoDialog.addEventListener('close', () => {
         photoDialogImage.src = '';
         photoDialogImage.alt = '';
