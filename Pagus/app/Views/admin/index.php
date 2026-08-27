@@ -1,24 +1,138 @@
-<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>파구스 운영</title><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQjCHJ1yMZ9QxY5G9L8B4mR4JvR8f6M=" crossorigin=""><style>#restaurant-map{height:320px;max-width:720px;margin:8px 0}.location-search{margin:8px 0}.location-search input{width:24rem;max-width:90%}#address-search-message,#reference-search-message{color:#555}.address-result{display:block;margin:4px 0;padding:6px;text-align:left}.reference-attribution{color:#888;font-size:.85em}</style></head><body>
-<h1>파구스 운영자 화면</h1><p><?= esc(session('user_name')) ?>님</p>
-<?php if (session('message')): ?><p role="status"><?= esc(session('message')) ?></p><?php endif; ?><?php if (session('error')): ?><p role="alert"><?= esc(session('error')) ?></p><?php endif; ?>
-<p><a href="/admin/inquiries">문의 관리</a></p>
-<form method="post" action="/logout"><?= csrf_field() ?><button type="submit">로그아웃</button></form>
-<h2>카테고리</h2><form method="post" action="/admin/categories/save"><?= csrf_field() ?><input type="hidden" name="id" value="<?= $editingCategory === null ? '' : (int) $editingCategory['id'] ?>"><label>이름 <input name="name" required maxlength="100" value="<?= esc($editingCategory['name'] ?? old('name')) ?>"></label><button type="submit"><?= $editingCategory === null ? '등록' : '수정' ?></button><?php if ($editingCategory !== null): ?> <a href="/admin">취소</a><?php endif; ?></form>
-<ul><?php foreach ($categories as $category): ?><li><?= esc($category['name']) ?> (<?= (int) $category['is_active'] === 1 ? '활성' : '숨김' ?>) <a href="/admin/categories/<?= (int) $category['id'] ?>/edit">수정</a> <form method="post" action="/admin/categories/<?= (int) $category['id'] ?>/toggle" style="display:inline"><?= csrf_field() ?><button type="submit"><?= (int) $category['is_active'] === 1 ? '숨김' : '활성화' ?></button></form></li><?php endforeach; ?></ul>
-<h2><?= $editingRestaurant === null ? '맛집 등록' : '맛집 수정' ?></h2><form method="post" action="/admin/restaurants/save">
-<?= csrf_field() ?><input type="hidden" name="id" value="<?= $editingRestaurant === null ? '' : (int) $editingRestaurant['id'] ?>">
-<p><label>상호 <input id="restaurant-name" name="name" required maxlength="150" value="<?= esc($editingRestaurant['name'] ?? old('name')) ?>"></label></p><p><label>주소 <input id="restaurant-address" name="address" required maxlength="255" value="<?= esc($editingRestaurant['address'] ?? old('address')) ?>"></label></p>
-<div class="location-search" id="reference-search-form" role="search"><label for="reference-search-query">외부 참고 데이터 검색 (카카오)</label> <input id="reference-search-query" minlength="2" maxlength="100" autocomplete="off" placeholder="상호명으로 검색"><button id="reference-search-submit" type="button">검색</button><p id="reference-search-message" role="status">결과는 참고용입니다. 공개 여부·권한은 운영자가 직접 확인 후 결정하세요. 조회가 안 되면 아래 항목을 직접 입력할 수 있습니다.</p><div id="reference-search-results"></div><p class="reference-attribution">검색 결과 제공: 카카오</p></div>
-<div class="location-search" id="address-search-form" role="search"><label for="address-search-query">주소 검색</label> <input id="address-search-query" minlength="2" maxlength="100" autocomplete="street-address"><button id="address-search-submit" type="button">검색</button><p id="address-search-message" role="status">검색 실패 시 주소와 좌표를 직접 입력할 수 있습니다.</p><div id="address-search-results"></div></div>
-<div id="restaurant-map" aria-label="맛집 위치 선택 지도"></div>
-<p><label>위도 <input id="restaurant-latitude" name="latitude" required type="number" step="any" min="-90" max="90" value="<?= esc($editingRestaurant['latitude'] ?? old('latitude')) ?>"></label> <label>경도 <input id="restaurant-longitude" name="longitude" required type="number" step="any" min="-180" max="180" value="<?= esc($editingRestaurant['longitude'] ?? old('longitude')) ?>"></label></p>
-<p><label>연락처 <input id="restaurant-phone" name="phone" maxlength="30" value="<?= esc($editingRestaurant['phone'] ?? old('phone')) ?>"></label> <label>홈페이지 <input name="homepage_url" type="url" maxlength="2048" value="<?= esc($editingRestaurant['homepage_url'] ?? old('homepage_url')) ?>"></label></p>
-<p>카테고리 <?php $selected = $editingRestaurant['category_ids'] ?? (array) old('category_ids');
-foreach ($categories as $category): ?><label><input type="checkbox" name="category_ids[]" value="<?= (int) $category['id'] ?>" <?= in_array((int) $category['id'], array_map('intval', $selected), true) ? 'checked' : '' ?>><?= esc($category['name']) ?></label> <?php endforeach; ?></p>
-<p><label>설명<br><textarea name="description"><?= esc($editingRestaurant['description'] ?? old('description')) ?></textarea></label></p><p><label>메뉴<br><textarea name="menu"><?= esc($editingRestaurant['menu'] ?? old('menu')) ?></textarea></label></p><p><label>영업 정보<br><textarea name="business_hours"><?= esc($editingRestaurant['business_hours'] ?? old('business_hours')) ?></textarea></label></p><p><label>태그 <input name="tags" maxlength="500" value="<?= esc($editingRestaurant['tags'] ?? old('tags')) ?>"></label></p>
-<button type="submit">저장</button><?php if ($editingRestaurant !== null): ?> <a href="/admin">취소</a><?php endif; ?></form>
-<h2>맛집 목록</h2><form method="get" action="/admin"><label>검색 <input name="q" value="<?= esc((string) (request()->getGet('q') ?? '')) ?>"></label><button type="submit">검색</button></form>
-<table><thead><tr><th>상호</th><th>주소</th><th>카테고리</th><th>공개</th><th>관리</th></tr></thead><tbody><?php foreach ($restaurants as $restaurant): ?><tr><td><?= esc($restaurant['name']) ?></td><td><?= esc($restaurant['address']) ?></td><td><?= esc((string) ($restaurant['category_names'] ?? '')) ?></td><td><?= (int) $restaurant['is_published'] === 1 ? '공개' : '숨김' ?></td><td><a href="/admin/restaurants/<?= (int) $restaurant['id'] ?>/edit">수정</a> <a href="/admin/restaurants/<?= (int) $restaurant['id'] ?>/photos">사진관리</a> <form method="post" action="/admin/restaurants/<?= (int) $restaurant['id'] ?>/toggle" style="display:inline"><?= csrf_field() ?><button type="submit"><?= (int) $restaurant['is_published'] === 1 ? '숨김' : '공개' ?></button></form></td></tr><?php endforeach; ?></tbody></table>
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>파구스 운영</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+    <link rel="stylesheet" href="<?= base_url('assets/css/app.css') ?>">
+</head>
+<body>
+<div class="admin-shell">
+    <header class="admin-header">
+        <a class="admin-header-brand" href="/admin">파구스 운영</a>
+        <nav class="admin-header-nav" aria-label="운영자 메뉴">
+            <a href="/admin">맛집 관리</a>
+            <a href="/admin/inquiries">문의 관리</a>
+            <span class="admin-header-user"><?= esc(session('user_name')) ?>님</span>
+            <form class="inline-form" method="post" action="/logout"><?= csrf_field() ?><button class="btn-ghost btn-sm" type="submit">로그아웃</button></form>
+        </nav>
+    </header>
+    <main class="admin-main">
+        <?php if (session('message')): ?><p role="status"><?= esc(session('message')) ?></p><?php endif; ?>
+        <?php if (session('error')): ?><p role="alert"><?= esc(session('error')) ?></p><?php endif; ?>
+
+        <section class="admin-section">
+            <h2>카테고리</h2>
+            <form class="form-row" method="post" action="/admin/categories/save">
+                <?= csrf_field() ?>
+                <input type="hidden" name="id" value="<?= $editingCategory === null ? '' : (int) $editingCategory['id'] ?>">
+                <label>이름 <input name="name" required maxlength="100" value="<?= esc($editingCategory['name'] ?? old('name')) ?>"></label>
+                <span class="inline-actions">
+                    <button type="submit"><?= $editingCategory === null ? '등록' : '수정' ?></button>
+                    <?php if ($editingCategory !== null): ?><a class="btn-ghost" href="/admin">취소</a><?php endif; ?>
+                </span>
+            </form>
+            <ul class="admin-list">
+                <?php foreach ($categories as $category): ?>
+                    <li>
+                        <span><?= esc($category['name']) ?></span>
+                        <span class="badge <?= (int) $category['is_active'] === 1 ? 'badge-on' : 'badge-off' ?>"><?= (int) $category['is_active'] === 1 ? '활성' : '숨김' ?></span>
+                        <span class="inline-actions">
+                            <a class="btn-ghost btn-sm" href="/admin/categories/<?= (int) $category['id'] ?>/edit">수정</a>
+                            <form class="inline-form" method="post" action="/admin/categories/<?= (int) $category['id'] ?>/toggle"><?= csrf_field() ?><button class="btn-ghost btn-sm" type="submit"><?= (int) $category['is_active'] === 1 ? '숨김' : '활성화' ?></button></form>
+                        </span>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        </section>
+
+        <section class="admin-section">
+            <h2><?= $editingRestaurant === null ? '맛집 등록' : '맛집 수정' ?></h2>
+            <form class="form-grid" method="post" action="/admin/restaurants/save">
+                <?= csrf_field() ?>
+                <input type="hidden" name="id" value="<?= $editingRestaurant === null ? '' : (int) $editingRestaurant['id'] ?>">
+                <label>상호 <input id="restaurant-name" name="name" required maxlength="150" value="<?= esc($editingRestaurant['name'] ?? old('name')) ?>"></label>
+                <label>주소 <input id="restaurant-address" name="address" required maxlength="255" value="<?= esc($editingRestaurant['address'] ?? old('address')) ?>"></label>
+
+                <div class="location-search" id="reference-search-form" role="search">
+                    <label for="reference-search-query">외부 참고 데이터 검색 (카카오)</label>
+                    <input id="reference-search-query" minlength="2" maxlength="100" autocomplete="off" placeholder="상호명으로 검색">
+                    <button id="reference-search-submit" type="button" class="btn-ghost">검색</button>
+                    <p id="reference-search-message" class="location-search-message" role="status">결과는 참고용입니다. 공개 여부·권한은 운영자가 직접 확인 후 결정하세요. 조회가 안 되면 아래 항목을 직접 입력할 수 있습니다.</p>
+                    <div id="reference-search-results"></div>
+                    <p class="reference-attribution">검색 결과 제공: 카카오</p>
+                </div>
+                <div class="location-search" id="address-search-form" role="search">
+                    <label for="address-search-query">주소 검색</label>
+                    <input id="address-search-query" minlength="2" maxlength="100" autocomplete="street-address">
+                    <button id="address-search-submit" type="button" class="btn-ghost">검색</button>
+                    <p id="address-search-message" class="location-search-message" role="status">검색 실패 시 주소와 좌표를 직접 입력할 수 있습니다.</p>
+                    <div id="address-search-results"></div>
+                </div>
+                <div id="restaurant-map" aria-label="맛집 위치 선택 지도"></div>
+
+                <div class="form-row">
+                    <label>위도 <input id="restaurant-latitude" name="latitude" required type="number" step="any" min="-90" max="90" value="<?= esc($editingRestaurant['latitude'] ?? old('latitude')) ?>"></label>
+                    <label>경도 <input id="restaurant-longitude" name="longitude" required type="number" step="any" min="-180" max="180" value="<?= esc($editingRestaurant['longitude'] ?? old('longitude')) ?>"></label>
+                </div>
+                <div class="form-row">
+                    <label>연락처 <input id="restaurant-phone" name="phone" maxlength="30" value="<?= esc($editingRestaurant['phone'] ?? old('phone')) ?>"></label>
+                    <label>홈페이지 <input name="homepage_url" type="url" maxlength="2048" value="<?= esc($editingRestaurant['homepage_url'] ?? old('homepage_url')) ?>"></label>
+                </div>
+
+                <div>
+                    <label>카테고리</label>
+                    <div class="checkbox-group">
+                        <?php
+                            $selected = $editingRestaurant['category_ids'] ?? (array) old('category_ids');
+    foreach ($categories as $category): ?>
+                            <label class="checkbox-label"><input type="checkbox" name="category_ids[]" value="<?= (int) $category['id'] ?>" <?= in_array((int) $category['id'], array_map('intval', $selected), true) ? 'checked' : '' ?>><?= esc($category['name']) ?></label>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <label>설명 <textarea name="description" rows="3"><?= esc($editingRestaurant['description'] ?? old('description')) ?></textarea></label>
+                <label>메뉴 <textarea name="menu" rows="3"><?= esc($editingRestaurant['menu'] ?? old('menu')) ?></textarea></label>
+                <label>영업 정보 <textarea name="business_hours" rows="3"><?= esc($editingRestaurant['business_hours'] ?? old('business_hours')) ?></textarea></label>
+                <label>태그 <input name="tags" maxlength="500" value="<?= esc($editingRestaurant['tags'] ?? old('tags')) ?>"></label>
+
+                <span class="inline-actions">
+                    <button type="submit">저장</button>
+                    <?php if ($editingRestaurant !== null): ?><a class="btn-ghost" href="/admin">취소</a><?php endif; ?>
+                </span>
+            </form>
+        </section>
+
+        <section class="admin-section">
+            <h2>맛집 목록</h2>
+            <form class="form-row" method="get" action="/admin">
+                <label>검색 <input name="q" value="<?= esc((string) (request()->getGet('q') ?? '')) ?>"></label>
+                <span class="inline-actions"><button type="submit">검색</button></span>
+            </form>
+            <table class="admin-table">
+                <thead><tr><th>상호</th><th>주소</th><th>카테고리</th><th>공개</th><th>관리</th></tr></thead>
+                <tbody>
+                <?php foreach ($restaurants as $restaurant): ?>
+                    <tr>
+                        <td><?= esc($restaurant['name']) ?></td>
+                        <td><?= esc($restaurant['address']) ?></td>
+                        <td><?= esc((string) ($restaurant['category_names'] ?? '')) ?></td>
+                        <td><span class="badge <?= (int) $restaurant['is_published'] === 1 ? 'badge-on' : 'badge-off' ?>"><?= (int) $restaurant['is_published'] === 1 ? '공개' : '숨김' ?></span></td>
+                        <td>
+                            <span class="inline-actions">
+                                <a class="btn-ghost btn-sm" href="/admin/restaurants/<?= (int) $restaurant['id'] ?>/edit">수정</a>
+                                <a class="btn-ghost btn-sm" href="/admin/restaurants/<?= (int) $restaurant['id'] ?>/photos">사진관리</a>
+                                <form class="inline-form" method="post" action="/admin/restaurants/<?= (int) $restaurant['id'] ?>/toggle"><?= csrf_field() ?><button class="btn-ghost btn-sm" type="submit"><?= (int) $restaurant['is_published'] === 1 ? '숨김' : '공개' ?></button></form>
+                            </span>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </section>
+    </main>
+</div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script><script>
 (() => {
     const name = document.getElementById('restaurant-name'); const phone = document.getElementById('restaurant-phone'); const address = document.getElementById('restaurant-address'); const latitude = document.getElementById('restaurant-latitude'); const longitude = document.getElementById('restaurant-longitude'); const message = document.getElementById('address-search-message'); const results = document.getElementById('address-search-results'); const referenceMessage = document.getElementById('reference-search-message'); const referenceResults = document.getElementById('reference-search-results'); let marker = null;

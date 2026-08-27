@@ -1,0 +1,353 @@
+/*
+ * 파구스 공용 디자인 시스템 — DESIGN.md 참조.
+ * 노스스타: The Trusted Neighbor. 초록 하나만 신뢰 신호, 그림자 없이 테두리로만 입체감.
+ */
+
+:root {
+    --color-fern: #206b58;
+    --color-pine: #173b35;
+    --color-mint: #d9f2e9;
+    --color-linen: #f7f3ec;
+    --color-paper: #fffdf7;
+    --color-charcoal: #2b2620;
+    --color-taupe: #6b6259;
+    --color-border: #ded4c3;
+
+    --color-error: #8a3b2b;
+    --color-error-border: #e0b7a8;
+    --color-error-bg: #f6e4de;
+
+    --radius-sm: 6.4px;
+    --radius-md: 8px;
+    --radius-pill: 999px;
+
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 32px;
+
+    --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+
+    color-scheme: light;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { color: var(--color-charcoal); font-family: var(--font-sans); }
+
+body {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: var(--color-linen);
+    color: var(--color-charcoal);
+    font-family: var(--font-sans);
+    line-height: 1.5;
+}
+
+h1, h2, h3 { color: var(--color-charcoal); font-weight: 700; }
+h1 { font-size: 1.5rem; line-height: 1.25; margin: 0 0 var(--space-md); }
+h2 { font-size: 1.05rem; font-weight: 600; line-height: 1.3; margin: 0 0 var(--space-xs); }
+
+p { margin: var(--space-xs) 0; }
+
+a { color: var(--color-fern); }
+a:hover { color: var(--color-pine); }
+
+:focus-visible {
+    outline: 2px solid var(--color-pine);
+    outline-offset: 2px;
+}
+
+/* 폼 요소 공통 */
+input, select, textarea, button { font: inherit; }
+
+input, select, textarea {
+    background: var(--color-paper);
+    color: var(--color-charcoal);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: .65rem .75rem;
+    width: 100%;
+}
+
+input::placeholder, textarea::placeholder { color: var(--color-taupe); }
+
+label {
+    display: block;
+    font-size: .9rem;
+    color: var(--color-taupe);
+    margin-bottom: var(--space-xs);
+}
+
+label input, label select, label textarea { margin-top: var(--space-xs); }
+
+.checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: .9rem;
+    color: var(--color-charcoal);
+    margin: 0 var(--space-sm) var(--space-xs) 0;
+}
+.checkbox-label input { width: auto; }
+
+.checkbox-group { display: flex; flex-wrap: wrap; margin: var(--space-xs) 0 var(--space-md); }
+
+fieldset { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-md); margin: 0 0 var(--space-md); }
+legend { padding: 0 var(--space-xs); font-weight: 600; }
+
+button, .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-fern);
+    color: #fff;
+    border: 1px solid var(--color-fern);
+    border-radius: var(--radius-md);
+    padding: .65rem .9rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background .15s ease, border-color .15s ease;
+}
+button:hover, .btn:hover { background: var(--color-pine); border-color: var(--color-pine); }
+
+.btn-ghost { background: transparent; color: var(--color-fern); border-color: var(--color-border); }
+.btn-ghost:hover { background: var(--color-paper); border-color: var(--color-fern); color: var(--color-pine); }
+
+.btn-danger { background: var(--color-paper); color: var(--color-error); border-color: var(--color-error-border); }
+.btn-danger:hover { background: var(--color-error-bg); border-color: var(--color-error); }
+
+.btn-sm { padding: .4rem .65rem; font-size: .9rem; }
+
+.inline-form { display: inline; }
+.inline-actions { display: flex; flex-wrap: wrap; gap: var(--space-xs); align-items: center; }
+
+.form-grid { display: grid; gap: var(--space-sm); }
+.form-row { display: flex; flex-wrap: wrap; gap: var(--space-md); }
+.form-row > * { flex: 1 1 12rem; }
+
+/* 상태 배너 */
+[role="status"], [role="alert"] {
+    padding: .65rem .9rem;
+    border-radius: var(--radius-md);
+    margin: 0 0 var(--space-md);
+    font-size: .9rem;
+}
+[role="status"] { background: var(--color-mint); color: var(--color-pine); }
+[role="alert"] { background: var(--color-error-bg); color: var(--color-error); }
+
+/* 상태 배지(공개/숨김/활성 등). 카드·버튼과 다른 완전 원형(pill) 형태는 배지 전용 예외다. */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: .2rem .55rem;
+    border-radius: var(--radius-pill);
+    font-size: .9rem;
+    font-weight: 600;
+}
+.badge-on { background: var(--color-mint); color: var(--color-pine); }
+.badge-off { background: var(--color-border); color: var(--color-taupe); }
+
+/* ===== 공개 사이트 헤더/푸터 ===== */
+.site-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-xs) var(--space-md);
+    padding: var(--space-md) 5vw;
+    background: var(--color-pine);
+    color: #fff;
+}
+.site-header h1 { margin: 0; color: #fff; }
+.site-header nav { display: flex; flex-wrap: wrap; gap: var(--space-md); }
+
+@media (max-width: 480px) {
+    .site-header h1 { font-size: 1.05rem; }
+}
+.site-header nav a { color: var(--color-mint); text-decoration: none; }
+.site-header nav a:hover, .site-header nav a:focus-visible { text-decoration: underline; }
+
+.site-footer {
+    padding: var(--space-lg) 5vw;
+    background: var(--color-pine);
+    color: var(--color-mint);
+}
+.site-footer h2 { color: #fff; }
+.site-footer .form-grid { max-width: 28rem; }
+.site-footer label { color: var(--color-mint); }
+
+/* ===== 홈: 지도 + 목록 ===== */
+.home-main {
+    display: grid;
+    grid-template-columns: minmax(18rem, 28rem) 1fr;
+    grid-template-rows: 1fr;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+.home-aside { padding: var(--space-lg); overflow-y: auto; background: var(--color-linen); }
+.search-form { margin-bottom: var(--space-md); }
+.result-summary { color: var(--color-taupe); font-size: .9rem; margin: var(--space-md) 0; }
+
+.restaurant-card {
+    display: block;
+    padding: var(--space-md) 0;
+    border-bottom: 1px solid var(--color-border);
+}
+.restaurant-card h2 a { color: var(--color-charcoal); text-decoration: none; }
+.restaurant-card h2 a:hover { color: var(--color-fern); }
+.restaurant-card p { color: var(--color-taupe); font-size: .9rem; }
+.restaurant-card .category { color: var(--color-fern); font-weight: 600; }
+
+.empty-state { padding: var(--space-xl) 0; color: var(--color-taupe); }
+
+#map { min-height: 0; background: var(--color-border); }
+
+.pagination {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    margin-top: var(--space-md);
+    padding: 0;
+    list-style: none;
+}
+.pagination li { display: block; }
+.pagination a {
+    display: block;
+    padding: .45rem .7rem;
+    border-radius: var(--radius-sm);
+    background: var(--color-paper);
+    color: var(--color-fern);
+    text-decoration: none;
+    border: 1px solid var(--color-border);
+}
+.pagination a:hover, .pagination a:focus-visible { border-color: var(--color-fern); }
+.pagination li.active a { background: var(--color-fern); color: #fff; border-color: var(--color-fern); }
+
+@media (max-width: 720px) {
+    .home-main { display: flex; flex-direction: column-reverse; }
+    #map { min-height: 55vh; }
+    .home-aside { min-height: 45vh; }
+}
+
+/* ===== 맛집 상세 ===== */
+.detail-main { max-width: 48rem; margin: 0 auto; padding: var(--space-lg) 5vw; }
+.detail-main .category { color: var(--color-fern); font-weight: 600; }
+.detail-main section { margin: var(--space-lg) 0; padding-top: var(--space-lg); border-top: 1px solid var(--color-border); }
+.detail-main section:first-of-type { border-top: none; padding-top: 0; }
+
+.photo-grid { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin: var(--space-md) 0; }
+.photo-grid img {
+    width: 12rem;
+    height: 9rem;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    background: var(--color-paper);
+}
+
+/* ===== 운영자 화면 공통 ===== */
+.admin-shell { min-height: 100vh; background: var(--color-linen); }
+
+.admin-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    padding: var(--space-md) 5vw;
+    background: var(--color-pine);
+    color: #fff;
+}
+.admin-header a { color: var(--color-mint); text-decoration: none; }
+.admin-header a:hover, .admin-header a:focus-visible { text-decoration: underline; }
+.admin-header-brand { font-weight: 700; font-size: 1.05rem; color: #fff; text-decoration: none; }
+.admin-header-nav { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-md); }
+.admin-header-user { color: var(--color-mint); font-size: .9rem; }
+
+.admin-main { padding: var(--space-lg) 5vw var(--space-xl); max-width: 64rem; margin: 0 auto; }
+
+.admin-section {
+    background: var(--color-paper);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+    margin: 0 0 var(--space-lg);
+}
+
+.admin-table { width: 100%; border-collapse: collapse; margin: var(--space-md) 0; }
+.admin-table th, .admin-table td {
+    text-align: left;
+    padding: .6rem var(--space-sm);
+    border-bottom: 1px solid var(--color-border);
+    font-size: .9rem;
+    vertical-align: middle;
+}
+.admin-table th { color: var(--color-taupe); font-weight: 600; }
+.admin-table tbody tr:hover { background: var(--color-linen); }
+
+.admin-list { list-style: none; margin: var(--space-sm) 0; padding: 0; }
+.admin-list li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: .6rem 0;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.admin-photo-thumb {
+    width: 120px;
+    height: 90px;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    background: var(--color-paper);
+}
+
+.location-search { margin: var(--space-sm) 0; }
+.location-search input { max-width: 24rem; }
+.location-search-message { color: var(--color-taupe); font-size: .9rem; }
+.address-result {
+    display: block;
+    width: 100%;
+    margin: var(--space-xs) 0;
+    padding: .5rem .65rem;
+    text-align: left;
+    background: var(--color-paper);
+    border: 1px solid var(--color-border);
+    color: var(--color-charcoal);
+}
+.address-result:hover { border-color: var(--color-fern); }
+.reference-attribution { color: var(--color-taupe); font-size: .9rem; }
+
+#restaurant-map, #admin-restaurant-map {
+    height: 320px;
+    max-width: 720px;
+    margin: var(--space-sm) 0;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+}
+
+/* ===== 로그인 ===== */
+.auth-shell {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    background: var(--color-linen);
+    padding: var(--space-lg) 5vw;
+}
+.auth-card {
+    width: 100%;
+    max-width: 24rem;
+    background: var(--color-paper);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-xl) var(--space-lg);
+}
+.auth-card h1 { text-align: center; }
+.auth-card .form-grid { margin-top: var(--space-md); }
+.auth-card button { width: 100%; margin-top: var(--space-xs); }
