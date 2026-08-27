@@ -2,6 +2,16 @@
     "name": "pushwing/pagus",
     "description": "파주 로컬 맛집 지도 서비스",
     "type": "project",
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
     "require": {
         "php": ">=8.2",
         "codeigniter4/framework": "^4.6"

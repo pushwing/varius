@@ -1,0 +1,128 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services;
+
+use App\Models\CategoryModel;
+use App\Models\RestaurantModel;
+use CodeIgniter\Database\BaseConnection;
+use InvalidArgumentException;
+use RuntimeException;
+
+final class RestaurantManagementService
+{
+    public function __construct(private readonly ?CategoryModel $categories = null, private readonly ?RestaurantModel $restaurants = null, private readonly ?BaseConnection $db = null)
+    {
+    }
+
+    /** @return list<array<string, mixed>> */
+    public function categories(): array
+    {
+        return ($this->categories ?? model(CategoryModel::class))->orderBy('name', 'ASC')->findAll();
+    }
+
+    /** @return array<string, mixed>|null */
+    public function category(int $id): ?array
+    {
+        $category = ($this->categories ?? model(CategoryModel::class))->find($id);
+        return is_array($category) ? $category : null;
+    }
+
+    /** @return list<array<string, mixed>> */
+    public function restaurants(string $query = ''): array
+    {
+        $model = ($this->restaurants ?? model(RestaurantModel::class))->select('restaurants.*, GROUP_CONCAT(categories.name ORDER BY categories.name SEPARATOR ", ") AS category_names')->join('restaurant_categories', 'restaurant_categories.restaurant_id = restaurants.id', 'left')->join('categories', 'categories.id = restaurant_categories.category_id', 'left')->groupBy('restaurants.id')->orderBy('restaurants.name', 'ASC');
+        if ($query !== '') {
+            $model->groupStart()->like('restaurants.name', $query)->orLike('restaurants.address', $query)->orLike('restaurants.tags', $query)->groupEnd();
+        }
+        return $model->findAll();
+    }
+
+    /** @return array<string, mixed>|null */
+    public function restaurant(int $id): ?array
+    {
+        $restaurant = ($this->restaurants ?? model(RestaurantModel::class))->find($id);
+        if (! is_array($restaurant)) {
+            return null;
+        }
+        $restaurant['category_ids'] = array_map(static fn (array $row): int => (int) $row['category_id'], db_connect()->table('restaurant_categories')->select('category_id')->where('restaurant_id', $id)->get()->getResultArray());
+        return $restaurant;
+    }
+
+    public function saveCategory(?int $id, string $name, bool $isActive = true): int
+    {
+        $name = trim($name);
+        if ($name === '') {
+            throw new InvalidArgumentException('카테고리명은 필수입니다.');
+        }
+        $model = $this->categories ?? model(CategoryModel::class);
+        $data = ['name' => $name, 'is_active' => $isActive ? 1 : 0];
+        if ($id === null) {
+            $model->insert($data);
+            return (int) $model->getInsertID();
+        }
+        $model->update($id, $data);
+        return $id;
+    }
+
+    public function toggleCategory(int $id): void
+    {
+        $model = $this->categories ?? model(CategoryModel::class);
+        $category = $model->find($id);
+        if (! is_array($category)) {
+            throw new InvalidArgumentException('카테고리를 찾을 수 없습니다.');
+        }
+        $model->update($id, ['is_active' => ((int) $category['is_active']) === 1 ? 0 : 1]);
+    }
+
+    /** @param array<string, mixed> $data @param list<int> $categoryIds */
+    public function saveRestaurant(?int $id, array $data, array $categoryIds): int
+    {
+        self::assertRestaurantData($data);
+        $restaurantModel = $this->restaurants ?? model(RestaurantModel::class);
+        $db = $this->db ?? db_connect();
+        $db->transStart();
+        if ($id === null) {
+            $restaurantModel->insert($data);
+            $id = (int) $restaurantModel->getInsertID();
+        } else {
+            if (! is_array($restaurantModel->find($id))) {
+                throw new InvalidArgumentException('맛집을 찾을 수 없습니다.');
+            }
+            $restaurantModel->update($id, $data);
+            $db->table('restaurant_categories')->where('restaurant_id', $id)->delete();
+        }
+        foreach (array_values(array_unique(array_map('intval', $categoryIds))) as $categoryId) {
+            $db->table('restaurant_categories')->insert(['restaurant_id' => $id, 'category_id' => $categoryId]);
+        }
+        $db->transComplete();
+        if ($db->transStatus() === false) {
+            throw new RuntimeException('맛집 저장에 실패했습니다.');
+        }
+        return $id;
+    }
+
+    public function toggleRestaurant(int $id): void
+    {
+        $model = $this->restaurants ?? model(RestaurantModel::class);
+        $restaurant = $model->find($id);
+        if (! is_array($restaurant)) {
+            throw new InvalidArgumentException('맛집을 찾을 수 없습니다.');
+        }
+        $model->update($id, ['is_published' => ((int) $restaurant['is_published']) === 1 ? 0 : 1]);
+    }
+
+    /** @param array<string, mixed> $data */
+    public static function assertRestaurantData(array $data): void
+    {
+        foreach (['name', 'address', 'latitude', 'longitude'] as $field) {
+            if (! isset($data[$field]) || trim((string) $data[$field]) === '') {
+                throw new InvalidArgumentException('맛집 필수값이 누락되었습니다.');
+            }
+        }
+        if ((float) $data['latitude'] < -90 || (float) $data['latitude'] > 90 || (float) $data['longitude'] < -180 || (float) $data['longitude'] > 180) {
+            throw new InvalidArgumentException('좌표 범위가 올바르지 않습니다.');
+        }
+    }
+}
