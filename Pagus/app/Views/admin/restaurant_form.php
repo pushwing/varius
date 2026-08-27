@@ -116,9 +116,10 @@ foreach ($categories as $category): ?>
     let tags = tagsHidden.value.split(',').map((tag) => tag.trim()).filter((tag) => tag !== '');
     function renderTags() { tagChips.replaceChildren(); tags.forEach((tag, index) => { const chip = document.createElement('span'); chip.className = 'tag-chip'; chip.textContent = tag + ' '; const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '×'; remove.setAttribute('aria-label', tag + ' 태그 삭제'); remove.addEventListener('click', () => { tags.splice(index, 1); syncTags(); }); chip.append(remove); tagChips.append(chip); }); }
     function syncTags() { tagsHidden.value = tags.join(','); renderTags(); }
-    function addTagFromInput() { const value = tagInput.value.trim(); tagInput.value = ''; if (value === '' || tags.includes(value)) return; tags.push(value); syncTags(); }
-    tagInput.addEventListener('keydown', (event) => { if (event.key === ',' || event.key === 'Enter') { event.preventDefault(); addTagFromInput(); } });
-    tagInput.addEventListener('blur', addTagFromInput);
+    function commitTagInput() { tagInput.value.split(',').forEach((part) => { const value = part.trim(); if (value !== '' && !tags.includes(value)) tags.push(value); }); tagInput.value = ''; syncTags(); }
+    tagInput.addEventListener('input', () => { if (tagInput.value.includes(',')) commitTagInput(); });
+    tagInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); commitTagInput(); } });
+    tagInput.addEventListener('blur', commitTagInput);
     renderTags();
 })();
 </script></body></html>
