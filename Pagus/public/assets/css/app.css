@@ -162,7 +162,8 @@ button:hover, .btn:hover { background: var(--color-pine); border-color: var(--co
     background: var(--color-pine);
     color: #fff;
 }
-.site-header h1 { margin: 0; color: #fff; }
+.site-header h1 { display: flex; align-items: center; gap: var(--space-sm); margin: 0; color: #fff; }
+.brand-mark { display: block; width: 1.75rem; height: 1.75rem; border-radius: var(--radius-sm); }
 .site-header nav { display: flex; flex-wrap: wrap; gap: var(--space-md); }
 
 @media (max-width: 480px) {
@@ -316,7 +317,7 @@ button:hover, .btn:hover { background: var(--color-pine); border-color: var(--co
 }
 .admin-header a { color: var(--color-mint); text-decoration: none; }
 .admin-header a:hover, .admin-header a:focus-visible { text-decoration: underline; }
-.admin-header-brand { font-weight: 700; font-size: 1.05rem; color: #fff; text-decoration: none; }
+.admin-header-brand { display: flex; align-items: center; gap: var(--space-sm); font-weight: 700; font-size: 1.05rem; color: #fff; text-decoration: none; }
 .admin-header-nav { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-md); }
 .admin-header-user { color: var(--color-mint); font-size: .9rem; }
 

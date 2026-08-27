@@ -5,7 +5,7 @@
  */
 ?>
 <header class="admin-header">
-    <a class="admin-header-brand" href="/admin">파구스 운영</a>
+    <a class="admin-header-brand" href="/admin"><img class="brand-mark" src="/assets/img/logo-mark.svg" alt="">파구스 운영</a>
     <nav class="admin-header-nav" aria-label="운영자 메뉴">
         <a href="/admin"<?= $active === 'restaurants' ? ' aria-current="page"' : '' ?>>맛집 목록</a>
         <a href="/admin/restaurants/new"<?= $active === 'restaurant-form' ? ' aria-current="page"' : '' ?>>맛집 등록</a>

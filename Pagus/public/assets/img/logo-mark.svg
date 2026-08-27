@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="파구스">
+    <rect x="0" y="0" width="64" height="64" rx="14" fill="#173b35"/>
+    <path d="M32 9 L49 25 L32 57 L15 25 Z" fill="#fffdf7"/>
+    <rect x="28" y="30" width="8" height="14" rx="1" fill="#173b35"/>
+</svg>
