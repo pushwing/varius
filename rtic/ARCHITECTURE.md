@@ -42,7 +42,7 @@
 - 구현·배포 파일은 [`daemon/`](daemon/) 참고(Python + GStreamer/PyGObject, `livekitwebrtcsrc` 사용 — 표준 apt에 없어 소스 빌드 필요. 실서버 배포에서 검증한 필수 조건: `gstreamer1.0-nice`, 실행 사용자 `audio` 그룹, 실시간 오디오 sink `sync=false`. `daemon/README.md` 참고).
 - "상태를 데이터 채널로 회신"(2절)은 `rtic_daemon/status_reporter.py`(이슈 #12)가 담당 — LiveKit 텍스트 스트림(토픽 `rtic.status`)으로 발신, 오디오 참가자와는 별개의 데이터 채널 전용 참가자(`<identity>-status`) 사용.
 
-## 7. 개발 순서 제안 (Claude Code 작업 단위)
+## 7. 개발 순서 제안 (Codex 작업 단위)
 1. [x] CI4: 인증 + 룸 토큰(JWT) 발급 API 엔드포인트 구현
 2. [x] coturn 셀프호스팅 설정 (docker-compose, HMAC secret 연동) — 인프라만 구축, LiveKit 연동은 보류(4절)
 3. [x] LiveKit 셀프호스팅 배포 (docker-compose/k8s), CI4와 토큰 검증 연동

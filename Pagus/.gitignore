@@ -1,0 +1,14 @@
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/
+
+/vendor/
+/.env
+/.phpunit.result.cache
+/.php-cs-fixer.cache
+/writable/uploads/*
+!/writable/uploads/.gitkeep
+/writable/cache/*
+!/writable/cache/.gitkeep
+/writable/session/*
+!/writable/session/.gitkeep
+/writable/logs/*

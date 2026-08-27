@@ -1,0 +1,1 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><title><?= esc($title ?? '오류') ?></title></head><body><h1><?= esc($title ?? '오류') ?></h1><p><?= esc($message ?? '요청을 처리할 수 없습니다.') ?></p></body></html>

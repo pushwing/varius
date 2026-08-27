@@ -20,7 +20,7 @@ GPS 좌표를 추출해 지도에 표시하고, **날짜별 이동 동선**(마�
 > **GPS EXIF를 의도적으로 제거합니다**(Google 공식 문서 기준). 위치 정보를 원본 그대로 얻는
 > 유일한 경로는 사용자가 직접 요청하는 **Google Takeout**뿐이며, Takeout도 사진 파일 자체의
 > GPS는 지우지만 함께 내려주는 `.json` 사이드카의 `geoData`/`geoDataExif`에는 보존합니다.
-> 자세한 배경은 [`CLAUDE.md`](CLAUDE.md)의 "핵심 전제"를 참고하세요.
+> 자세한 배경은 [`AGENTS.md`](AGENTS.md)의 "핵심 전제"를 참고하세요.
 
 ## 주요 기능
 
@@ -91,7 +91,7 @@ GPS 좌표를 추출해 지도에 표시하고, **날짜별 이동 동선**(마�
 - 원본 이미지·업로드 zip·압축 해제용 임시 디렉터리는 처리 완료(성공·실패 무관) 즉시 삭제 — 좌표 추출에 성공한 지점의 300px 썸네일만 예외적으로 보관.
 
 상세 명세는 [`docs/photo-gps-tracker-spec.md`](docs/photo-gps-tracker-spec.md)를(단, GPS 획득 방식은
-Takeout zip 업로드로 대체됨), Claude Code 작업 규칙은 [`CLAUDE.md`](CLAUDE.md)를 참고하세요.
+Takeout zip 업로드로 대체됨), Codex 작업 규칙은 [`AGENTS.md`](AGENTS.md)를 참고하세요.
 
 ## 로컬 실행 · 설정
 

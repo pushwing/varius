@@ -7,7 +7,7 @@ namespace App\Services\Ingest;
 /**
  * 다운로드한 원본 이미지로부터 지도 미리보기용 썸네일을 생성한다.
  *
- * 풀사이즈 원본은 저장하지 않지만(Iter/CLAUDE.md 저장 정책), 썸네일은 예외로 보관해
+ * 풀사이즈 원본은 저장하지 않지만(Iter/AGENTS.md 저장 정책), 썸네일은 예외로 보관해
  * 재조회 없이 즉시 서빙할 수 있게 한다.
  */
 interface ThumbnailGeneratorInterface

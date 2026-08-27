@@ -1,0 +1,12 @@
+parameters:
+    level: 5
+    bootstrapFiles:
+        - phpstan-bootstrap.php
+    dynamicConstantNames:
+        - CI_DEBUG
+        - ENVIRONMENT
+    paths:
+        - app
+        - tests
+    excludePaths:
+        - app/Views
