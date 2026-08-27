@@ -11,4 +11,5 @@ class Filters extends BaseFilters
         'admin' => \App\Filters\AdminFilter::class,
     ];
     public array $globals = ['before' => ['csrf'], 'after' => []];
+    public array $required = ['before' => [], 'after' => []];
 }

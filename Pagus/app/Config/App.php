@@ -10,8 +10,8 @@ class App extends BaseConfig
     public string $indexPage = '';
     public string $uriProtocol = 'REQUEST_URI';
     public string $permittedURIChars = 'a-z 0-9~%.:_\\-';
-    public string $proxyIPs = '';
-    public string $allowedHostnames = '';
+    public array $proxyIPs = [];
+    public array $allowedHostnames = ['pagus.test'];
     public bool $forceGlobalSecureRequests = false;
     public bool $negotiateLocale = false;
     public array $supportedLocales = ['ko'];

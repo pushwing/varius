@@ -66,7 +66,7 @@ final class AdminController extends Controller
 
     public function saveRestaurant(): RedirectResponse
     {
-        $rules = ['name' => 'required|max_length[150]', 'address' => 'required|max_length[255]', 'latitude' => 'required|numeric|greater_than_equal[-90]|less_than_equal[90]', 'longitude' => 'required|numeric|greater_than_equal[-180]|less_than_equal[180]', 'phone' => 'permit_empty|max_length[30]', 'homepage_url' => 'permit_empty|valid_url|max_length[2048]', 'description' => 'permit_empty', 'menu' => 'permit_empty', 'business_hours' => 'permit_empty', 'tags' => 'permit_empty|max_length[500]'];
+        $rules = ['name' => 'required|max_length[150]', 'address' => 'required|max_length[255]', 'latitude' => 'required|numeric|greater_than_equal_to[-90]|less_than_equal_to[90]', 'longitude' => 'required|numeric|greater_than_equal_to[-180]|less_than_equal_to[180]', 'phone' => 'permit_empty|max_length[30]', 'homepage_url' => 'permit_empty|valid_url|max_length[2048]', 'description' => 'permit_empty', 'menu' => 'permit_empty', 'business_hours' => 'permit_empty', 'tags' => 'permit_empty|max_length[500]'];
         if (! $this->validate($rules)) {
             return redirect()->to('/admin')->withInput()->with('error', '맛집 필수값 또는 좌표를 확인하세요.');
         }
