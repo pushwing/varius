@@ -63,7 +63,7 @@
 </main>
 <dialog id="photo-dialog" class="photo-dialog" aria-labelledby="photo-dialog-title">
     <div class="photo-dialog__header">
-        <h2 id="photo-dialog-title">사진 크게 보기</h2>
+        <h2 id="photo-dialog-title">사진 크게 보기 <span id="photo-dialog-count" aria-live="polite">(<?= $photos !== [] ? '1/' . count($photos) : '0/0' ?>)</span></h2>
         <button type="button" class="btn-ghost btn-sm" data-photo-close>닫기</button>
     </div>
     <div class="photo-dialog__viewer">
@@ -79,6 +79,7 @@
 <script>
     const photoDialog = document.getElementById('photo-dialog');
     const photoDialogImage = document.getElementById('photo-dialog-image');
+    const photoDialogCount = document.getElementById('photo-dialog-count');
     const photoTriggers = [...document.querySelectorAll('.photo-trigger')];
     const previousPhotoButton = document.querySelector('[data-photo-previous]');
     const nextPhotoButton = document.querySelector('[data-photo-next]');
@@ -93,6 +94,7 @@
         currentPhotoIndex = index;
         photoDialogImage.src = trigger.dataset.photoUrl;
         photoDialogImage.alt = trigger.dataset.photoAlt;
+        photoDialogCount.textContent = `(${currentPhotoIndex + 1}/${photoTriggers.length})`;
         if (previousPhotoButton && nextPhotoButton) {
             previousPhotoButton.disabled = currentPhotoIndex === 0;
             nextPhotoButton.disabled = currentPhotoIndex === photoTriggers.length - 1;

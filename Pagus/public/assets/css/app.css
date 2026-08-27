@@ -316,6 +316,7 @@ button:hover, .btn:hover { background: var(--color-pine); border-color: var(--co
 .photo-dialog::backdrop { background: rgb(23 59 53 / 75%); }
 .photo-dialog__header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); margin-bottom: var(--space-md); }
 .photo-dialog__header h2 { margin: 0; }
+.photo-dialog__header h2 span { color: var(--color-taupe); font-size: .85em; font-weight: 500; }
 .photo-dialog__header .btn-ghost { flex: 0 0 auto; }
 .photo-dialog__viewer { position: relative; max-width: calc(90vw - 2rem); }
 .photo-dialog__viewer > img { display: block; width: auto; max-width: 100%; height: auto; max-height: calc(90vh - 6rem); object-fit: contain; }
