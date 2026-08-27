@@ -9,6 +9,7 @@ use CodeIgniter\HTTP\Files\UploadedFile;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 use App\Services\GeocodingService;
+use App\Services\KakaoLocalReferenceService;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -17,6 +18,7 @@ final class AdminController extends Controller
     private RestaurantManagementService $management;
     private RestaurantPhotoService $photos;
     private GeocodingService $geocoding;
+    private KakaoLocalReferenceService $reference;
 
     public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger): void
     {
@@ -24,6 +26,7 @@ final class AdminController extends Controller
         $this->management = new RestaurantManagementService();
         $this->photos = new RestaurantPhotoService();
         $this->geocoding = new GeocodingService();
+        $this->reference = new KakaoLocalReferenceService();
     }
 
     public function index(): string
@@ -144,6 +147,19 @@ final class AdminController extends Controller
         $results = $this->geocoding->search($query);
         if ($results === null) {
             return $this->response->setStatusCode(503)->setJSON(['error' => '주소 검색을 사용할 수 없습니다. 주소와 좌표를 직접 입력하세요.']);
+        }
+        return $this->response->setJSON(['results' => $results]);
+    }
+
+    public function searchReference(): ResponseInterface
+    {
+        $query = trim((string) $this->request->getGet('q'));
+        if ($query === '' || mb_strlen($query) < 2 || mb_strlen($query) > 100) {
+            return $this->response->setStatusCode(400)->setJSON(['error' => '참고 데이터 검색어는 2자 이상 100자 이하로 입력하세요.']);
+        }
+        $results = $this->reference->search($query);
+        if ($results === null) {
+            return $this->response->setStatusCode(503)->setJSON(['error' => '참고 데이터 조회를 사용할 수 없습니다. 상호·주소·좌표를 직접 입력하세요.']);
         }
         return $this->response->setJSON(['results' => $results]);
     }

@@ -13,6 +13,7 @@ $routes->post('logout', 'AdminAuthController::logout', ['filter' => 'admin']);
 $routes->get('admin', 'AdminController::index', ['filter' => 'admin']);
 $routes->get('admin/restaurants/(:num)/edit', 'AdminController::editRestaurant/$1', ['filter' => 'admin']);
 $routes->get('admin/restaurants/search-address', 'AdminController::searchAddress', ['filter' => 'admin']);
+$routes->get('admin/restaurants/search-reference', 'AdminController::searchReference', ['filter' => 'admin']);
 $routes->get('admin/restaurants/(:num)/photos', 'AdminController::managePhotos/$1', ['filter' => 'admin']);
 $routes->post('admin/restaurants/(:num)/photos/upload', 'AdminController::uploadPhotos/$1', ['filter' => 'admin']);
 $routes->post('admin/restaurants/(:num)/photos/(:num)/toggle', 'AdminController::togglePhoto/$1/$2', ['filter' => 'admin']);

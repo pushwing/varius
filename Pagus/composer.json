@@ -9,7 +9,8 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Tests\\": "tests/"
+            "Tests\\": "tests/",
+            "Config\\": "app/Config/"
         }
     },
     "require": {
