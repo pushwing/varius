@@ -11,7 +11,6 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= $editingRestaurant === null ? '맛집 등록' : '맛집 수정' ?> · 파구스 운영</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
     <link rel="stylesheet" href="<?= base_url('assets/css/app.css') ?>">
 </head>
 <body>
@@ -85,14 +84,30 @@ foreach ($categories as $category): ?>
         </section>
     </main>
 </div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script><script>
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=<?= esc(config(\Config\KakaoMaps::class)->jsKey, 'url') ?>"></script><script>
 (() => {
-    const name = document.getElementById('restaurant-name'); const phone = document.getElementById('restaurant-phone'); const address = document.getElementById('restaurant-address'); const latitude = document.getElementById('restaurant-latitude'); const longitude = document.getElementById('restaurant-longitude'); const message = document.getElementById('address-search-message'); const results = document.getElementById('address-search-results'); const referenceMessage = document.getElementById('reference-search-message'); const referenceResults = document.getElementById('reference-search-results'); let marker = null;
+    const name = document.getElementById('restaurant-name'); const phone = document.getElementById('restaurant-phone'); const address = document.getElementById('restaurant-address'); const latitude = document.getElementById('restaurant-latitude'); const longitude = document.getElementById('restaurant-longitude'); const message = document.getElementById('address-search-message'); const results = document.getElementById('address-search-results'); const referenceMessage = document.getElementById('reference-search-message'); const referenceResults = document.getElementById('reference-search-results'); let map = null; let marker = null;
     const validLocation = (lat, lon) => Number.isFinite(lat) && Number.isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
-    const map = window.L ? L.map('restaurant-map').setView([37.76, 126.78], 12) : null;
-    if (map) { L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution: '&copy; OpenStreetMap contributors', maxZoom: 19}).addTo(map); map.on('click', (event) => setLocation(event.latlng.lat, event.latlng.lng)); } else document.getElementById('restaurant-map').textContent = '지도를 불러오지 못했습니다. 아래 좌표를 직접 입력하세요.';
-    function setLocation(lat, lon, label = '') { if (!validLocation(lat, lon)) return; latitude.value = lat.toFixed(7); longitude.value = lon.toFixed(7); if (label !== '') address.value = label; if (map) { if (marker) marker.setLatLng([lat, lon]); else marker = L.marker([lat, lon]).addTo(map); map.setView([lat, lon], Math.max(map.getZoom(), 15)); } }
-    const initialLat = Number(latitude.value); const initialLon = Number(longitude.value); if (validLocation(initialLat, initialLon)) setLocation(initialLat, initialLon);
+    function setLocation(lat, lon, label = '') {
+        if (!validLocation(lat, lon)) return;
+        latitude.value = lat.toFixed(7); longitude.value = lon.toFixed(7);
+        if (label !== '') address.value = label;
+        if (!map) return;
+        const position = new kakao.maps.LatLng(lat, lon);
+        if (marker) marker.setPosition(position); else marker = new kakao.maps.Marker({ position, map });
+        map.setCenter(position);
+        if (map.getLevel() > 4) map.setLevel(4);
+    }
+    if (window.kakao && window.kakao.maps) {
+        kakao.maps.load(() => {
+            map = new kakao.maps.Map(document.getElementById('restaurant-map'), { center: new kakao.maps.LatLng(37.76, 126.78), level: 7 });
+            kakao.maps.event.addListener(map, 'click', (event) => setLocation(event.latLng.getLat(), event.latLng.getLng()));
+            const initialLat = Number(latitude.value); const initialLon = Number(longitude.value);
+            if (validLocation(initialLat, initialLon)) setLocation(initialLat, initialLon);
+        });
+    } else {
+        document.getElementById('restaurant-map').textContent = '지도를 불러오지 못했습니다. 아래 좌표를 직접 입력하세요.';
+    }
     const searchAddress = async () => { results.replaceChildren(); const query = address.value.trim(); if (query.length < 2 || query.length > 100) { message.textContent = '주소는 2자 이상 100자 이하로 입력 후 검색하세요.'; return; } const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 7000); message.textContent = '주소 검색 중...'; try { const response = await fetch('/admin/restaurants/search-address?q=' + encodeURIComponent(query), {signal: controller.signal, headers: {'Accept': 'application/json'}}); const payload = await response.json(); if (!response.ok) throw new Error(payload.error || '주소 검색을 사용할 수 없습니다.'); if (!payload.results.length) { message.textContent = '검색 결과가 없습니다. 주소와 좌표를 직접 입력하세요.'; return; } message.textContent = '결과를 선택하면 주소와 좌표가 입력됩니다.'; payload.results.forEach((item) => { const button = document.createElement('button'); button.type = 'button'; button.className = 'address-result'; button.textContent = item.display_name; button.addEventListener('click', () => setLocation(item.latitude, item.longitude, item.display_name)); results.append(button); }); } catch { message.textContent = '주소 검색을 사용할 수 없습니다. 주소와 좌표를 직접 입력하세요.'; } finally { clearTimeout(timer); } };
     document.getElementById('address-search-submit').addEventListener('click', searchAddress); address.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); searchAddress(); } });
     const searchReference = async () => { referenceResults.replaceChildren(); const query = document.getElementById('reference-search-query').value.trim(); if (query.length < 2 || query.length > 100) { referenceMessage.textContent = '참고 데이터 검색어는 2자 이상 100자 이하로 입력하세요.'; return; } const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 7000); referenceMessage.textContent = '참고 데이터 조회 중...'; try { const response = await fetch('/admin/restaurants/search-reference?q=' + encodeURIComponent(query), {signal: controller.signal, headers: {'Accept': 'application/json'}}); const payload = await response.json(); if (!response.ok) throw new Error(payload.error || '참고 데이터 조회를 사용할 수 없습니다.'); if (!payload.results.length) { referenceMessage.textContent = '참고 데이터가 없습니다. 상호·주소·좌표를 직접 입력하세요.'; return; } referenceMessage.textContent = '결과는 참고용입니다. 선택하면 상호·주소·연락처·좌표가 채워지며, 공개 여부는 저장 전 직접 확인하세요.'; payload.results.forEach((item) => { const button = document.createElement('button'); button.type = 'button'; button.className = 'address-result'; button.textContent = item.name + ' · ' + item.address; button.addEventListener('click', () => { name.value = item.name; if (item.phone) phone.value = item.phone; setLocation(item.latitude, item.longitude, item.address); }); referenceResults.append(button); }); } catch { referenceMessage.textContent = '참고 데이터 조회를 사용할 수 없습니다. 상호·주소·좌표를 직접 입력하세요.'; } finally { clearTimeout(timer); } };
