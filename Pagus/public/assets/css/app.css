@@ -304,7 +304,8 @@ button:hover, .btn:hover { background: var(--color-pine); border-color: var(--co
     background: var(--color-paper);
 }
 .photo-dialog {
-    width: min(90vw, 64rem);
+    width: fit-content;
+    max-width: 90vw;
     max-height: 90vh;
     margin: auto;
     padding: var(--space-md);
@@ -316,7 +317,7 @@ button:hover, .btn:hover { background: var(--color-pine); border-color: var(--co
 .photo-dialog__header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); margin-bottom: var(--space-md); }
 .photo-dialog__header h2 { margin: 0; }
 .photo-dialog__header .btn-ghost { flex: 0 0 auto; }
-.photo-dialog > img { display: block; width: 100%; max-height: calc(90vh - 6rem); object-fit: contain; }
+.photo-dialog > img { display: block; width: auto; max-width: 100%; height: auto; max-height: calc(90vh - 6rem); object-fit: contain; }
 
 /* ===== 운영자 화면 공통 ===== */
 .admin-shell { min-height: 100vh; background: var(--color-linen); }
