@@ -1,54 +1,28 @@
+<?php
+
+/**
+ * @var list<array<string, mixed>> $categories
+ * @var array<string, mixed>|null $editingRestaurant
+ */
+?>
 <!doctype html>
 <html lang="ko">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>파구스 운영</title>
+    <title><?= $editingRestaurant === null ? '맛집 등록' : '맛집 수정' ?> · 파구스 운영</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
     <link rel="stylesheet" href="<?= base_url('assets/css/app.css') ?>">
 </head>
 <body>
 <div class="admin-shell">
-    <header class="admin-header">
-        <a class="admin-header-brand" href="/admin">파구스 운영</a>
-        <nav class="admin-header-nav" aria-label="운영자 메뉴">
-            <a href="/admin">맛집 관리</a>
-            <a href="/admin/inquiries">문의 관리</a>
-            <span class="admin-header-user"><?= esc(session('user_name')) ?>님</span>
-            <form class="inline-form" method="post" action="/logout"><?= csrf_field() ?><button class="btn-ghost btn-sm" type="submit">로그아웃</button></form>
-        </nav>
-    </header>
+    <?= view('admin/_header', ['active' => 'restaurant-form']) ?>
     <main class="admin-main">
         <?php if (session('message')): ?><p role="status"><?= esc(session('message')) ?></p><?php endif; ?>
         <?php if (session('error')): ?><p role="alert"><?= esc(session('error')) ?></p><?php endif; ?>
 
         <section class="admin-section">
-            <h2>카테고리</h2>
-            <form class="form-row" method="post" action="/admin/categories/save">
-                <?= csrf_field() ?>
-                <input type="hidden" name="id" value="<?= $editingCategory === null ? '' : (int) $editingCategory['id'] ?>">
-                <label>이름 <input name="name" required maxlength="100" value="<?= esc($editingCategory['name'] ?? old('name')) ?>"></label>
-                <span class="inline-actions">
-                    <button type="submit"><?= $editingCategory === null ? '등록' : '수정' ?></button>
-                    <?php if ($editingCategory !== null): ?><a class="btn-ghost" href="/admin">취소</a><?php endif; ?>
-                </span>
-            </form>
-            <ul class="admin-list">
-                <?php foreach ($categories as $category): ?>
-                    <li>
-                        <span><?= esc($category['name']) ?></span>
-                        <span class="badge <?= (int) $category['is_active'] === 1 ? 'badge-on' : 'badge-off' ?>"><?= (int) $category['is_active'] === 1 ? '활성' : '숨김' ?></span>
-                        <span class="inline-actions">
-                            <a class="btn-ghost btn-sm" href="/admin/categories/<?= (int) $category['id'] ?>/edit">수정</a>
-                            <form class="inline-form" method="post" action="/admin/categories/<?= (int) $category['id'] ?>/toggle"><?= csrf_field() ?><button class="btn-ghost btn-sm" type="submit"><?= (int) $category['is_active'] === 1 ? '숨김' : '활성화' ?></button></form>
-                        </span>
-                    </li>
-                <?php endforeach; ?>
-            </ul>
-        </section>
-
-        <section class="admin-section">
-            <h2><?= $editingRestaurant === null ? '맛집 등록' : '맛집 수정' ?></h2>
+            <h1><?= $editingRestaurant === null ? '맛집 등록' : '맛집 수정' ?></h1>
             <form class="form-grid" method="post" action="/admin/restaurants/save">
                 <?= csrf_field() ?>
                 <input type="hidden" name="id" value="<?= $editingRestaurant === null ? '' : (int) $editingRestaurant['id'] ?>">
@@ -86,7 +60,7 @@
                     <div class="checkbox-group">
                         <?php
                             $selected = $editingRestaurant['category_ids'] ?? (array) old('category_ids');
-    foreach ($categories as $category): ?>
+foreach ($categories as $category): ?>
                             <label class="checkbox-label"><input type="checkbox" name="category_ids[]" value="<?= (int) $category['id'] ?>" <?= in_array((int) $category['id'], array_map('intval', $selected), true) ? 'checked' : '' ?>><?= esc($category['name']) ?></label>
                         <?php endforeach; ?>
                     </div>
@@ -99,37 +73,9 @@
 
                 <span class="inline-actions">
                     <button type="submit">저장</button>
-                    <?php if ($editingRestaurant !== null): ?><a class="btn-ghost" href="/admin">취소</a><?php endif; ?>
+                    <a class="btn-ghost" href="/admin">취소</a>
                 </span>
             </form>
-        </section>
-
-        <section class="admin-section">
-            <h2>맛집 목록</h2>
-            <form class="form-row" method="get" action="/admin">
-                <label>검색 <input name="q" value="<?= esc((string) (request()->getGet('q') ?? '')) ?>"></label>
-                <span class="inline-actions"><button type="submit">검색</button></span>
-            </form>
-            <table class="admin-table">
-                <thead><tr><th>상호</th><th>주소</th><th>카테고리</th><th>공개</th><th>관리</th></tr></thead>
-                <tbody>
-                <?php foreach ($restaurants as $restaurant): ?>
-                    <tr>
-                        <td><?= esc($restaurant['name']) ?></td>
-                        <td><?= esc($restaurant['address']) ?></td>
-                        <td><?= esc((string) ($restaurant['category_names'] ?? '')) ?></td>
-                        <td><span class="badge <?= (int) $restaurant['is_published'] === 1 ? 'badge-on' : 'badge-off' ?>"><?= (int) $restaurant['is_published'] === 1 ? '공개' : '숨김' ?></span></td>
-                        <td>
-                            <span class="inline-actions">
-                                <a class="btn-ghost btn-sm" href="/admin/restaurants/<?= (int) $restaurant['id'] ?>/edit">수정</a>
-                                <a class="btn-ghost btn-sm" href="/admin/restaurants/<?= (int) $restaurant['id'] ?>/photos">사진관리</a>
-                                <form class="inline-form" method="post" action="/admin/restaurants/<?= (int) $restaurant['id'] ?>/toggle"><?= csrf_field() ?><button class="btn-ghost btn-sm" type="submit"><?= (int) $restaurant['is_published'] === 1 ? '숨김' : '공개' ?></button></form>
-                            </span>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-                </tbody>
-            </table>
         </section>
     </main>
 </div>

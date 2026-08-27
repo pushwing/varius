@@ -15,6 +15,7 @@ $routes->get('admin/inquiries', 'AdminController::inquiries', ['filter' => 'admi
 $routes->get('admin/inquiries/(:num)', 'AdminController::showInquiry/$1', ['filter' => 'admin']);
 $routes->post('admin/inquiries/(:num)/status', 'AdminController::updateInquiryStatus/$1', ['filter' => 'admin']);
 $routes->get('admin', 'AdminController::index', ['filter' => 'admin']);
+$routes->get('admin/restaurants/new', 'AdminController::newRestaurant', ['filter' => 'admin']);
 $routes->get('admin/restaurants/(:num)/edit', 'AdminController::editRestaurant/$1', ['filter' => 'admin']);
 $routes->get('admin/restaurants/search-address', 'AdminController::searchAddress', ['filter' => 'admin']);
 $routes->get('admin/restaurants/search-reference', 'AdminController::searchReference', ['filter' => 'admin']);
@@ -23,6 +24,7 @@ $routes->post('admin/restaurants/(:num)/photos/upload', 'AdminController::upload
 $routes->post('admin/restaurants/(:num)/photos/(:num)/toggle', 'AdminController::togglePhoto/$1/$2', ['filter' => 'admin']);
 $routes->post('admin/restaurants/(:num)/photos/(:num)/delete', 'AdminController::deletePhoto/$1/$2', ['filter' => 'admin']);
 $routes->get('admin/restaurants/(:num)/photos/(:num)/file', 'PhotoController::adminShow/$1/$2', ['filter' => 'admin']);
+$routes->get('admin/categories', 'AdminController::categories', ['filter' => 'admin']);
 $routes->get('admin/categories/(:num)/edit', 'AdminController::editCategory/$1', ['filter' => 'admin']);
 $routes->post('admin/categories/save', 'AdminController::saveCategory', ['filter' => 'admin']);
 $routes->post('admin/categories/(:num)/toggle', 'AdminController::toggleCategory/$1', ['filter' => 'admin']);
