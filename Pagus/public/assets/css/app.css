@@ -197,8 +197,17 @@ button:hover, .btn:hover { background: var(--color-pine); border-color: var(--co
     padding: var(--space-md) 0;
     border-bottom: 1px solid var(--color-border);
 }
-.restaurant-card h2 a { color: var(--color-charcoal); text-decoration: none; }
-.restaurant-card h2 a:hover { color: var(--color-fern); }
+.restaurant-title {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-charcoal);
+    font: inherit;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+}
+.restaurant-title:hover, .restaurant-title:focus-visible { color: var(--color-fern); }
 .restaurant-card p { color: var(--color-taupe); font-size: .9rem; }
 .restaurant-card .category { color: var(--color-fern); font-weight: 600; }
 
