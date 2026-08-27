@@ -5,26 +5,30 @@ declare(strict_types=1);
 namespace App\Services;
 
 use CodeIgniter\HTTP\CURLRequest;
-use Config\Geocoding;
+use Config\KakaoLocal;
 
 final class GeocodingService
 {
-    public function __construct(private readonly ?CURLRequest $client = null, private readonly ?Geocoding $config = null)
+    public function __construct(private readonly ?CURLRequest $client = null, private readonly ?KakaoLocal $config = null)
     {
     }
 
     /** @return list<array{display_name: string, latitude: float, longitude: float}>|null */
     public function search(string $query): ?array
     {
-        $config = $this->config ?? config(Geocoding::class);
+        $config = $this->config ?? config(KakaoLocal::class);
+        if ($config->apiKey === '') {
+            return null;
+        }
+
         try {
             $response = ($this->client ?? service('curlrequest', [
                 'timeout' => $config->timeout,
                 'connect_timeout' => $config->connectTimeout,
                 'http_errors' => false,
-            ]))->get($config->endpoint, [
-                'headers' => ['Accept' => 'application/json', 'User-Agent' => $config->userAgent],
-                'query' => ['q' => $query, 'format' => 'jsonv2', 'addressdetails' => 1, 'countrycodes' => 'kr', 'limit' => $config->resultLimit],
+            ]))->get($config->addressEndpoint, [
+                'headers' => ['Authorization' => 'KakaoAK ' . $config->apiKey, 'Accept' => 'application/json'],
+                'query' => ['query' => $query, 'size' => $config->resultLimit],
                 'timeout' => $config->timeout,
                 'connect_timeout' => $config->connectTimeout,
             ]);
@@ -36,23 +40,30 @@ final class GeocodingService
             return null;
         }
         $decoded = json_decode($response->getBody(), true);
-        return is_array($decoded) ? self::normalizeResults($decoded) : null;
+        $documents = is_array($decoded) ? ($decoded['documents'] ?? null) : null;
+        return is_array($documents) ? self::normalizeResults($documents) : null;
     }
 
-    /** @param array<mixed> $results @return list<array{display_name: string, latitude: float, longitude: float}> */
-    public static function normalizeResults(array $results): array
+    /** @param array<mixed> $documents @return list<array{display_name: string, latitude: float, longitude: float}> */
+    public static function normalizeResults(array $documents): array
     {
         $normalized = [];
-        foreach ($results as $result) {
-            if (! is_array($result) || ! is_string($result['display_name'] ?? null) || ! is_numeric($result['lat'] ?? null) || ! is_numeric($result['lon'] ?? null)) {
+        foreach ($documents as $document) {
+            if (! is_array($document) || ! is_numeric($document['y'] ?? null) || ! is_numeric($document['x'] ?? null)) {
                 continue;
             }
-            $latitude = (float) $result['lat'];
-            $longitude = (float) $result['lon'];
+            $roadAddress = $document['road_address'] ?? null;
+            $displayName = is_array($roadAddress) ? ($roadAddress['address_name'] ?? null) : null;
+            $displayName = is_string($displayName) && $displayName !== '' ? $displayName : ($document['address_name'] ?? null);
+            if (! is_string($displayName) || $displayName === '') {
+                continue;
+            }
+            $latitude = (float) $document['y'];
+            $longitude = (float) $document['x'];
             if ($latitude < -90 || $latitude > 90 || $longitude < -180 || $longitude > 180) {
                 continue;
             }
-            $normalized[] = ['display_name' => $result['display_name'], 'latitude' => $latitude, 'longitude' => $longitude];
+            $normalized[] = ['display_name' => $displayName, 'latitude' => $latitude, 'longitude' => $longitude];
         }
         return $normalized;
     }
