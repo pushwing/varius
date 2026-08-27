@@ -91,7 +91,15 @@ if ($mapData === false) {
 </main>
 <footer id="contact" style="padding: 1.5rem 5vw; background: #173b35; color: #d9f2e9;">
     <h2 style="font-size: 1rem; margin: 0 0 .4rem;">문의하기</h2>
-    <p style="margin: 0;">파주 맛집 정보에 대한 문의는 운영자 로그인 후 관리자에게 남겨주세요.</p>
+    <?php if (session('message')): ?><p role="status"><?= esc(session('message')) ?></p><?php endif; ?>
+    <?php if (session('error')): ?><p role="alert"><?= esc(session('error')) ?></p><?php endif; ?>
+    <form method="post" action="<?= site_url('inquiries') ?>" style="display: grid; gap: .5rem; max-width: 28rem;">
+        <?= csrf_field() ?>
+        <label>이름 <input name="name" required maxlength="100" value="<?= esc(old('name') ?? '') ?>"></label>
+        <label>연락처(선택, 회신용) <input name="contact" maxlength="255" value="<?= esc(old('contact') ?? '') ?>"></label>
+        <label>문의 내용<br><textarea name="message" required maxlength="2000" rows="4"><?= esc(old('message') ?? '') ?></textarea></label>
+        <button type="submit">문의 보내기</button>
+    </form>
 </footer>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>

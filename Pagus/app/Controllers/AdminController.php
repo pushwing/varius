@@ -2,6 +2,8 @@
 
 namespace App\Controllers;
 
+use App\Enums\InquiryStatus;
+use App\Services\InquiryService;
 use App\Services\RestaurantManagementService;
 use App\Services\RestaurantPhotoService;
 use CodeIgniter\Controller;
@@ -19,6 +21,7 @@ final class AdminController extends Controller
     private RestaurantPhotoService $photos;
     private GeocodingService $geocoding;
     private KakaoLocalReferenceService $reference;
+    private InquiryService $inquiries;
 
     public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger): void
     {
@@ -27,6 +30,7 @@ final class AdminController extends Controller
         $this->photos = new RestaurantPhotoService();
         $this->geocoding = new GeocodingService();
         $this->reference = new KakaoLocalReferenceService();
+        $this->inquiries = new InquiryService();
     }
 
     public function index(): string
@@ -162,5 +166,29 @@ final class AdminController extends Controller
             return $this->response->setStatusCode(503)->setJSON(['error' => '참고 데이터 조회를 사용할 수 없습니다. 상호·주소·좌표를 직접 입력하세요.']);
         }
         return $this->response->setJSON(['results' => $results]);
+    }
+
+    public function inquiries(): string
+    {
+        return view('admin/inquiries', ['inquiries' => $this->inquiries->all()]);
+    }
+
+    public function showInquiry(int $id): string|RedirectResponse
+    {
+        $inquiry = $this->inquiries->find($id);
+        if ($inquiry === null) {
+            return redirect()->to('/admin/inquiries')->with('error', '문의를 찾을 수 없습니다.');
+        }
+        return view('admin/inquiry', ['inquiry' => $inquiry, 'statuses' => InquiryStatus::cases()]);
+    }
+
+    public function updateInquiryStatus(int $id): RedirectResponse
+    {
+        try {
+            $this->inquiries->updateStatus($id, (string) $this->request->getPost('status'));
+        } catch (InvalidArgumentException $exception) {
+            return redirect()->to("/admin/inquiries/{$id}")->with('error', $exception->getMessage());
+        }
+        return redirect()->to("/admin/inquiries/{$id}")->with('message', '처리 상태를 변경했습니다.');
     }
 }
