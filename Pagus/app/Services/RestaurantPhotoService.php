@@ -110,25 +110,40 @@ final class RestaurantPhotoService
         return $uploaded;
     }
 
-    public function togglePhoto(int $photoId): void
+    public function togglePhoto(int $restaurantId, int $photoId): void
     {
         $model = $this->photos ?? model(RestaurantPhotoModel::class);
-        $photo = $model->find($photoId);
-        if (! is_array($photo)) {
-            throw new InvalidArgumentException('사진을 찾을 수 없습니다.');
-        }
+        $photo = $this->ownedPhoto($restaurantId, $photoId);
         $model->update($photoId, ['is_hidden' => ((int) $photo['is_hidden']) === 1 ? 0 : 1]);
     }
 
-    public function deletePhoto(int $photoId): void
+    public function deletePhoto(int $restaurantId, int $photoId): void
     {
         $model = $this->photos ?? model(RestaurantPhotoModel::class);
-        $photo = $model->find($photoId);
-        if (! is_array($photo)) {
-            throw new InvalidArgumentException('사진을 찾을 수 없습니다.');
-        }
+        $photo = $this->ownedPhoto($restaurantId, $photoId);
         $model->delete($photoId);
         @unlink($this->absolutePath($photo));
+    }
+
+    /** @return array<string, mixed> */
+    private function ownedPhoto(int $restaurantId, int $photoId): array
+    {
+        $photo = ($this->photos ?? model(RestaurantPhotoModel::class))->find($photoId);
+        return self::assertPhotoOwnership(is_array($photo) ? $photo : null, $restaurantId);
+    }
+
+    /**
+     * 사진이 해당 맛집에 속하는지 확인한다. 다른 맛집의 사진은 조작할 수 없다.
+     *
+     * @param array<string, mixed>|null $photo
+     * @return array<string, mixed>
+     */
+    public static function assertPhotoOwnership(?array $photo, int $restaurantId): array
+    {
+        if ($photo === null || (int) ($photo['restaurant_id'] ?? 0) !== $restaurantId) {
+            throw new InvalidArgumentException('사진을 찾을 수 없습니다.');
+        }
+        return $photo;
     }
 
     /**

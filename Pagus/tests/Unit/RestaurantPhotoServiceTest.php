@@ -58,4 +58,22 @@ final class RestaurantPhotoServiceTest extends TestCase
     {
         self::assertSame('파일을 업로드하지 못했습니다.', RestaurantPhotoService::uploadErrorMessage(UPLOAD_ERR_CANT_WRITE));
     }
+
+    public function testPhotoOfAnotherRestaurantIsRejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        RestaurantPhotoService::assertPhotoOwnership(['id' => 5, 'restaurant_id' => 2], 1);
+    }
+
+    public function testMissingPhotoIsRejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        RestaurantPhotoService::assertPhotoOwnership(null, 1);
+    }
+
+    public function testOwnPhotoIsAccepted(): void
+    {
+        $photo = ['id' => 5, 'restaurant_id' => 1];
+        self::assertSame($photo, RestaurantPhotoService::assertPhotoOwnership($photo, 1));
+    }
 }

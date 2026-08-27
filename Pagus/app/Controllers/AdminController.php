@@ -10,6 +10,7 @@ use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 use App\Services\GeocodingService;
 use InvalidArgumentException;
+use RuntimeException;
 
 final class AdminController extends Controller
 {
@@ -108,7 +109,7 @@ final class AdminController extends Controller
         ));
         try {
             $uploaded = $this->photos->uploadPhotos($restaurantId, $files);
-        } catch (InvalidArgumentException $exception) {
+        } catch (InvalidArgumentException | RuntimeException $exception) {
             return redirect()->to("/admin/restaurants/{$restaurantId}/photos")->with('error', $exception->getMessage());
         }
         return redirect()->to("/admin/restaurants/{$restaurantId}/photos")->with('message', "{$uploaded}장의 사진을 업로드했습니다.");
@@ -117,7 +118,7 @@ final class AdminController extends Controller
     public function togglePhoto(int $restaurantId, int $photoId): RedirectResponse
     {
         try {
-            $this->photos->togglePhoto($photoId);
+            $this->photos->togglePhoto($restaurantId, $photoId);
         } catch (InvalidArgumentException $exception) {
             return redirect()->to("/admin/restaurants/{$restaurantId}/photos")->with('error', $exception->getMessage());
         }
@@ -127,7 +128,7 @@ final class AdminController extends Controller
     public function deletePhoto(int $restaurantId, int $photoId): RedirectResponse
     {
         try {
-            $this->photos->deletePhoto($photoId);
+            $this->photos->deletePhoto($restaurantId, $photoId);
         } catch (InvalidArgumentException $exception) {
             return redirect()->to("/admin/restaurants/{$restaurantId}/photos")->with('error', $exception->getMessage());
         }
