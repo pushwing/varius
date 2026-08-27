@@ -73,7 +73,7 @@ final class KakaoLocalReferenceService
             }
             $normalized[] = [
                 'name' => $name,
-                'address' => $address,
+                'address' => preg_replace('/^경기(?=\s)/u', '경기도', $address) ?? $address,
                 'phone' => is_string($document['phone'] ?? null) ? $document['phone'] : '',
                 'category' => is_string($document['category_name'] ?? null) ? $document['category_name'] : '',
                 'latitude' => $latitude,

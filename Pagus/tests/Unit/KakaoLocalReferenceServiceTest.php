@@ -26,7 +26,7 @@ final class KakaoLocalReferenceServiceTest extends TestCase
     public function testResultsAreNormalizedToReferenceShape(): void
     {
         self::assertSame([
-            ['name' => '파구스식당', 'address' => '경기 파주시 금릉역로 1', 'phone' => '031-000-0000', 'category' => '음식점 > 한식', 'latitude' => 37.7597, 'longitude' => 126.7777],
+            ['name' => '파구스식당', 'address' => '경기도 파주시 금릉역로 1', 'phone' => '031-000-0000', 'category' => '음식점 > 한식', 'latitude' => 37.7597, 'longitude' => 126.7777],
         ], KakaoLocalReferenceService::normalizeResults([
             ['place_name' => '파구스식당', 'address_name' => '파주시 금촌동 1', 'road_address_name' => '경기 파주시 금릉역로 1', 'phone' => '031-000-0000', 'category_name' => '음식점 > 한식', 'y' => '37.7597', 'x' => '126.7777'],
         ]));
@@ -96,7 +96,7 @@ final class KakaoLocalReferenceServiceTest extends TestCase
         $service = new KakaoLocalReferenceService($client, $config);
 
         self::assertSame([
-            ['name' => '파구스식당', 'address' => '경기 파주시 금릉역로 1', 'phone' => '031-000-0000', 'category' => '음식점 > 한식', 'latitude' => 37.7597, 'longitude' => 126.7777],
+            ['name' => '파구스식당', 'address' => '경기도 파주시 금릉역로 1', 'phone' => '031-000-0000', 'category' => '음식점 > 한식', 'latitude' => 37.7597, 'longitude' => 126.7777],
         ], $service->search('파구스'));
     }
 
