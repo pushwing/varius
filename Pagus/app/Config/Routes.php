@@ -10,6 +10,7 @@ $routes->post('login', 'AdminAuthController::authenticate');
 $routes->post('logout', 'AdminAuthController::logout', ['filter' => 'admin']);
 $routes->get('admin', 'AdminController::index', ['filter' => 'admin']);
 $routes->get('admin/restaurants/(:num)/edit', 'AdminController::editRestaurant/$1', ['filter' => 'admin']);
+$routes->get('admin/restaurants/search-address', 'AdminController::searchAddress', ['filter' => 'admin']);
 $routes->get('admin/categories/(:num)/edit', 'AdminController::editCategory/$1', ['filter' => 'admin']);
 $routes->post('admin/categories/save', 'AdminController::saveCategory', ['filter' => 'admin']);
 $routes->post('admin/categories/(:num)/toggle', 'AdminController::toggleCategory/$1', ['filter' => 'admin']);
