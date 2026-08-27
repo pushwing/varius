@@ -6,6 +6,8 @@ use CodeIgniter\Database\Config;
 
 class Database extends Config
 {
+    public string $defaultGroup = 'default';
+
     public array $default = [
         'DSN' => '', 'hostname' => 'localhost', 'username' => '', 'password' => '',
         'database' => 'pagus', 'DBDriver' => 'MySQLi', 'DBPrefix' => '',
