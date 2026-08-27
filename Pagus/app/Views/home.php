@@ -93,10 +93,12 @@ if ($mapData === false) {
         const bounds = new kakao.maps.LatLngBounds();
         let hasBounds = false;
         let openInfoWindow = null;
-        function openMarker(marker, infoWindow) {
+        function openMarker(marker, infoWindow, restaurantId) {
             if (openInfoWindow) openInfoWindow.close();
             infoWindow.open(map, marker);
             openInfoWindow = infoWindow;
+            document.querySelectorAll('.restaurant-card.is-selected').forEach((card) => card.classList.remove('is-selected'));
+            document.querySelector(`[data-restaurant-id="${restaurantId}"]`)?.closest('.restaurant-card')?.classList.add('is-selected');
         }
         restaurants.forEach((restaurant) => {
             const lat = Number(restaurant.latitude);
@@ -104,29 +106,55 @@ if ($mapData === false) {
             if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
             const position = new kakao.maps.LatLng(lat, lon);
             const marker = new kakao.maps.Marker({ position, map });
-            const content = document.createElement('div');
+            const content = document.createElement('article');
             content.className = 'map-popup';
-            const title = document.createElement('strong');
+            const header = document.createElement('header');
+            header.className = 'map-popup__header';
+            const kicker = document.createElement('span');
+            kicker.className = 'map-popup__kicker';
+            kicker.textContent = '파주 로컬 맛집';
+            const title = document.createElement('h3');
             title.textContent = restaurant.name;
-            const address = document.createElement('div');
-            address.textContent = restaurant.address;
-            content.append(title, address);
+            header.append(kicker, title);
+            content.append(header);
             if (restaurant.category_names) {
-                const category = document.createElement('div');
+                const category = document.createElement('span');
+                category.className = 'map-popup__category';
                 category.textContent = restaurant.category_names;
                 content.append(category);
             }
-            if (restaurant.phone) {
-                const phone = document.createElement('div');
-                phone.textContent = restaurant.phone;
-                content.append(phone);
+            const details = document.createElement('dl');
+            details.className = 'map-popup__details';
+            const appendDetail = (label, value) => {
+                if (!value) return;
+                const term = document.createElement('dt');
+                term.textContent = label;
+                const description = document.createElement('dd');
+                description.textContent = value;
+                details.append(term, description);
+            };
+            appendDetail('주소', restaurant.address);
+            appendDetail('전화', restaurant.phone);
+            appendDetail('영업 정보', restaurant.business_hours);
+            if (details.childElementCount > 0) {
+                content.append(details);
             }
+            if (restaurant.description) {
+                const summary = document.createElement('p');
+                summary.className = 'map-popup__summary';
+                summary.textContent = restaurant.description;
+                content.append(summary);
+            }
+            const actions = document.createElement('div');
+            actions.className = 'map-popup__actions';
             const detail = document.createElement('a');
+            detail.className = 'map-popup__link';
             detail.href = '<?= site_url('restaurants') ?>/' + Number(restaurant.id);
-            detail.textContent = '상세 보기';
-            content.append(detail);
-            const infoWindow = new kakao.maps.InfoWindow({ content });
-            kakao.maps.event.addListener(marker, 'click', () => openMarker(marker, infoWindow));
+            detail.textContent = '상세 정보 보기';
+            actions.append(detail);
+            content.append(actions);
+            const infoWindow = new kakao.maps.InfoWindow({ content, removable: true });
+            kakao.maps.event.addListener(marker, 'click', () => openMarker(marker, infoWindow, restaurant.id));
             markers.set(Number(restaurant.id), { marker, infoWindow });
             bounds.extend(position);
             hasBounds = true;
@@ -141,7 +169,7 @@ if ($mapData === false) {
                 if (!entry) return;
                 map.setCenter(entry.marker.getPosition());
                 if (map.getLevel() > 4) map.setLevel(4);
-                openMarker(entry.marker, entry.infoWindow);
+                openMarker(entry.marker, entry.infoWindow, button.dataset.restaurantId);
             });
         });
     });

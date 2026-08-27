@@ -208,12 +208,33 @@ button:hover, .btn:hover { background: var(--color-pine); border-color: var(--co
     cursor: pointer;
 }
 .restaurant-title:hover, .restaurant-title:focus-visible { color: var(--color-fern); }
+.restaurant-card.is-selected { border-color: var(--color-fern); }
+.restaurant-card.is-selected .restaurant-title { color: var(--color-fern); }
 .restaurant-card p { color: var(--color-taupe); font-size: .9rem; }
 .restaurant-card .category { color: var(--color-fern); font-weight: 600; }
 
 .empty-state { padding: var(--space-xl) 0; color: var(--color-taupe); }
 
 #map { min-height: 0; background: var(--color-border); }
+
+.map-popup {
+    width: min(18rem, calc(100vw - 4rem));
+    padding: var(--space-md);
+    background: var(--color-paper);
+    color: var(--color-charcoal);
+    font: inherit;
+}
+.map-popup__header { margin-bottom: var(--space-sm); }
+.map-popup__kicker { display: block; margin-bottom: var(--space-xs); color: var(--color-taupe); font-size: .9rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.map-popup h3 { margin: 0; color: var(--color-pine); font-size: 1.05rem; line-height: 1.3; }
+.map-popup__category { display: inline-flex; max-width: 100%; margin-bottom: var(--space-sm); padding: .25rem .5rem; overflow: hidden; border-radius: var(--radius-pill); background: var(--color-mint); color: var(--color-pine); font-size: .9rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.map-popup__details { display: grid; grid-template-columns: 3.5rem 1fr; gap: .4rem .6rem; margin: 0; padding-top: var(--space-sm); border-top: 1px solid var(--color-border); font-size: .9rem; line-height: 1.45; }
+.map-popup__details dt { color: var(--color-taupe); font-weight: 700; }
+.map-popup__details dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.map-popup__summary { display: -webkit-box; margin: var(--space-sm) 0 0; overflow: hidden; color: var(--color-taupe); font-size: .9rem; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.map-popup__actions { margin-top: var(--space-md); }
+.map-popup__link { display: flex; align-items: center; justify-content: center; min-height: 2.5rem; padding: .55rem .75rem; border-radius: var(--radius-sm); background: var(--color-fern); color: #fff; font-size: .9rem; font-weight: 700; text-decoration: none; }
+.map-popup__link:hover, .map-popup__link:focus-visible { background: var(--color-pine); }
 
 .pagination {
     display: flex;
