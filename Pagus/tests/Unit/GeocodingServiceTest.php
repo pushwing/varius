@@ -26,7 +26,7 @@ final class GeocodingServiceTest extends TestCase
     public function testResultsPreferRoadAddressForDetailedDisplay(): void
     {
         self::assertSame([
-            ['display_name' => '경기 파주시 문산읍 문향로 57', 'latitude' => 37.7597, 'longitude' => 126.7777],
+            ['display_name' => '경기도 파주시 문산읍 문향로 57', 'latitude' => 37.7597, 'longitude' => 126.7777],
         ], GeocodingService::normalizeResults([
             [
                 'address_name' => '경기 파주시 문산읍 선유리 123-4',
@@ -49,7 +49,7 @@ final class GeocodingServiceTest extends TestCase
                 'road_address' => null,
             ],
         ]);
-        self::assertSame('경기 파주시 문산읍 선유리 123-4', $results[0]['display_name']);
+        self::assertSame('경기도 파주시 문산읍 선유리 123-4', $results[0]['display_name']);
     }
 
     public function testFallsBackToTopLevelAddressNameWhenNestedAddressesMissing(): void
@@ -57,7 +57,7 @@ final class GeocodingServiceTest extends TestCase
         $results = GeocodingService::normalizeResults([
             ['address_name' => '경기 파주시청', 'y' => '37.7597', 'x' => '126.7777'],
         ]);
-        self::assertSame('경기 파주시청', $results[0]['display_name']);
+        self::assertSame('경기도 파주시청', $results[0]['display_name']);
     }
 
     public function testInvalidResultsAreDiscarded(): void
@@ -118,7 +118,7 @@ final class GeocodingServiceTest extends TestCase
         $service = new GeocodingService($client, $config);
 
         self::assertSame([
-            ['display_name' => '경기 파주시 문산읍 문향로 57', 'latitude' => 37.7597, 'longitude' => 126.7777],
+            ['display_name' => '경기도 파주시 문산읍 문향로 57', 'latitude' => 37.7597, 'longitude' => 126.7777],
         ], $service->search('문산읍 문향로 57'));
     }
 

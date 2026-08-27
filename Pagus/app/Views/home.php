@@ -58,7 +58,7 @@ if ($mapData === false) {
         <?php else: ?>
             <?php foreach ($restaurants as $restaurant): ?>
                 <article class="restaurant-card">
-                    <h2><a href="<?= site_url('restaurants/' . (int) $restaurant['id']) ?>"><?= esc((string) $restaurant['name']) ?></a></h2>
+                    <h2><button class="restaurant-title" type="button" data-restaurant-id="<?= (int) $restaurant['id'] ?>"><?= esc((string) $restaurant['name']) ?></button></h2>
                     <p class="category"><?= esc((string) ($restaurant['category_names'] ?? '카테고리 미지정')) ?></p>
                     <p><?= esc((string) $restaurant['address']) ?></p>
                     <?php if ((string) ($restaurant['phone'] ?? '') !== ''): ?><p><?= esc((string) $restaurant['phone']) ?></p><?php endif; ?>
@@ -85,6 +85,7 @@ if ($mapData === false) {
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
     const restaurants = <?= $mapData ?>;
+    const markers = new Map();
     const map = L.map('map').setView([37.7597, 126.7777], 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
@@ -105,10 +106,28 @@ if ($mapData === false) {
             category.textContent = restaurant.category_names;
             popup.append(category);
         }
-        L.marker(position).addTo(map).bindPopup(popup);
+        if (restaurant.phone) {
+            const phone = document.createElement('div');
+            phone.textContent = restaurant.phone;
+            popup.append(phone);
+        }
+        const detail = document.createElement('a');
+        detail.href = '<?= site_url('restaurants') ?>/' + Number(restaurant.id);
+        detail.textContent = '상세 보기';
+        popup.append(detail);
+        const marker = L.marker(position).addTo(map).bindPopup(popup);
+        markers.set(Number(restaurant.id), marker);
         bounds.push(position);
     });
     if (bounds.length > 0) map.fitBounds(bounds, { padding: [24, 24], maxZoom: 15 });
+    document.querySelectorAll('[data-restaurant-id]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const marker = markers.get(Number(button.dataset.restaurantId));
+            if (!marker) return;
+            map.setView(marker.getLatLng(), Math.max(map.getZoom(), 15));
+            marker.openPopup();
+        });
+    });
 </script>
 </body>
 </html>

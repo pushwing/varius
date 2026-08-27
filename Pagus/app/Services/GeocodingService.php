@@ -57,7 +57,7 @@ final class GeocodingService
             if (! is_array($document)) {
                 continue;
             }
-            $displayName = self::detailedAddress($document);
+            $displayName = self::formatAddress(self::detailedAddress($document));
             if ($displayName === null || ! is_numeric($document['y'] ?? null) || ! is_numeric($document['x'] ?? null)) {
                 continue;
             }
@@ -83,5 +83,14 @@ final class GeocodingService
             return $address['address_name'];
         }
         return is_string($document['address_name'] ?? null) && $document['address_name'] !== '' ? $document['address_name'] : null;
+    }
+
+    private static function formatAddress(?string $address): ?string
+    {
+        if ($address === null) {
+            return null;
+        }
+
+        return preg_replace('/^경기(?=\s)/u', '경기도', $address) ?? $address;
     }
 }
