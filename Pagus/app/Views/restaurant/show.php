@@ -12,10 +12,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc((string) $restaurant['name']) ?> · 파구스</title>
     <link rel="stylesheet" href="<?= base_url('assets/css/app.css') ?>">
+    <link rel="icon" href="<?= base_url('favicon.ico') ?>" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="<?= base_url('favicon.svg') ?>">
+    <link rel="apple-touch-icon" href="<?= base_url('apple-touch-icon.png') ?>">
 </head>
 <body>
 <header class="site-header">
-    <h1>파구스</h1>
+    <h1><img class="brand-mark" src="<?= base_url('assets/img/logo-mark.svg') ?>" alt="">파구스</h1>
     <nav aria-label="주요 메뉴"><a href="<?= site_url('/') ?>">목록으로</a></nav>
 </header>
 <main class="detail-main">
