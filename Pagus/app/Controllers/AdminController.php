@@ -5,16 +5,20 @@ namespace App\Controllers;
 use App\Services\RestaurantManagementService;
 use CodeIgniter\Controller;
 use CodeIgniter\HTTP\RedirectResponse;
+use CodeIgniter\HTTP\ResponseInterface;
+use App\Services\GeocodingService;
 use InvalidArgumentException;
 
 final class AdminController extends Controller
 {
     private RestaurantManagementService $management;
+    private GeocodingService $geocoding;
 
     public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger): void
     {
         parent::initController($request, $response, $logger);
         $this->management = new RestaurantManagementService();
+        $this->geocoding = new GeocodingService();
     }
 
     public function index(): string
@@ -81,5 +85,18 @@ final class AdminController extends Controller
     {
         $this->management->toggleRestaurant($id);
         return redirect()->to('/admin')->with('message', '맛집 공개 상태를 변경했습니다.');
+    }
+
+    public function searchAddress(): ResponseInterface
+    {
+        $query = trim((string) $this->request->getGet('q'));
+        if ($query === '' || mb_strlen($query) < 2 || mb_strlen($query) > 100) {
+            return $this->response->setStatusCode(400)->setJSON(['error' => '주소 검색어는 2자 이상 100자 이하로 입력하세요.']);
+        }
+        $results = $this->geocoding->search($query);
+        if ($results === null) {
+            return $this->response->setStatusCode(503)->setJSON(['error' => '주소 검색을 사용할 수 없습니다. 주소와 좌표를 직접 입력하세요.']);
+        }
+        return $this->response->setJSON(['results' => $results]);
     }
 }
