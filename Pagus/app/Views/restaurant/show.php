@@ -11,25 +11,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc((string) $restaurant['name']) ?> · 파구스</title>
-    <style>
-        :root { color: #17202a; font-family: system-ui, -apple-system, sans-serif; }
-        body { margin: 0; background: #f5f7f8; }
-        header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 5vw; background: #173b35; color: #fff; }
-        header a { color: #d9f2e9; text-decoration: none; }
-        main { max-width: 48rem; margin: 0 auto; padding: 1.5rem 5vw; }
-        .category { color: #206b58; }
-        .photos { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1rem 0; }
-        .photos img { width: 12rem; height: 9rem; object-fit: cover; border-radius: .5rem; }
-        section { margin: 1.25rem 0; }
-        section h2 { font-size: 1rem; margin: 0 0 .3rem; }
-    </style>
+    <link rel="stylesheet" href="<?= base_url('assets/css/app.css') ?>">
 </head>
 <body>
-<header>
+<header class="site-header">
     <h1>파구스</h1>
     <nav aria-label="주요 메뉴"><a href="<?= site_url('/') ?>">목록으로</a></nav>
 </header>
-<main>
+<main class="detail-main">
     <h1><?= esc((string) $restaurant['name']) ?></h1>
     <p class="category"><?= esc((string) ($restaurant['category_names'] ?? '카테고리 미지정')) ?></p>
     <p><?= esc((string) $restaurant['address']) ?></p>
@@ -38,7 +27,7 @@
 
     <?php if ($photos !== []): ?>
         <section aria-label="사진">
-            <div class="photos">
+            <div class="photo-grid">
                 <?php foreach ($photos as $photo): ?>
                     <img src="/photos/<?= (int) $photo['id'] ?>" alt="<?= esc((string) $restaurant['name']) ?> 사진" loading="lazy">
                 <?php endforeach; ?>

@@ -12,3 +12,4 @@
 /writable/session/*
 !/writable/session/.gitkeep
 /writable/logs/*
+/.impeccable/hook.cache.json
