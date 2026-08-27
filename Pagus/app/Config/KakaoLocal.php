@@ -10,6 +10,7 @@ final class KakaoLocal extends BaseConfig
 {
     public string $apiKey = '';
     public string $endpoint = 'https://dapi.kakao.com/v2/local/search/keyword.json';
+    public string $addressEndpoint = 'https://dapi.kakao.com/v2/local/search/address.json';
     public int $timeout = 5;
     public int $connectTimeout = 3;
     public int $resultLimit = 5;

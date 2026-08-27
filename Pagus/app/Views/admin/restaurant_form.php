@@ -27,7 +27,6 @@
                 <?= csrf_field() ?>
                 <input type="hidden" name="id" value="<?= $editingRestaurant === null ? '' : (int) $editingRestaurant['id'] ?>">
                 <label>상호 <input id="restaurant-name" name="name" required maxlength="150" value="<?= esc($editingRestaurant['name'] ?? old('name')) ?>"></label>
-                <label>주소 <input id="restaurant-address" name="address" required maxlength="255" value="<?= esc($editingRestaurant['address'] ?? old('address')) ?>"></label>
 
                 <div class="location-search" id="reference-search-form" role="search">
                     <label for="reference-search-query">외부 참고 데이터 검색 (카카오)</label>
@@ -38,8 +37,8 @@
                     <p class="reference-attribution">검색 결과 제공: 카카오</p>
                 </div>
                 <div class="location-search" id="address-search-form" role="search">
-                    <label for="address-search-query">주소 검색</label>
-                    <input id="address-search-query" minlength="2" maxlength="100" autocomplete="street-address">
+                    <label for="restaurant-address">주소 (2자 이상 입력 후 검색하면 도로명 주소와 좌표를 채웁니다)</label>
+                    <input id="restaurant-address" name="address" required maxlength="255" autocomplete="street-address" value="<?= esc($editingRestaurant['address'] ?? old('address')) ?>">
                     <button id="address-search-submit" type="button" class="btn-ghost">검색</button>
                     <p id="address-search-message" class="location-search-message" role="status">검색 실패 시 주소와 좌표를 직접 입력할 수 있습니다.</p>
                     <div id="address-search-results"></div>
@@ -55,6 +54,8 @@
                     <label>홈페이지 <input name="homepage_url" type="url" maxlength="2048" value="<?= esc($editingRestaurant['homepage_url'] ?? old('homepage_url')) ?>"></label>
                 </div>
 
+                <label class="checkbox-label"><input type="checkbox" name="is_published" value="1" <?= (int) ($editingRestaurant['is_published'] ?? old('is_published') ?? 0) === 1 ? 'checked' : '' ?>> 공개</label>
+
                 <div>
                     <label>카테고리</label>
                     <div class="checkbox-group">
@@ -69,7 +70,12 @@ foreach ($categories as $category): ?>
                 <label>설명 <textarea name="description" rows="3"><?= esc($editingRestaurant['description'] ?? old('description')) ?></textarea></label>
                 <label>메뉴 <textarea name="menu" rows="3"><?= esc($editingRestaurant['menu'] ?? old('menu')) ?></textarea></label>
                 <label>영업 정보 <textarea name="business_hours" rows="3"><?= esc($editingRestaurant['business_hours'] ?? old('business_hours')) ?></textarea></label>
-                <label>태그 <input name="tags" maxlength="500" value="<?= esc($editingRestaurant['tags'] ?? old('tags')) ?>"></label>
+                <div>
+                    <label for="tag-input">태그 (입력 후 쉼표나 Enter로 추가)</label>
+                    <div id="tag-chips" class="tag-chip-list"></div>
+                    <input id="tag-input" maxlength="100" autocomplete="off">
+                    <input type="hidden" name="tags" id="restaurant-tags" maxlength="500" value="<?= esc($editingRestaurant['tags'] ?? old('tags')) ?>">
+                </div>
 
                 <span class="inline-actions">
                     <button type="submit">저장</button>
@@ -87,9 +93,17 @@ foreach ($categories as $category): ?>
     if (map) { L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution: '&copy; OpenStreetMap contributors', maxZoom: 19}).addTo(map); map.on('click', (event) => setLocation(event.latlng.lat, event.latlng.lng)); } else document.getElementById('restaurant-map').textContent = '지도를 불러오지 못했습니다. 아래 좌표를 직접 입력하세요.';
     function setLocation(lat, lon, label = '') { if (!validLocation(lat, lon)) return; latitude.value = lat.toFixed(7); longitude.value = lon.toFixed(7); if (label !== '') address.value = label; if (map) { if (marker) marker.setLatLng([lat, lon]); else marker = L.marker([lat, lon]).addTo(map); map.setView([lat, lon], Math.max(map.getZoom(), 15)); } }
     const initialLat = Number(latitude.value); const initialLon = Number(longitude.value); if (validLocation(initialLat, initialLon)) setLocation(initialLat, initialLon);
-    const searchAddress = async () => { results.replaceChildren(); const query = document.getElementById('address-search-query').value.trim(); if (query.length < 2 || query.length > 100) { message.textContent = '주소 검색어는 2자 이상 100자 이하로 입력하세요.'; return; } const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 7000); message.textContent = '주소 검색 중...'; try { const response = await fetch('/admin/restaurants/search-address?q=' + encodeURIComponent(query), {signal: controller.signal, headers: {'Accept': 'application/json'}}); const payload = await response.json(); if (!response.ok) throw new Error(payload.error || '주소 검색을 사용할 수 없습니다.'); if (!payload.results.length) { message.textContent = '검색 결과가 없습니다. 주소와 좌표를 직접 입력하세요.'; return; } message.textContent = '결과를 선택하면 주소와 좌표가 입력됩니다.'; payload.results.forEach((item) => { const button = document.createElement('button'); button.type = 'button'; button.className = 'address-result'; button.textContent = item.display_name; button.addEventListener('click', () => setLocation(item.latitude, item.longitude, item.display_name)); results.append(button); }); } catch { message.textContent = '주소 검색을 사용할 수 없습니다. 주소와 좌표를 직접 입력하세요.'; } finally { clearTimeout(timer); } };
-    document.getElementById('address-search-submit').addEventListener('click', searchAddress); document.getElementById('address-search-query').addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); searchAddress(); } });
+    const searchAddress = async () => { results.replaceChildren(); const query = address.value.trim(); if (query.length < 2 || query.length > 100) { message.textContent = '주소는 2자 이상 100자 이하로 입력 후 검색하세요.'; return; } const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 7000); message.textContent = '주소 검색 중...'; try { const response = await fetch('/admin/restaurants/search-address?q=' + encodeURIComponent(query), {signal: controller.signal, headers: {'Accept': 'application/json'}}); const payload = await response.json(); if (!response.ok) throw new Error(payload.error || '주소 검색을 사용할 수 없습니다.'); if (!payload.results.length) { message.textContent = '검색 결과가 없습니다. 주소와 좌표를 직접 입력하세요.'; return; } message.textContent = '결과를 선택하면 주소와 좌표가 입력됩니다.'; payload.results.forEach((item) => { const button = document.createElement('button'); button.type = 'button'; button.className = 'address-result'; button.textContent = item.display_name; button.addEventListener('click', () => setLocation(item.latitude, item.longitude, item.display_name)); results.append(button); }); } catch { message.textContent = '주소 검색을 사용할 수 없습니다. 주소와 좌표를 직접 입력하세요.'; } finally { clearTimeout(timer); } };
+    document.getElementById('address-search-submit').addEventListener('click', searchAddress); address.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); searchAddress(); } });
     const searchReference = async () => { referenceResults.replaceChildren(); const query = document.getElementById('reference-search-query').value.trim(); if (query.length < 2 || query.length > 100) { referenceMessage.textContent = '참고 데이터 검색어는 2자 이상 100자 이하로 입력하세요.'; return; } const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 7000); referenceMessage.textContent = '참고 데이터 조회 중...'; try { const response = await fetch('/admin/restaurants/search-reference?q=' + encodeURIComponent(query), {signal: controller.signal, headers: {'Accept': 'application/json'}}); const payload = await response.json(); if (!response.ok) throw new Error(payload.error || '참고 데이터 조회를 사용할 수 없습니다.'); if (!payload.results.length) { referenceMessage.textContent = '참고 데이터가 없습니다. 상호·주소·좌표를 직접 입력하세요.'; return; } referenceMessage.textContent = '결과는 참고용입니다. 선택하면 상호·주소·연락처·좌표가 채워지며, 공개 여부는 저장 전 직접 확인하세요.'; payload.results.forEach((item) => { const button = document.createElement('button'); button.type = 'button'; button.className = 'address-result'; button.textContent = item.name + ' · ' + item.address; button.addEventListener('click', () => { name.value = item.name; if (item.phone) phone.value = item.phone; setLocation(item.latitude, item.longitude, item.address); }); referenceResults.append(button); }); } catch { referenceMessage.textContent = '참고 데이터 조회를 사용할 수 없습니다. 상호·주소·좌표를 직접 입력하세요.'; } finally { clearTimeout(timer); } };
     document.getElementById('reference-search-submit').addEventListener('click', searchReference); document.getElementById('reference-search-query').addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); searchReference(); } });
+    const tagsHidden = document.getElementById('restaurant-tags'); const tagInput = document.getElementById('tag-input'); const tagChips = document.getElementById('tag-chips');
+    let tags = tagsHidden.value.split(',').map((tag) => tag.trim()).filter((tag) => tag !== '');
+    function renderTags() { tagChips.replaceChildren(); tags.forEach((tag, index) => { const chip = document.createElement('span'); chip.className = 'tag-chip'; chip.textContent = tag + ' '; const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '×'; remove.setAttribute('aria-label', tag + ' 태그 삭제'); remove.addEventListener('click', () => { tags.splice(index, 1); syncTags(); }); chip.append(remove); tagChips.append(chip); }); }
+    function syncTags() { tagsHidden.value = tags.join(','); renderTags(); }
+    function addTagFromInput() { const value = tagInput.value.trim(); tagInput.value = ''; if (value === '' || tags.includes(value)) return; tags.push(value); syncTags(); }
+    tagInput.addEventListener('keydown', (event) => { if (event.key === ',' || event.key === 'Enter') { event.preventDefault(); addTagFromInput(); } });
+    tagInput.addEventListener('blur', addTagFromInput);
+    renderTags();
 })();
 </script></body></html>
