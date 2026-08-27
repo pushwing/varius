@@ -15,13 +15,7 @@
 </head>
 <body>
 <div class="admin-shell">
-    <header class="admin-header">
-        <a class="admin-header-brand" href="/admin">파구스 운영</a>
-        <nav class="admin-header-nav" aria-label="운영자 메뉴">
-            <a href="/admin">맛집 관리</a>
-            <a href="/admin/inquiries">문의 관리</a>
-        </nav>
-    </header>
+    <?= view('admin/_header', ['active' => 'restaurants']) ?>
     <main class="admin-main">
         <p><a href="/admin">← 목록으로</a></p>
         <h1><?= esc((string) $restaurant['name']) ?> 사진 관리</h1>

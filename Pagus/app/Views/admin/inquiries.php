@@ -14,13 +14,7 @@
 </head>
 <body>
 <div class="admin-shell">
-    <header class="admin-header">
-        <a class="admin-header-brand" href="/admin">파구스 운영</a>
-        <nav class="admin-header-nav" aria-label="운영자 메뉴">
-            <a href="/admin">맛집 관리</a>
-            <a href="/admin/inquiries">문의 관리</a>
-        </nav>
-    </header>
+    <?= view('admin/_header', ['active' => 'inquiries']) ?>
     <main class="admin-main">
         <h1>문의 목록</h1>
         <?php if (session('message')): ?><p role="status"><?= esc(session('message')) ?></p><?php endif; ?>
