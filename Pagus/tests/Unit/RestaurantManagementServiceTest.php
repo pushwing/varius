@@ -27,4 +27,34 @@ final class RestaurantManagementServiceTest extends TestCase
         $this->expectNotToPerformAssertions();
         RestaurantManagementService::assertRestaurantData(['name' => '맛집', 'address' => '파주', 'latitude' => -90, 'longitude' => 180]);
     }
+
+    public function testPublicFiltersAreNormalizedSafely(): void
+    {
+        self::assertSame([
+            'query' => str_repeat('맛', 100),
+            'category_id' => null,
+            'sort' => 'name',
+            'page' => 1,
+        ], RestaurantManagementService::normalizePublicFilters([
+            'query' => str_repeat('맛', 120),
+            'category_id' => 'not-a-number',
+            'sort' => 'unsupported',
+            'page' => '0',
+        ]));
+    }
+
+    public function testPublicFilterCategoryAndSortArePreserved(): void
+    {
+        self::assertSame([
+            'query' => '운정',
+            'category_id' => 3,
+            'sort' => 'newest',
+            'page' => 2,
+        ], RestaurantManagementService::normalizePublicFilters([
+            'query' => ' 운정 ',
+            'category_id' => '3',
+            'sort' => 'newest',
+            'page' => '2',
+        ]));
+    }
 }
