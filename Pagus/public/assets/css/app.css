@@ -128,6 +128,8 @@ button:hover, .btn:hover { background: var(--color-pine); border-color: var(--co
 .form-grid { display: grid; gap: var(--space-sm); }
 .form-row { display: flex; flex-wrap: wrap; gap: var(--space-md); }
 .form-row > * { flex: 1 1 12rem; }
+.admin-search-form { align-items: flex-end; }
+.admin-search-form .inline-actions { align-items: center; margin-bottom: var(--space-xs); }
 
 /* 상태 배너 */
 [role="status"], [role="alert"] {
