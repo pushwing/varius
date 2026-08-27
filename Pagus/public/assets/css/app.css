@@ -170,6 +170,14 @@ button:hover, .btn:hover { background: var(--color-pine); border-color: var(--co
 }
 .site-header nav a { color: var(--color-mint); text-decoration: none; }
 .site-header nav a:hover, .site-header nav a:focus-visible { text-decoration: underline; }
+.site-header .nav-button {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-mint);
+    font-size: inherit;
+}
+.site-header .nav-button:hover, .site-header .nav-button:focus-visible { background: transparent; border-color: transparent; color: #fff; text-decoration: underline; }
 
 .site-footer {
     padding: var(--space-lg) 5vw;
@@ -177,8 +185,22 @@ button:hover, .btn:hover { background: var(--color-pine); border-color: var(--co
     color: var(--color-mint);
 }
 .site-footer h2 { color: #fff; }
-.site-footer .form-grid { max-width: 28rem; }
-.site-footer label { color: var(--color-mint); }
+.site-footer p { margin: var(--space-xs) 0; }
+.site-footer a { color: var(--color-mint); }
+
+.contact-dialog {
+    width: min(28rem, calc(100% - 2rem));
+    margin: auto;
+    padding: var(--space-lg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-paper);
+    color: var(--color-charcoal);
+}
+.contact-dialog::backdrop { background: rgb(23 59 53 / 65%); }
+.contact-dialog__header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); margin-bottom: var(--space-md); }
+.contact-dialog__header h2 { margin: 0; }
+.contact-dialog .btn-ghost { flex: 0 0 auto; }
 
 /* ===== 홈: 지도 + 목록 ===== */
 .home-main {

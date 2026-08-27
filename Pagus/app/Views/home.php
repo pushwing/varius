@@ -25,9 +25,24 @@ if ($mapData === false) {
     <nav aria-label="주요 메뉴">
         <a href="<?= site_url('/') ?>">홈</a>
         <a href="<?= site_url('login') ?>">로그인</a>
-        <a href="#contact">문의하기</a>
+        <button type="button" class="nav-button" data-contact-open>문의하기</button>
     </nav>
 </header>
+<dialog id="contact" class="contact-dialog" aria-labelledby="contact-title">
+    <div class="contact-dialog__header">
+        <h2 id="contact-title">문의하기</h2>
+        <button type="button" class="btn-ghost btn-sm" data-contact-close aria-label="문의하기 닫기">닫기</button>
+    </div>
+    <?php if (session('message')): ?><p role="status"><?= esc(session('message')) ?></p><?php endif; ?>
+    <?php if (session('error')): ?><p role="alert"><?= esc(session('error')) ?></p><?php endif; ?>
+    <form class="form-grid" method="post" action="<?= site_url('inquiries') ?>">
+        <?= csrf_field() ?>
+        <label for="contact-name">이름 <input id="contact-name" name="name" required maxlength="100" value="<?= esc(old('name') ?? '') ?>"></label>
+        <label for="contact-detail">연락처(선택, 회신용) <input id="contact-detail" name="contact" maxlength="255" value="<?= esc(old('contact') ?? '') ?>"></label>
+        <label for="contact-message">문의 내용 <textarea id="contact-message" name="message" required maxlength="2000" rows="4"><?= esc(old('message') ?? '') ?></textarea></label>
+        <button type="submit">문의 보내기</button>
+    </form>
+</dialog>
 <main class="home-main">
     <aside class="home-aside">
         <form class="search-form form-grid" method="get" action="<?= site_url('/') ?>" aria-label="맛집 검색">
@@ -67,21 +82,29 @@ if ($mapData === false) {
     </aside>
     <div id="map" aria-label="공개 맛집 지도"></div>
 </main>
-<footer id="contact" class="site-footer">
-    <h2>문의하기</h2>
-    <?php if (session('message')): ?><p role="status"><?= esc(session('message')) ?></p><?php endif; ?>
-    <?php if (session('error')): ?><p role="alert"><?= esc(session('error')) ?></p><?php endif; ?>
-    <form class="form-grid" method="post" action="<?= site_url('inquiries') ?>">
-        <?= csrf_field() ?>
-        <label>이름 <input name="name" required maxlength="100" value="<?= esc(old('name') ?? '') ?>"></label>
-        <label>연락처(선택, 회신용) <input name="contact" maxlength="255" value="<?= esc(old('contact') ?? '') ?>"></label>
-        <label>문의 내용 <textarea name="message" required maxlength="2000" rows="4"><?= esc(old('message') ?? '') ?></textarea></label>
-        <button type="submit">문의 보내기</button>
-    </form>
+<footer class="site-footer">
+    <p>© <?= date('Y') ?> 파구스. All rights reserved.</p>
+    <p><a href="mailto:advisor@aivance.kr">advisor@aivance.kr</a></p>
 </footer>
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=<?= esc(config(\Config\KakaoMaps::class)->jsKey, 'url') ?>"></script>
 <script>
     const restaurants = <?= $mapData ?>;
+    const contactDialog = document.getElementById('contact');
+    const contactOpenButton = document.querySelector('[data-contact-open]');
+    const contactCloseButton = document.querySelector('[data-contact-close]');
+    const openContactDialog = () => {
+        if (!contactDialog.open) contactDialog.showModal();
+        history.replaceState(null, '', '#contact');
+    };
+    contactOpenButton?.addEventListener('click', openContactDialog);
+    contactCloseButton?.addEventListener('click', () => {
+        contactDialog.close();
+        if (window.location.hash === '#contact') history.replaceState(null, '', window.location.pathname + window.location.search);
+    });
+    contactDialog?.addEventListener('click', (event) => {
+        if (event.target === contactDialog) contactCloseButton?.click();
+    });
+    if (window.location.hash === '#contact') openContactDialog();
     if (!window.kakao || !window.kakao.maps) {
         document.getElementById('map').textContent = '지도를 불러오지 못했습니다.';
     } else kakao.maps.load(() => {
