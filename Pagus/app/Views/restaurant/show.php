@@ -32,7 +32,16 @@
         <section aria-label="사진">
             <div class="photo-grid">
                 <?php foreach ($photos as $photo): ?>
-                    <img src="/photos/<?= (int) $photo['id'] ?>" alt="<?= esc((string) $restaurant['name']) ?> 사진" loading="lazy">
+                    <?php $photoAlt = (string) $restaurant['name'] . ' 사진'; ?>
+                    <button
+                        class="photo-trigger"
+                        type="button"
+                        data-photo-url="/photos/<?= (int) $photo['id'] ?>"
+                        data-photo-alt="<?= esc($photoAlt, 'attr') ?>"
+                        aria-label="<?= esc($photoAlt) ?> 크게 보기"
+                    >
+                        <img src="/photos/<?= (int) $photo['id'] ?>" alt="<?= esc($photoAlt, 'attr') ?>" loading="lazy">
+                    </button>
                 <?php endforeach; ?>
             </div>
         </section>
@@ -51,5 +60,30 @@
         <section><h2>태그</h2><p><?= esc((string) $restaurant['tags']) ?></p></section>
     <?php endif; ?>
 </main>
+<dialog id="photo-dialog" class="photo-dialog" aria-labelledby="photo-dialog-title">
+    <div class="photo-dialog__header">
+        <h2 id="photo-dialog-title">사진 크게 보기</h2>
+        <button type="button" class="btn-ghost btn-sm" data-photo-close>닫기</button>
+    </div>
+    <img id="photo-dialog-image" src="" alt="">
+</dialog>
+<script>
+    const photoDialog = document.getElementById('photo-dialog');
+    const photoDialogImage = document.getElementById('photo-dialog-image');
+
+    document.querySelectorAll('.photo-trigger').forEach((trigger) => {
+        trigger.addEventListener('click', () => {
+            photoDialogImage.src = trigger.dataset.photoUrl;
+            photoDialogImage.alt = trigger.dataset.photoAlt;
+            photoDialog.showModal();
+        });
+    });
+
+    document.querySelector('[data-photo-close]').addEventListener('click', () => photoDialog.close());
+    photoDialog.addEventListener('close', () => {
+        photoDialogImage.src = '';
+        photoDialogImage.alt = '';
+    });
+</script>
 </body>
 </html>

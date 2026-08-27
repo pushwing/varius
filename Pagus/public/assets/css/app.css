@@ -293,6 +293,8 @@ button:hover, .btn:hover { background: var(--color-pine); border-color: var(--co
 .detail-main section:first-of-type { border-top: none; padding-top: 0; }
 
 .photo-grid { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin: var(--space-md) 0; }
+.photo-trigger { display: block; padding: 0; border: 0; background: transparent; }
+.photo-trigger:hover, .photo-trigger:focus-visible { background: transparent; border-color: transparent; }
 .photo-grid img {
     width: 12rem;
     height: 9rem;
@@ -301,6 +303,20 @@ button:hover, .btn:hover { background: var(--color-pine); border-color: var(--co
     border: 1px solid var(--color-border);
     background: var(--color-paper);
 }
+.photo-dialog {
+    width: min(90vw, 64rem);
+    max-height: 90vh;
+    margin: auto;
+    padding: var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-paper);
+}
+.photo-dialog::backdrop { background: rgb(23 59 53 / 75%); }
+.photo-dialog__header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); margin-bottom: var(--space-md); }
+.photo-dialog__header h2 { margin: 0; }
+.photo-dialog__header .btn-ghost { flex: 0 0 auto; }
+.photo-dialog > img { display: block; width: 100%; max-height: calc(90vh - 6rem); object-fit: contain; }
 
 /* ===== 운영자 화면 공통 ===== */
 .admin-shell { min-height: 100vh; background: var(--color-linen); }
