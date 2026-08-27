@@ -116,9 +116,18 @@ foreach ($categories as $category): ?>
     let tags = tagsHidden.value.split(',').map((tag) => tag.trim()).filter((tag) => tag !== '');
     function renderTags() { tagChips.replaceChildren(); tags.forEach((tag, index) => { const chip = document.createElement('span'); chip.className = 'tag-chip'; chip.textContent = tag + ' '; const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '×'; remove.setAttribute('aria-label', tag + ' 태그 삭제'); remove.addEventListener('click', () => { tags.splice(index, 1); syncTags(); }); chip.append(remove); tagChips.append(chip); }); }
     function syncTags() { tagsHidden.value = tags.join(','); renderTags(); }
-    function commitTagInput() { tagInput.value.split(',').forEach((part) => { const value = part.trim(); if (value !== '' && !tags.includes(value)) tags.push(value); }); tagInput.value = ''; syncTags(); }
-    tagInput.addEventListener('input', () => { if (tagInput.value.includes(',')) commitTagInput(); });
-    tagInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); commitTagInput(); } });
+    let isComposingTag = false;
+    function commitTagInput() {
+        tagInput.value.split(',').forEach((part) => { const value = part.trim(); if (value !== '' && !tags.includes(value)) tags.push(value); });
+        syncTags();
+        // 한글(IME) 조합 종료 직후 값을 바로 비우면 조합 중이던 마지막 글자가 다시 끼어드는
+        // 브라우저가 있어, 다음 이벤트 루프 틱으로 값 초기화를 미룬다.
+        setTimeout(() => { tagInput.value = ''; }, 0);
+    }
+    tagInput.addEventListener('compositionstart', () => { isComposingTag = true; });
+    tagInput.addEventListener('compositionend', () => { isComposingTag = false; if (tagInput.value.includes(',')) commitTagInput(); });
+    tagInput.addEventListener('input', () => { if (!isComposingTag && tagInput.value.includes(',')) commitTagInput(); });
+    tagInput.addEventListener('keydown', (event) => { if (event.key === 'Enter' && !isComposingTag) { event.preventDefault(); commitTagInput(); } });
     tagInput.addEventListener('blur', commitTagInput);
     renderTags();
 })();
