@@ -1,0 +1,13 @@
+# CodeIgniter 4의 모든 비정적 요청을 front controller로 전달합니다.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # 실제 파일과 디렉터리는 Apache가 직접 제공합니다.
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ index.php/$1 [L]
+</IfModule>
+
+<IfModule !mod_rewrite.c>
+    ErrorDocument 404 index.php
+</IfModule>
