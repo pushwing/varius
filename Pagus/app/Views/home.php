@@ -78,7 +78,7 @@ if ($mapData === false) {
         <?php else: ?>
             <?php foreach ($restaurants as $restaurant): ?>
                 <article class="restaurant">
-                    <h2><?= esc((string) $restaurant['name']) ?></h2>
+                    <h2><a href="<?= site_url('restaurants/' . (int) $restaurant['id']) ?>"><?= esc((string) $restaurant['name']) ?></a></h2>
                     <p class="category"><?= esc((string) ($restaurant['category_names'] ?? '카테고리 미지정')) ?></p>
                     <p><?= esc((string) $restaurant['address']) ?></p>
                     <?php if ((string) ($restaurant['phone'] ?? '') !== ''): ?><p><?= esc((string) $restaurant['phone']) ?></p><?php endif; ?>

@@ -3,7 +3,9 @@
 namespace App\Controllers;
 
 use App\Services\RestaurantManagementService;
+use App\Services\RestaurantPhotoService;
 use CodeIgniter\Controller;
+use CodeIgniter\HTTP\Files\UploadedFile;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 use App\Services\GeocodingService;
@@ -12,12 +14,14 @@ use InvalidArgumentException;
 final class AdminController extends Controller
 {
     private RestaurantManagementService $management;
+    private RestaurantPhotoService $photos;
     private GeocodingService $geocoding;
 
     public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger): void
     {
         parent::initController($request, $response, $logger);
         $this->management = new RestaurantManagementService();
+        $this->photos = new RestaurantPhotoService();
         $this->geocoding = new GeocodingService();
     }
 
@@ -85,6 +89,49 @@ final class AdminController extends Controller
     {
         $this->management->toggleRestaurant($id);
         return redirect()->to('/admin')->with('message', '맛집 공개 상태를 변경했습니다.');
+    }
+
+    public function managePhotos(int $restaurantId): string|RedirectResponse
+    {
+        $restaurant = $this->management->restaurant($restaurantId);
+        if ($restaurant === null) {
+            return redirect()->to('/admin')->with('error', '맛집을 찾을 수 없습니다.');
+        }
+        return view('admin/photos', ['restaurant' => $restaurant, 'photos' => $this->photos->photosForRestaurant($restaurantId, true)]);
+    }
+
+    public function uploadPhotos(int $restaurantId): RedirectResponse
+    {
+        $files = array_values(array_filter(
+            (array) ($this->request->getFiles()['photos'] ?? []),
+            static fn (mixed $file): bool => $file instanceof UploadedFile && $file->getError() !== UPLOAD_ERR_NO_FILE,
+        ));
+        try {
+            $uploaded = $this->photos->uploadPhotos($restaurantId, $files);
+        } catch (InvalidArgumentException $exception) {
+            return redirect()->to("/admin/restaurants/{$restaurantId}/photos")->with('error', $exception->getMessage());
+        }
+        return redirect()->to("/admin/restaurants/{$restaurantId}/photos")->with('message', "{$uploaded}장의 사진을 업로드했습니다.");
+    }
+
+    public function togglePhoto(int $restaurantId, int $photoId): RedirectResponse
+    {
+        try {
+            $this->photos->togglePhoto($photoId);
+        } catch (InvalidArgumentException $exception) {
+            return redirect()->to("/admin/restaurants/{$restaurantId}/photos")->with('error', $exception->getMessage());
+        }
+        return redirect()->to("/admin/restaurants/{$restaurantId}/photos")->with('message', '사진 공개 상태를 변경했습니다.');
+    }
+
+    public function deletePhoto(int $restaurantId, int $photoId): RedirectResponse
+    {
+        try {
+            $this->photos->deletePhoto($photoId);
+        } catch (InvalidArgumentException $exception) {
+            return redirect()->to("/admin/restaurants/{$restaurantId}/photos")->with('error', $exception->getMessage());
+        }
+        return redirect()->to("/admin/restaurants/{$restaurantId}/photos")->with('message', '사진을 삭제했습니다.');
     }
 
     public function searchAddress(): ResponseInterface

@@ -91,6 +91,20 @@ final class RestaurantManagementService
         return ['restaurants' => $model->paginate(12, 'restaurants', $page), 'pager' => $model->pager];
     }
 
+    /** @return array<string, mixed>|null 공개된 맛집만 조회한다 */
+    public function publicRestaurant(int $id): ?array
+    {
+        $restaurant = ($this->restaurants ?? model(RestaurantModel::class))
+            ->select('restaurants.*, GROUP_CONCAT(DISTINCT categories.name ORDER BY categories.name SEPARATOR ", ") AS category_names')
+            ->join('restaurant_categories', 'restaurant_categories.restaurant_id = restaurants.id', 'left')
+            ->join('categories', 'categories.id = restaurant_categories.category_id', 'left')
+            ->where('restaurants.id', $id)
+            ->where('restaurants.is_published', 1)
+            ->groupBy('restaurants.id')
+            ->first();
+        return is_array($restaurant) ? $restaurant : null;
+    }
+
     /** @return array<string, mixed>|null */
     public function restaurant(int $id): ?array
     {
