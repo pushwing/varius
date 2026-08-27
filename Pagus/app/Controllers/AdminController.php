@@ -95,6 +95,7 @@ final class AdminController extends Controller
             return redirect()->to($formUrl)->withInput()->with('error', '맛집 필수값 또는 좌표를 확인하세요.');
         }
         $data = array_intersect_key($post, array_flip(['name', 'address', 'latitude', 'longitude', 'phone', 'homepage_url', 'description', 'menu', 'business_hours', 'tags']));
+        $data['is_published'] = ((string) $this->request->getPost('is_published')) === '1' ? 1 : 0;
         try {
             $id = ($post['id'] ?? '') === '' ? null : (int) $post['id'];
             $this->management->saveRestaurant($id, $data, array_map('intval', (array) ($post['category_ids'] ?? [])));
