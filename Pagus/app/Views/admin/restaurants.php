@@ -24,11 +24,11 @@
 
         <section class="admin-section">
             <h1>맛집 목록</h1>
-            <form class="form-row" method="get" action="/admin">
-                <label>검색 <input name="q" value="<?= esc((string) (request()->getGet('q') ?? '')) ?>"></label>
+            <form class="form-row admin-search-form" method="get" action="/admin">
+                <input aria-label="맛집 검색" name="q" value="<?= esc((string) (request()->getGet('q') ?? '')) ?>">
                 <span class="inline-actions">
                     <button type="submit">검색</button>
-                    <a class="btn-ghost" href="/admin/restaurants/new">맛집 등록</a>
+                    <a class="btn btn-ghost" href="/admin/restaurants/new">맛집 등록</a>
                 </span>
             </form>
             <table class="admin-table">
