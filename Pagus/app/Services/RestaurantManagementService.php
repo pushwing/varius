@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Models\CategoryModel;
 use App\Models\RestaurantModel;
 use CodeIgniter\Database\BaseConnection;
+use CodeIgniter\Pager\Pager;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -37,6 +38,57 @@ final class RestaurantManagementService
             $model->groupStart()->like('restaurants.name', $query)->orLike('restaurants.address', $query)->orLike('restaurants.tags', $query)->groupEnd();
         }
         return $model->findAll();
+    }
+
+    /**
+     * @param array<string, mixed> $filters
+     * @return array{query: string, category_id: ?int, sort: string, page: int}
+     */
+    public static function normalizePublicFilters(array $filters): array
+    {
+        $query = trim((string) ($filters['query'] ?? ''));
+        if (mb_strlen($query) > 100) {
+            $query = mb_substr($query, 0, 100);
+        }
+
+        $categoryId = filter_var($filters['category_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $sort = in_array($filters['sort'] ?? '', ['name', 'newest'], true) ? (string) $filters['sort'] : 'name';
+        $page = filter_var($filters['page'] ?? 1, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: 1;
+
+        return ['query' => $query, 'category_id' => is_int($categoryId) ? $categoryId : null, 'sort' => $sort, 'page' => $page];
+    }
+
+    /**
+     * @return array{restaurants: list<array<string, mixed>>, pager: Pager}
+     */
+    public function publicRestaurants(string $query = '', ?int $categoryId = null, string $sort = 'name', int $page = 1): array
+    {
+        $model = ($this->restaurants ?? model(RestaurantModel::class))
+            ->select('restaurants.*, GROUP_CONCAT(DISTINCT categories.name ORDER BY categories.name SEPARATOR ", ") AS category_names')
+            ->join('restaurant_categories', 'restaurant_categories.restaurant_id = restaurants.id', 'left')
+            ->join('categories', 'categories.id = restaurant_categories.category_id', 'left')
+            ->where('restaurants.is_published', 1)
+            ->groupBy('restaurants.id');
+
+        if ($categoryId !== null) {
+            $model->where('categories.id', $categoryId)->where('categories.is_active', 1);
+        }
+        if ($query !== '') {
+            $model->groupStart()
+                ->like('restaurants.name', $query)
+                ->orLike('restaurants.address', $query)
+                ->orLike('restaurants.tags', $query)
+                ->orLike('categories.name', $query)
+                ->groupEnd();
+        }
+
+        if ($sort === 'newest') {
+            $model->orderBy('restaurants.created_at', 'DESC')->orderBy('restaurants.id', 'DESC');
+        } else {
+            $model->orderBy('restaurants.name', 'ASC');
+        }
+
+        return ['restaurants' => $model->paginate(12, 'restaurants', $page), 'pager' => $model->pager];
     }
 
     /** @return array<string, mixed>|null */
