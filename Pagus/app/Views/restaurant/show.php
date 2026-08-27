@@ -57,8 +57,21 @@
     <?php if ((string) ($restaurant['business_hours'] ?? '') !== ''): ?>
         <section><h2>영업 정보</h2><p><?= nl2br(esc((string) $restaurant['business_hours'])) ?></p></section>
     <?php endif; ?>
-    <?php if ((string) ($restaurant['tags'] ?? '') !== ''): ?>
-        <section><h2>태그</h2><p><?= esc((string) $restaurant['tags']) ?></p></section>
+    <?php
+    $tagList = array_values(array_filter(
+        array_map('trim', explode(',', (string) ($restaurant['tags'] ?? ''))),
+        static fn (string $tag): bool => $tag !== ''
+    ));
+?>
+    <?php if ($tagList !== []): ?>
+        <section>
+            <h2>태그</h2>
+            <div class="tag-chip-list">
+                <?php foreach ($tagList as $tag): ?>
+                    <a class="tag-chip" href="<?= esc(site_url('/') . '?' . http_build_query(['q' => $tag]), 'attr') ?>">#<?= esc($tag) ?></a>
+                <?php endforeach; ?>
+            </div>
+        </section>
     <?php endif; ?>
 </main>
 <dialog id="photo-dialog" class="photo-dialog" aria-labelledby="photo-dialog-title">
