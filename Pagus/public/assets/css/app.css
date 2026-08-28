@@ -293,7 +293,7 @@ button:hover, .btn:hover { background: var(--color-pine); border-color: var(--co
 }
 
 /* ===== 맛집 상세 ===== */
-.detail-main { max-width: 48rem; margin: 0 auto; padding: var(--space-lg) 5vw; }
+.detail-main { flex: 1 1 auto; max-width: 48rem; margin: 0 auto; padding: var(--space-lg) 5vw; }
 .detail-main .category { color: var(--color-fern); font-weight: 600; }
 .detail-actions { display: flex; flex-wrap: wrap; gap: var(--space-xs); margin: var(--space-md) 0; }
 .directions-link { display: inline-flex; align-items: center; min-height: 2.5rem; padding: .55rem .75rem; border-radius: var(--radius-sm); background: var(--color-fern); color: #fff; font-weight: 700; text-decoration: none; }
@@ -336,7 +336,7 @@ button:hover, .btn:hover { background: var(--color-pine); border-color: var(--co
 .photo-nav--next { right: var(--space-sm); }
 
 /* ===== 운영자 화면 공통 ===== */
-.admin-shell { min-height: 100vh; background: var(--color-linen); }
+.admin-shell { display: flex; flex-direction: column; min-height: 100vh; background: var(--color-linen); }
 
 .admin-header {
     display: flex;
@@ -354,7 +354,7 @@ button:hover, .btn:hover { background: var(--color-pine); border-color: var(--co
 .admin-header-nav { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-md); }
 .admin-header-user { color: var(--color-mint); font-size: .9rem; }
 
-.admin-main { padding: var(--space-lg) 5vw var(--space-xl); max-width: 64rem; margin: 0 auto; }
+.admin-main { flex: 1 1 auto; padding: var(--space-lg) 5vw var(--space-xl); max-width: 64rem; margin: 0 auto; }
 
 .admin-section {
     background: var(--color-paper);
@@ -436,7 +436,7 @@ a.tag-chip:hover { border-color: var(--color-fern); color: var(--color-fern); }
 
 /* ===== 로그인 ===== */
 .auth-shell {
-    min-height: 100vh;
+    flex: 1 1 auto;
     display: grid;
     place-items: center;
     background: var(--color-linen);
