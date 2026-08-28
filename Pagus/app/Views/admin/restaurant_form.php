@@ -86,6 +86,11 @@ foreach ($categories as $category): ?>
             </form>
         </section>
     </main>
+    <footer class="site-footer">
+        <p>© <?= date('Y') ?> 파구스. All rights reserved.</p>
+        <p><a href="mailto:advisor@aivance.kr">advisor@aivance.kr</a></p>
+        <p>파구스는 오픈소스 프로젝트입니다. <a href="https://github.com/pushwing/varius/tree/main/Pagus" target="_blank" rel="noopener noreferrer">GitHub에서 소스코드 보기</a></p>
+    </footer>
 </div>
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=<?= esc(config(\Config\KakaoMaps::class)->jsKey, 'url') ?>"></script><script>
 (() => {
