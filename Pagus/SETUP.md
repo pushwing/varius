@@ -37,17 +37,42 @@ composer --version
 mysql --version
 ```
 
-## 2. 소스와 의존성 준비
+## 2. 소스 받기와 의존성 준비
 
-명령은 `composer.json`과 `spark`가 있는 Pagus 디렉터리에서 실행한다.
+먼저 사용자가 원하는 작업 디렉터리에서 Git 저장소를 받는다. 아래 `~/projects`는 예시이므로 원하는 디렉터리로 바꿔도 된다.
 
 ```bash
-cd /경로/varius/Pagus
+mkdir -p ~/projects
+cd ~/projects
+git clone https://github.com/pushwing/varius.git
+cd varius/Pagus
 pwd
+```
+
+clone이 끝나면 모노레포가 다음과 같이 만들어진다.
+
+```text
+~/projects/varius/
+├── AGENTS.md
+├── README.md
+├── Iter/
+├── Pagus/
+│   ├── app/
+│   ├── public/
+│   ├── spark
+│   ├── composer.json
+│   └── .env.example
+└── rtic/
+```
+
+이후 모든 Pagus 명령은 `composer.json`과 `spark`가 있는 `~/projects/varius/Pagus`에서 실행한다. 사용자가 다른 곳에 clone했다면 그 경로의 `varius/Pagus`로 바꾼다.
+
+```bash
+cd ~/projects/varius/Pagus
 composer install
 ```
 
-출력 경로가 반드시 `.../varius/Pagus`인지 확인한다. 모노레포 상위 디렉터리에서 실행하면 Pagus의 `.env`, `vendor/`, `spark`를 찾지 못할 수 있다.
+모노레포 상위 디렉터리에서 실행하면 Pagus의 `.env`, `vendor/`, `spark`를 찾지 못할 수 있다.
 
 환경 설정 파일을 만든다.
 
@@ -60,10 +85,11 @@ php spark key:generate
 
 ## 3. 서비스 도메인 설정
 
-`app.baseURL`은 현재 설치하는 서비스의 자기 도메인으로 설정한다. 프로토콜을 포함하고 끝에 `/`를 붙인다.
+`app.baseURL`은 현재 접근할 주소로 설정한다. 프로토콜을 포함하고 끝에 `/`를 붙인다. `php spark serve`로 테스트할 때는 아래 로컬 주소를 사용한다.
 
 ```dotenv
-app.baseURL = 'https://your-domain.example/'
+# php spark serve 테스트 주소
+app.baseURL = 'http://localhost:8080/'
 ```
 
 다음 항목은 같은 호스트를 기준으로 맞춰야 한다.
@@ -73,7 +99,7 @@ app.baseURL = 'https://your-domain.example/'
 3. `app/Config/App.php`의 `allowedHostnames`
 4. Kakao Developers의 Web 플랫폼 허용 도메인
 
-운영 도메인이 `food.example.com`이라면 `app.baseURL`은 `https://food.example.com/`, Kakao Web 플랫폼 도메인은 `https://food.example.com`으로 설정한다. 도메인을 바꿀 때 네 항목을 함께 확인한다.
+운영 도메인이 `food.example.com`이라면 `app.baseURL`은 `https://food.example.com/`, Kakao Web 플랫폼 도메인은 `https://food.example.com`으로 설정한다. 도메인을 바꿀 때 네 항목을 함께 확인한다. 테스트 주소를 `localhost`로 사용할 때는 `app/Config/App.php`의 `allowedHostnames`에 `localhost`와 `127.0.0.1`을 등록한다.
 
 ## 4. MySQL 데이터베이스 준비
 
@@ -147,7 +173,7 @@ kakaomaps.jsKey = 발급받은_JavaScript_키
 마이그레이션과 시딩은 반드시 `composer.json`과 `spark`가 있는 Pagus 디렉터리에서 실행한다.
 
 ```bash
-cd /경로/varius/Pagus
+cd ~/projects/varius/Pagus
 pwd
 ```
 
@@ -158,7 +184,7 @@ pwd
 마이그레이션 파일은 `app/Database/Migrations/`에 있고, 적용 이력은 DB의 `migrations` 테이블에 저장된다.
 
 ```bash
-cd /경로/varius/Pagus
+cd ~/projects/varius/Pagus
 php spark migrate:status
 php spark migrate
 php spark migrate:status
@@ -188,14 +214,14 @@ PAGUS_ADMIN_PASSWORD = 12자_이상의_강한_비밀번호
 마이그레이션을 먼저 완료한 뒤 같은 Pagus 디렉터리에서 실행한다.
 
 ```bash
-cd /경로/varius/Pagus
+cd ~/projects/varius/Pagus
 php spark db:seed DatabaseSeeder
 ```
 
 `.env`를 수정하지 않고 한 번의 명령에만 계정 값을 지정하려면 다음처럼 실행한다.
 
 ```bash
-cd /경로/varius/Pagus
+cd ~/projects/varius/Pagus
 PAGUS_ADMIN_EMAIL='admin@your-domain.example' \
 PAGUS_ADMIN_PASSWORD='12자 이상의 강한 비밀번호' \
 php spark db:seed DatabaseSeeder
@@ -210,7 +236,7 @@ php spark db:seed DatabaseSeeder
 로컬 테스트 데이터베이스에서만 실행한다.
 
 ```bash
-cd /경로/varius/Pagus
+cd ~/projects/varius/Pagus
 php spark migrate:rollback
 ```
 
@@ -221,7 +247,7 @@ php spark migrate:rollback
 세션과 사진은 웹 루트가 아닌 `writable/` 아래에 저장한다.
 
 ```bash
-cd /경로/varius/Pagus
+cd ~/projects/varius/Pagus
 mkdir -p writable/session writable/uploads/restaurants
 ```
 
@@ -232,16 +258,16 @@ mkdir -p writable/session writable/uploads/restaurants
 개발자가 소스를 수정하거나 설치 상태를 확인할 때 사용하는 절차다. 운영 서비스는 이 개발 서버를 인터넷에 직접 노출하지 않는다.
 
 ```bash
-cd /경로/varius/Pagus
-php spark serve --host 127.0.0.1 --port 8080
+cd ~/projects/varius/Pagus
+php spark serve
 ```
 
-브라우저에서 `http://127.0.0.1:8080/`으로 접속한다. 이 주소를 사용할 때는 `app.baseURL`과 `app/Config/App.php`의 허용 호스트 설정도 현재 테스트 주소에 맞춘다.
+브라우저에서 `http://localhost:8080/`으로 접속한다. 접속되지 않으면 `app.baseURL`이 `http://localhost:8080/`인지, `app/Config/App.php`의 `allowedHostnames`에 `localhost`가 있는지 확인한다.
 
 코드 품질 테스트:
 
 ```bash
-cd /경로/varius/Pagus
+cd ~/projects/varius/Pagus
 composer check
 composer analyse
 composer test
@@ -264,7 +290,8 @@ composer test
 가능하면 애플리케이션 파일과 공개 웹 루트를 분리한다.
 
 ```text
-/home/계정/pagus/                 # app, system, writable, vendor, .env
+/home/계정/varius/                # Git clone 결과
+/home/계정/varius/Pagus/          # app, system, writable, vendor, .env
 /home/계정/public_html/           # Pagus/public의 내용 또는 public 디렉터리 연결
 ```
 
@@ -275,7 +302,7 @@ composer test
 SSH 또는 호스팅 터미널이 있으면 서버에서 실행한다.
 
 ```bash
-cd /home/계정/pagus
+cd /home/계정/varius/Pagus
 composer install --no-dev --optimize-autoloader
 php spark key:generate
 php spark migrate:status
@@ -309,10 +336,11 @@ mkdir -p writable/session writable/uploads/restaurants
 ### 10.2 소스 배포와 환경 설정
 
 ```bash
-sudo mkdir -p /var/www/pagus
-sudo chown -R deploy:www-data /var/www/pagus
-cd /var/www/pagus
-git clone 저장소_URL .
+sudo mkdir -p /var/www/varius
+sudo chown -R deploy:www-data /var/www/varius
+cd /var/www/varius
+git clone https://github.com/pushwing/varius.git .
+cd Pagus
 composer install --no-dev --optimize-autoloader
 cp .env.example .env
 php spark key:generate
@@ -337,13 +365,13 @@ kakaomaps.jsKey = 운영_JavaScript_키
 
 ### 10.3 Nginx 설정 예시
 
-`/etc/nginx/sites-available/pagus`에 다음과 같이 `public/`을 root로 지정한다.
+`/etc/nginx/sites-available/pagus`에 다음과 같이 `Pagus/public/`을 root로 지정한다.
 
 ```nginx
 server {
     listen 80;
     server_name your-domain.example;
-    root /var/www/pagus/public;
+    root /var/www/varius/Pagus/public;
     index index.php;
 
     location / {
@@ -376,7 +404,7 @@ sudo systemctl reload nginx
 소스 전체를 웹 서버 쓰기 권한으로 만들지 말고, 애플리케이션 실행에 필요한 디렉터리만 허용한다.
 
 ```bash
-cd /var/www/pagus
+cd /var/www/varius/Pagus
 mkdir -p writable/session writable/uploads/restaurants
 sudo chown -R deploy:www-data writable
 sudo chmod -R u=rwX,g=rwX,o= writable
@@ -401,7 +429,7 @@ php spark db:seed DatabaseSeeder
 새 소스를 배포할 때는 백업 후 다음 순서로 진행한다.
 
 ```bash
-cd /배포된/Pagus
+cd /배포된/varius/Pagus
 git pull --ff-only
 composer install --no-dev --optimize-autoloader
 php spark migrate:status

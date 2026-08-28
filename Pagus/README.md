@@ -71,14 +71,14 @@ php spark serve
 
 ```dotenv
 CI_ENVIRONMENT = development
-app.baseURL = 'https://your-domain.example/'
+app.baseURL = 'http://localhost:8080/'
 database.default.hostname = localhost
 database.default.database = pagus
 database.default.username = pagus
 database.default.password =
 database.default.DBDriver = MySQLi
 database.default.port = 3306
-PAGUS_ADMIN_EMAIL = admin@your-domain.example
+PAGUS_ADMIN_EMAIL = admin@example.com
 PAGUS_ADMIN_PASSWORD = change-this-password
 ```
 
