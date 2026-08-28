@@ -86,6 +86,12 @@
         </section>
     <?php endif; ?>
 </main>
+<footer class="site-footer">
+    <p>© <?= date('Y') ?> 파구스. All rights reserved.</p>
+    <p><a href="mailto:advisor@aivance.kr">advisor@aivance.kr</a></p>
+    <p><a href="<?= site_url('login') ?>">로그인</a></p>
+    <p>파구스는 오픈소스 프로젝트입니다. <a href="https://github.com/pushwing/varius/tree/main/Pagus" target="_blank" rel="noopener noreferrer">GitHub에서 소스코드 보기</a></p>
+</footer>
 <dialog id="photo-dialog" class="photo-dialog" aria-labelledby="photo-dialog-title">
     <div class="photo-dialog__header">
         <h2 id="photo-dialog-title">사진 크게 보기 <span id="photo-dialog-count" aria-live="polite">(<?= $photos !== [] ? '1/' . count($photos) : '0/0' ?>)</span></h2>
