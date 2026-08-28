@@ -291,6 +291,8 @@ button:hover, .btn:hover { background: var(--color-pine); border-color: var(--co
 /* ===== 맛집 상세 ===== */
 .detail-main { max-width: 48rem; margin: 0 auto; padding: var(--space-lg) 5vw; }
 .detail-main .category { color: var(--color-fern); font-weight: 600; }
+.directions-link { display: inline-flex; align-items: center; min-height: 2.5rem; padding: .55rem .75rem; border-radius: var(--radius-sm); background: var(--color-fern); color: #fff; font-weight: 700; text-decoration: none; }
+.directions-link:hover, .directions-link:focus-visible { background: var(--color-pine); color: #fff; }
 .detail-main section { margin: var(--space-lg) 0; padding-top: var(--space-lg); border-top: 1px solid var(--color-border); }
 .detail-main section:first-of-type { border-top: none; padding-top: 0; }
 

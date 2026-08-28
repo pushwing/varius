@@ -25,6 +25,13 @@
     <h1><?= esc((string) $restaurant['name']) ?></h1>
     <p class="category"><?= esc((string) ($restaurant['category_names'] ?? '카테고리 미지정')) ?></p>
     <p><?= esc((string) $restaurant['address']) ?></p>
+    <?php
+    $directionsUrl = 'https://map.kakao.com/link/to/'
+        . rawurlencode((string) $restaurant['name']) . ','
+        . rawurlencode((string) $restaurant['latitude']) . ','
+        . rawurlencode((string) $restaurant['longitude']);
+?>
+    <p><a class="directions-link" href="<?= esc($directionsUrl, 'attr') ?>" rel="noopener noreferrer" target="_blank"><?= esc((string) $restaurant['name']) ?> 길찾기</a></p>
     <?php if ((string) ($restaurant['phone'] ?? '') !== ''): ?><p><?= esc((string) $restaurant['phone']) ?></p><?php endif; ?>
     <?php if ((string) ($restaurant['homepage_url'] ?? '') !== ''): ?><p><a href="<?= esc((string) $restaurant['homepage_url'], 'attr') ?>" rel="noopener noreferrer" target="_blank"><?= esc((string) $restaurant['homepage_url']) ?></a></p><?php endif; ?>
 
