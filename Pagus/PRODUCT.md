@@ -43,7 +43,14 @@ web
 
 ## Brand Commitments
 
-확정된 브랜드 자산(로고, 색상, 슬로건 디자인 등) 없음. 서비스명 "파구스(Pagus)"와 슬로건 "마을(Pagus) 속 진짜 맛집을 찾다"는 유지하되, 시각적 표현(색·타이포·로고)은 아직 확정되지 않아 자유롭게 설계 가능하다. 현재 뷰에 쓰이는 진초록(#173b35) 계열은 임시 구현 색상이며 브랜드 확정 색이 아니다.
+파구스의 브랜드 자산은 확정되어 있으며 모든 공개 화면과 운영 화면에서 동일하게 사용한다.
+
+- **서비스명:** 파구스 (Pagus)
+- **슬로건:** 마을(Pagus) 속 진짜 맛집을 찾다
+- **로고:** `public/assets/img/logo-mark.svg`(심볼), `public/assets/img/logo-horizontal.svg`(가로형)를 기본 자산으로 사용한다. `public/favicon.svg`와 PNG favicon도 동일한 로고 체계를 따른다.
+- **주요 색상:** Fern Green `#206b58`(주요 액션·링크·활성 상태), Pine Shadow `#173b35`(헤더·푸터·강조 상태), Mint Whisper `#d9f2e9`(어두운 배경의 보조 텍스트), Warm Linen `#f7f3ec`(페이지 배경), Paper Surface `#fffdf7`(카드·입력 표면), Warm Charcoal `#2b2620`(본문 텍스트), Toasted Border `#ded4c3`(구분선·테두리).
+- **브랜드 방향:** 따뜻한 크림·토프 바탕과 숲색 계열의 단일 초록 액센트로 동네 추천장의 신뢰감을 표현한다. 빨강·주황·차가운 파랑을 브랜드 액센트로 추가하지 않으며, 그림자 대신 배경 대비와 테두리를 사용한다.
+- **타이포그래피:** 별도 웹폰트 없이 `system-ui, -apple-system, 'Segoe UI', sans-serif`를 사용한다.
 
 ## Evidence on Hand
 
