@@ -6,6 +6,7 @@ use App\Enums\InquiryStatus;
 use App\Services\InquiryService;
 use App\Services\RestaurantManagementService;
 use App\Services\RestaurantPhotoService;
+use App\Services\RestaurantReviewService;
 use CodeIgniter\Controller;
 use CodeIgniter\HTTP\Files\UploadedFile;
 use CodeIgniter\HTTP\RedirectResponse;
@@ -22,6 +23,7 @@ final class AdminController extends Controller
     private GeocodingService $geocoding;
     private KakaoLocalReferenceService $reference;
     private InquiryService $inquiries;
+    private RestaurantReviewService $reviews;
 
     public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger): void
     {
@@ -31,6 +33,7 @@ final class AdminController extends Controller
         $this->geocoding = new GeocodingService();
         $this->reference = new KakaoLocalReferenceService();
         $this->inquiries = new InquiryService();
+        $this->reviews = new RestaurantReviewService();
     }
 
     public function index(): string
@@ -183,6 +186,21 @@ final class AdminController extends Controller
     public function inquiries(): string
     {
         return view('admin/inquiries', ['inquiries' => $this->inquiries->all()]);
+    }
+
+    public function reviews(): string
+    {
+        return view('admin/reviews', ['reviews' => $this->reviews->all()]);
+    }
+
+    public function toggleReview(int $id): RedirectResponse
+    {
+        try {
+            $this->reviews->toggleHidden($id);
+        } catch (InvalidArgumentException $exception) {
+            return redirect()->to('/admin/reviews')->with('error', $exception->getMessage());
+        }
+        return redirect()->to('/admin/reviews')->with('message', '후기 공개 상태를 변경했습니다.');
     }
 
     public function showInquiry(int $id): string|RedirectResponse

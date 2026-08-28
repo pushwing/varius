@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Services\RestaurantManagementService;
 use App\Services\RestaurantPhotoService;
+use App\Services\RestaurantReviewService;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -13,12 +14,14 @@ final class Home extends BaseController
 {
     private RestaurantManagementService $management;
     private RestaurantPhotoService $photos;
+    private RestaurantReviewService $reviews;
 
     public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger): void
     {
         parent::initController($request, $response, $logger);
         $this->management = new RestaurantManagementService();
         $this->photos = new RestaurantPhotoService();
+        $this->reviews = new RestaurantReviewService();
     }
 
     public function index(): string
@@ -42,6 +45,6 @@ final class Home extends BaseController
             throw PageNotFoundException::forPageNotFound('맛집을 찾을 수 없습니다.');
         }
 
-        return view('restaurant/show', ['restaurant' => $restaurant, 'photos' => $this->photos->photosForRestaurant($id)]);
+        return view('restaurant/show', ['restaurant' => $restaurant, 'photos' => $this->photos->photosForRestaurant($id), 'reviews' => $this->reviews->publicForRestaurant($id)]);
     }
 }
