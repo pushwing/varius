@@ -17,7 +17,7 @@ final class ReviewController extends Controller
             return redirect()->to("/restaurants/{$restaurantId}#review-form")->withInput()->with('error', '닉네임, 별점, 후기 내용을 확인하세요.');
         }
         try {
-            (new RestaurantReviewService())->create($restaurantId, $this->request->getPost());
+            (new RestaurantReviewService())->create($restaurantId, $this->request->getPost(), $this->reporterHash());
         } catch (InvalidArgumentException $exception) {
             return redirect()->to("/restaurants/{$restaurantId}#review-form")->withInput()->with('error', $exception->getMessage());
         }
@@ -62,6 +62,11 @@ final class ReviewController extends Controller
         } catch (InvalidArgumentException $exception) {
             return redirect()->to($returnPath . '#reviews')->with('error', $exception->getMessage());
         }
-        return redirect()->to($returnPath . '#reviews')->with('message', '신고가 접수되었습니다.');
+        return redirect()->to($returnPath . '#reviews')->with('report_message', '신고가 접수되었습니다.');
+    }
+
+    private function reporterHash(): string
+    {
+        return hash('sha256', $this->request->getIPAddress() . '|' . (string) $this->request->getUserAgent());
     }
 }

@@ -10,6 +10,6 @@ final class RestaurantReviewModel extends Model
 {
     protected $table = 'restaurant_reviews';
     protected $returnType = 'array';
-    protected $allowedFields = ['restaurant_id', 'nickname', 'rating', 'content', 'author_password_hash', 'is_hidden', 'report_count'];
+    protected $allowedFields = ['restaurant_id', 'nickname', 'rating', 'content', 'author_password_hash', 'author_reporter_hash', 'is_hidden', 'report_count'];
     protected $useTimestamps = true;
 }

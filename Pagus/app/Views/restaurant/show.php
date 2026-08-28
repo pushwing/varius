@@ -91,6 +91,7 @@
         <h2 id="reviews-title">방문 후기 (<?= count($reviews) ?>)</h2>
         <?php if (session('message')): ?><p role="status"><?= esc(session('message')) ?></p><?php endif; ?>
         <?php if (session('error')): ?><p role="alert"><?= esc(session('error')) ?></p><?php endif; ?>
+        <?php if (session('report_message')): ?><script>alert(<?= json_encode((string) session('report_message'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);</script><?php endif; ?>
         <?php if ($reviews === []): ?><p class="empty-state">아직 등록된 후기가 없습니다.</p><?php else: ?>
             <div class="review-list">
                 <?php foreach ($reviews as $review): ?>
