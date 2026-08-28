@@ -234,7 +234,11 @@ button:hover, .btn:hover { background: var(--color-pine); border-color: var(--co
     text-align: left;
     cursor: pointer;
 }
-.restaurant-title:hover, .restaurant-title:focus-visible { color: var(--color-fern); }
+.restaurant-title:hover, .restaurant-title:focus-visible {
+    background: transparent;
+    border-color: transparent;
+    color: var(--color-pine);
+}
 .restaurant-card.is-selected { border-color: var(--color-fern); }
 .restaurant-card.is-selected .restaurant-title { color: var(--color-fern); }
 .restaurant-card p { color: var(--color-taupe); font-size: .9rem; }
@@ -263,7 +267,10 @@ button:hover, .btn:hover { background: var(--color-pine); border-color: var(--co
 .map-popup__summary { display: -webkit-box; margin: var(--space-sm) 0 0; overflow: hidden; color: var(--color-taupe); font-size: .9rem; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
 .map-popup__actions { display: grid; gap: var(--space-xs); margin-top: var(--space-md); }
 .map-popup__link { display: flex; align-items: center; justify-content: center; min-height: 2.5rem; padding: .55rem .75rem; border-radius: var(--radius-sm); background: var(--color-fern); color: #fff; font-size: .9rem; font-weight: 700; text-decoration: none; }
-.map-popup__link:hover, .map-popup__link:focus-visible { background: var(--color-pine); }
+.map-popup__link:hover, .map-popup__link:focus-visible {
+    background: var(--color-pine);
+    color: #fff;
+}
 .map-popup__share { flex: 0 0 auto; padding: .35rem .5rem; white-space: nowrap; }
 
 .pagination {
