@@ -144,12 +144,22 @@ if ($mapData === false) {
             title.textContent = restaurant.name;
             header.append(kicker, title);
             content.append(header);
+            const detailUrl = '<?= site_url('restaurants') ?>/' + Number(restaurant.id);
+            const categoryRow = document.createElement('div');
+            categoryRow.className = 'map-popup__category-row';
             if (restaurant.category_names) {
                 const category = document.createElement('span');
                 category.className = 'map-popup__category';
                 category.textContent = restaurant.category_names;
-                content.append(category);
+                categoryRow.append(category);
             }
+            const share = document.createElement('button');
+            share.className = 'map-popup__share btn-ghost';
+            share.type = 'button';
+            share.textContent = '이 장소 공유';
+            share.addEventListener('click', () => window.sharePlace(restaurant.name, detailUrl, share));
+            categoryRow.append(share);
+            content.append(categoryRow);
             const details = document.createElement('dl');
             details.className = 'map-popup__details';
             const appendDetail = (label, value) => {
@@ -176,14 +186,9 @@ if ($mapData === false) {
             actions.className = 'map-popup__actions';
             const detail = document.createElement('a');
             detail.className = 'map-popup__link';
-            detail.href = '<?= site_url('restaurants') ?>/' + Number(restaurant.id);
+            detail.href = detailUrl;
             detail.textContent = '상세 정보 보기';
-            const share = document.createElement('button');
-            share.className = 'map-popup__share btn-ghost';
-            share.type = 'button';
-            share.textContent = '이 장소 공유';
-            share.addEventListener('click', () => window.sharePlace(restaurant.name, detail.href, share));
-            actions.append(detail, share);
+            actions.append(detail);
             content.append(actions);
             const infoWindow = new kakao.maps.InfoWindow({ content, removable: true });
             kakao.maps.event.addListener(marker, 'click', () => openMarker(marker, infoWindow, restaurant.id));
