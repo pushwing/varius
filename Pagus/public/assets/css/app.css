@@ -248,6 +248,12 @@ button:hover, .btn:hover { background: var(--color-pine); border-color: var(--co
 
 #map { min-height: 0; background: var(--color-border); }
 
+/* Kakao InfoWindow가 콘텐츠 바깥에 만드는 기본 프레임을 제거한다. */
+#map div:has(> div > .map-popup) {
+    border: 0 !important;
+    background: transparent !important;
+}
+
 .map-popup {
     width: min(18rem, calc(100vw - 4rem));
     padding: var(--space-md);
