@@ -39,9 +39,32 @@ final class RestaurantReviewService
         if (! is_array($restaurant) || (int) ($restaurant['is_published'] ?? 0) !== 1) {
             throw new InvalidArgumentException('후기를 작성할 맛집을 찾을 수 없습니다.');
         }
+        self::assertAuthorPassword((string) ($data['author_password'] ?? ''));
         $model = $this->reviews ?? model(RestaurantReviewModel::class);
-        $model->insert(['restaurant_id' => $restaurantId, 'nickname' => trim((string) $data['nickname']), 'rating' => (int) $data['rating'], 'content' => trim((string) $data['content'])]);
+        $model->insert(['restaurant_id' => $restaurantId, 'nickname' => trim((string) $data['nickname']), 'rating' => (int) $data['rating'], 'content' => trim((string) $data['content']), 'author_password_hash' => password_hash((string) $data['author_password'], PASSWORD_DEFAULT)]);
         return (int) $model->getInsertID();
+    }
+
+    /** @param array<string, mixed> $data */
+    public function update(int $restaurantId, int $reviewId, array $data, string $authorPassword): void
+    {
+        self::assertReviewData($data);
+        $review = $this->ownedReview($restaurantId, $reviewId);
+        self::assertAuthorPassword($authorPassword);
+        if (! password_verify($authorPassword, (string) ($review['author_password_hash'] ?? ''))) {
+            throw new InvalidArgumentException('후기 비밀번호가 올바르지 않습니다.');
+        }
+        ($this->reviews ?? model(RestaurantReviewModel::class))->update($reviewId, ['nickname' => trim((string) $data['nickname']), 'rating' => (int) $data['rating'], 'content' => trim((string) $data['content'])]);
+    }
+
+    public function delete(int $restaurantId, int $reviewId, string $authorPassword): void
+    {
+        $review = $this->ownedReview($restaurantId, $reviewId);
+        self::assertAuthorPassword($authorPassword);
+        if (! password_verify($authorPassword, (string) ($review['author_password_hash'] ?? ''))) {
+            throw new InvalidArgumentException('후기 비밀번호가 올바르지 않습니다.');
+        }
+        ($this->reviews ?? model(RestaurantReviewModel::class))->delete($reviewId);
     }
 
     public function report(int $reviewId, string $reporterHash, string $reason): void
@@ -102,5 +125,22 @@ final class RestaurantReviewService
         if ($rating === false || $rating < 1 || $rating > 5) {
             throw new InvalidArgumentException('별점은 1점부터 5점까지 선택하세요.');
         }
+    }
+
+    public static function assertAuthorPassword(string $password): void
+    {
+        if (mb_strlen($password) < 8 || mb_strlen($password) > 72) {
+            throw new InvalidArgumentException('후기 비밀번호는 8자 이상 72자 이하로 입력하세요.');
+        }
+    }
+
+    /** @return array<string, mixed> */
+    private function ownedReview(int $restaurantId, int $reviewId): array
+    {
+        $review = ($this->reviews ?? model(RestaurantReviewModel::class))->find($reviewId);
+        if (! is_array($review) || (int) ($review['restaurant_id'] ?? 0) !== $restaurantId) {
+            throw new InvalidArgumentException('후기를 찾을 수 없습니다.');
+        }
+        return $review;
     }
 }

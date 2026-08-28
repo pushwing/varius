@@ -33,4 +33,16 @@ final class RestaurantReviewServiceTest extends TestCase
         $this->expectNotToPerformAssertions();
         RestaurantReviewService::assertReviewData(['nickname' => '파구스', 'rating' => 5, 'content' => '좋았습니다.']);
     }
+
+    public function testShortAuthorPasswordIsRejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        RestaurantReviewService::assertAuthorPassword('short');
+    }
+
+    public function testValidAuthorPasswordIsAccepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+        RestaurantReviewService::assertAuthorPassword('long-password');
+    }
 }
