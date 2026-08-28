@@ -1,6 +1,6 @@
 # Pagus 셋업 및 배포 가이드
 
-파구스(Pagus)를 소스에서 설치하고 실행·배포하는 방법을 설명한다. Pagus는 CodeIgniter 4와 MySQL을 사용하며, 웹 서버의 document root는 반드시 프로젝트의 `public/` 디렉터리여야 한다.
+파구스(Pagus)를 소스에서 설치하고 실행·배포하는 방법을 설명한다. Pagus는 CodeIgniter 4와 MySQL을 사용하며, 웹 서버의 document root는 `public/` 디렉터리로 지정하는 것이 가장 안전하다. 호스팅에서 document root를 변경할 수 없는 경우에는 아래의 대체 배치 절차를 따른다.
 
 아래 문서의 `https://your-domain.example/`와 `your-domain.example`은 실제 서비스 도메인으로 교체한다. 예시 도메인을 그대로 사용하지 않는다.
 
@@ -18,7 +18,7 @@
 - PHP 8.2 이상
 - MySQL 8.0 이상
 - Composer 또는 서버에 업로드할 준비가 된 Composer 의존성
-- `public/`을 document root로 지정할 수 있는 호스팅
+- `public/`을 document root로 지정할 수 있는 호스팅(권장) 또는 document root 대체 배치가 가능한 호스팅
 - 가능하면 SSH 또는 호스팅 터미널(마이그레이션·시딩 실행용)
 
 ### 가상서버(VPS) 환경
@@ -287,15 +287,58 @@ composer test
 
 ### 9.2 파일 업로드와 document root
 
-가능하면 애플리케이션 파일과 공개 웹 루트를 분리한다.
+먼저 Git 저장소 전체를 호스팅 계정에 받거나 업로드한다. 저장소를 받은 뒤 Pagus 애플리케이션은 `varius/Pagus/` 아래에 있다.
+
+```bash
+cd /home/계정
+git clone https://github.com/pushwing/varius.git
+cd varius/Pagus
+```
+
+애플리케이션 파일과 공개 웹 루트는 분리한다.
 
 ```text
 /home/계정/varius/                # Git clone 결과
 /home/계정/varius/Pagus/          # app, system, writable, vendor, .env
-/home/계정/public_html/           # Pagus/public의 내용 또는 public 디렉터리 연결
+/home/계정/public_html/           # 호스팅이 제공하는 실제 document root
 ```
 
-호스팅 패널에서 document root를 `Pagus/public`으로 직접 지정하는 방식을 권장한다. document root를 프로젝트 전체로 지정하면 `.env`, `app/`, `writable/`가 웹에서 노출될 수 있으므로 사용하지 않는다.
+다음 두 방식 중 호스팅이 지원하는 방식을 선택한다.
+
+#### 방법 A: document root를 `Pagus/public`으로 지정할 수 있는 경우
+
+호스팅 패널의 도메인 설정에서 document root를 다음으로 지정한다.
+
+```text
+/home/계정/varius/Pagus/public
+```
+
+이 방식에서는 `public/index.php`, `public/.htaccess`, `public/assets/`를 그대로 사용한다. document root를 `/home/계정/varius` 또는 `/home/계정/varius/Pagus` 전체로 지정하지 않는다.
+
+#### 방법 B: document root를 `public_html`에서 바꿀 수 없는 경우
+
+`public_html`에는 `Pagus/public/`의 공개 파일만 복사한다. `app/`, `system/`, `writable/`, `vendor/`, `.env`는 `public_html` 안에 두지 않는다.
+
+```bash
+cd /home/계정/varius/Pagus
+cp -R public/. /home/계정/public_html/
+```
+
+그 다음 `/home/계정/public_html/index.php`를 열고 다음 줄을 수정한다.
+
+```php
+// 기존: public 디렉터리에서 한 단계 위의 app을 찾는 경로
+require FCPATH . '../app/Config/Paths.php';
+
+// 변경: 실제 clone 위치의 app을 절대 경로로 지정
+require '/home/계정/varius/Pagus/app/Config/Paths.php';
+```
+
+`/home/계정/varius/Pagus`는 실제 clone 위치로 바꾼다. `index.php`의 절대 경로가 실제 `app/Config/Paths.php`를 가리키지 않으면 500 오류 또는 `Paths.php`를 찾지 못하는 오류가 발생한다.
+
+Apache 호스팅이라면 `public/.htaccess`도 `public_html/.htaccess`로 복사하고 `mod_rewrite`와 `.htaccess` 재작성 허용이 활성화되어야 한다. `.htaccess`를 사용할 수 없는 호스팅은 URL rewrite 설정을 패널에서 별도로 등록해야 한다. rewrite를 지원하지 않는 호스팅에서는 `/restaurants/1` 같은 경로가 동작하지 않으므로 배포 전에 지원 여부를 확인한다.
+
+두 방식 모두 `.env`는 `/home/계정/varius/Pagus/.env`에 두고, `writable/`은 `/home/계정/varius/Pagus/writable/`에 둔다. `public_html`에 `.env`, `app/`, `writable/`를 복사하지 않는다. 복사 후 브라우저에서 `.env`나 PHP 소스가 다운로드되지 않는지 확인한다.
 
 ### 9.3 Composer와 초기화
 
