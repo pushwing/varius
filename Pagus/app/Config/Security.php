@@ -71,7 +71,8 @@ class Security extends BaseConfig
      *
      * Regenerate CSRF Token on every submission.
      */
-    public bool $regenerate = true;
+    // 관리자 화면의 여러 탭에서 폼을 열어 둔 상태로 저장해도 기존 token을 사용할 수 있어야 한다.
+    public bool $regenerate = false;
 
     /**
      * --------------------------------------------------------------------------
