@@ -44,6 +44,10 @@ final class RestaurantReviewService
         if (! preg_match('/^[a-f0-9]{64}$/', $authorReporterHash)) {
             throw new InvalidArgumentException('작성자 식별값이 올바르지 않습니다.');
         }
+        $since = date('Y-m-d H:i:s', time() - 86400);
+        if ($model->where('restaurant_id', $restaurantId)->where('author_reporter_hash', $authorReporterHash)->where('created_at >=', $since)->countAllResults() > 0) {
+            throw new InvalidArgumentException('같은 맛집에는 하루에 한 건만 후기를 작성할 수 있습니다.');
+        }
         $model->insert(['restaurant_id' => $restaurantId, 'nickname' => trim((string) $data['nickname']), 'rating' => (int) $data['rating'], 'content' => trim((string) $data['content']), 'author_password_hash' => password_hash((string) $data['author_password'], PASSWORD_DEFAULT), 'author_reporter_hash' => $authorReporterHash]);
         return (int) $model->getInsertID();
     }

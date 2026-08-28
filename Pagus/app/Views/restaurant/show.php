@@ -24,9 +24,11 @@
     <nav aria-label="주요 메뉴"><a href="<?= site_url('/') ?>">목록으로</a></nav>
 </header>
 <main class="detail-main">
-    <h1><?= esc((string) $restaurant['name']) ?></h1>
-    <p class="category"><?= esc((string) ($restaurant['category_names'] ?? '카테고리 미지정')) ?></p>
-    <p><?= esc((string) $restaurant['address']) ?></p>
+    <section class="detail-hero" aria-labelledby="restaurant-title">
+        <p class="detail-kicker">파주 맛집</p>
+        <h1 id="restaurant-title"><?= esc((string) $restaurant['name']) ?></h1>
+        <p class="category"><?= esc((string) ($restaurant['category_names'] ?? '카테고리 미지정')) ?></p>
+        <p class="detail-address"><?= esc((string) $restaurant['address']) ?></p>
     <?php $shareUrl = site_url('restaurants/' . (int) $restaurant['id']); ?>
     <?php
     $directionsUrl = 'https://map.kakao.com/link/to/'
@@ -38,11 +40,16 @@
         <a class="directions-link" href="<?= esc($directionsUrl, 'attr') ?>" rel="noopener noreferrer" target="_blank"><?= esc((string) $restaurant['name']) ?> 길찾기</a>
         <button class="btn-ghost share-button" type="button" data-share-place>이 장소 공유</button>
     </div>
-    <?php if ((string) ($restaurant['phone'] ?? '') !== ''): ?><p><?= esc((string) $restaurant['phone']) ?></p><?php endif; ?>
-    <?php if ((string) ($restaurant['homepage_url'] ?? '') !== ''): ?><p><a href="<?= esc((string) $restaurant['homepage_url'], 'attr') ?>" rel="noopener noreferrer" target="_blank"><?= esc((string) $restaurant['homepage_url']) ?></a></p><?php endif; ?>
+    </section>
+    <?php if ((string) ($restaurant['phone'] ?? '') !== '' || (string) ($restaurant['homepage_url'] ?? '') !== ''): ?>
+        <section class="detail-facts" aria-label="연락처와 홈페이지">
+            <?php if ((string) ($restaurant['phone'] ?? '') !== ''): ?><p><span>전화</span><a href="tel:<?= esc((string) $restaurant['phone'], 'attr') ?>"><?= esc((string) $restaurant['phone']) ?></a></p><?php endif; ?>
+            <?php if ((string) ($restaurant['homepage_url'] ?? '') !== ''): ?><p><span>홈페이지</span><a href="<?= esc((string) $restaurant['homepage_url'], 'attr') ?>" rel="noopener noreferrer" target="_blank"><?= esc((string) $restaurant['homepage_url']) ?></a></p><?php endif; ?>
+        </section>
+    <?php endif; ?>
 
     <?php if ($photos !== []): ?>
-        <section aria-label="사진">
+        <section class="detail-section" aria-label="사진">
             <div class="photo-grid">
                 <?php foreach ($photos as $photoIndex => $photo): ?>
                     <?php $photoAlt = (string) $restaurant['name'] . ' 사진'; ?>
@@ -62,13 +69,13 @@
     <?php endif; ?>
 
     <?php if ((string) ($restaurant['description'] ?? '') !== ''): ?>
-        <section><h2>소개</h2><p><?= nl2br(esc((string) $restaurant['description'])) ?></p></section>
+        <section class="detail-section"><h2>소개</h2><p><?= nl2br(esc((string) $restaurant['description'])) ?></p></section>
     <?php endif; ?>
     <?php if ((string) ($restaurant['menu'] ?? '') !== ''): ?>
-        <section><h2>메뉴</h2><p><?= nl2br(esc((string) $restaurant['menu'])) ?></p></section>
+        <section class="detail-section"><h2>메뉴</h2><p><?= nl2br(esc((string) $restaurant['menu'])) ?></p></section>
     <?php endif; ?>
     <?php if ((string) ($restaurant['business_hours'] ?? '') !== ''): ?>
-        <section><h2>영업 정보</h2><p><?= nl2br(esc((string) $restaurant['business_hours'])) ?></p></section>
+        <section class="detail-section"><h2>영업 정보</h2><p><?= nl2br(esc((string) $restaurant['business_hours'])) ?></p></section>
     <?php endif; ?>
     <?php
     $tagList = array_values(array_filter(
@@ -77,7 +84,7 @@
     ));
 ?>
     <?php if ($tagList !== []): ?>
-        <section>
+        <section class="detail-section">
             <h2>태그</h2>
             <div class="tag-chip-list">
                 <?php foreach ($tagList as $tag): ?>
@@ -87,8 +94,8 @@
         </section>
     <?php endif; ?>
 
-    <section id="reviews" aria-labelledby="reviews-title">
-        <h2 id="reviews-title">방문 후기 (<?= count($reviews) ?>)</h2>
+    <section id="reviews" class="review-section" aria-labelledby="reviews-title">
+        <div class="section-heading"><div><p class="section-label">다녀온 사람들의 기록</p><h2 id="reviews-title">방문 후기</h2></div><span class="section-count"><?= count($reviews) ?>개</span></div>
         <?php if (session('message')): ?><p role="status"><?= esc(session('message')) ?></p><?php endif; ?>
         <?php if (session('error')): ?><p role="alert"><?= esc(session('error')) ?></p><?php endif; ?>
         <?php if (session('report_message')): ?><script>alert(<?= json_encode((string) session('report_message'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);</script><?php endif; ?>
@@ -96,10 +103,9 @@
             <div class="review-list">
                 <?php foreach ($reviews as $review): ?>
                     <article class="review-item">
-                        <header><strong><?= esc((string) $review['nickname']) ?></strong> · <span aria-label="별점 <?= (int) $review['rating'] ?>점"><?= str_repeat('★', (int) $review['rating']) . str_repeat('☆', 5 - (int) $review['rating']) ?></span></header>
+                        <header><div><strong><?= esc((string) $review['nickname']) ?></strong><span class="review-rating" aria-label="별점 <?= (int) $review['rating'] ?>점"><?= str_repeat('★', (int) $review['rating']) . str_repeat('☆', 5 - (int) $review['rating']) ?></span></div><small><?= esc((string) $review['created_at']) ?></small></header>
                         <p><?= nl2br(esc((string) $review['content'])) ?></p>
-                        <small><?= esc((string) $review['created_at']) ?></small>
-                        <details><summary>내 후기 수정·삭제</summary>
+                        <details class="review-owner-actions"><summary>내 후기 수정·삭제</summary>
                             <form method="post" action="/restaurants/<?= (int) $restaurant['id'] ?>/reviews/<?= (int) $review['id'] ?>">
                                 <?= csrf_field() ?><label>닉네임 <input type="text" name="nickname" maxlength="50" value="<?= esc((string) $review['nickname']) ?>" required></label><label>별점 <select name="rating" required><?php for ($rating = 5; $rating >= 1; $rating--): ?><option value="<?= $rating ?>" <?= (int) $review['rating'] === $rating ? 'selected' : '' ?>><?= $rating ?>점</option><?php endfor; ?></select></label><label>후기 내용 <textarea name="content" maxlength="2000" required><?= esc((string) $review['content']) ?></textarea></label><label>작성 시 비밀번호 <input type="password" name="author_password" minlength="8" maxlength="72" required></label><button class="btn-ghost btn-sm" type="submit">수정</button>
                             </form>
@@ -107,7 +113,7 @@
                                 <?= csrf_field() ?><label>작성 시 비밀번호 <input type="password" name="author_password" minlength="8" maxlength="72" required></label><button class="btn-danger btn-sm" type="submit">삭제</button>
                             </form>
                         </details>
-                        <form method="post" action="/reviews/<?= (int) $review['id'] ?>/reports">
+                        <form class="review-report-form" method="post" action="/reviews/<?= (int) $review['id'] ?>/reports">
                             <?= csrf_field() ?><input type="hidden" name="return_path" value="<?= esc('/restaurants/' . (int) $restaurant['id'], 'attr') ?>">
                             <label>신고 사유 <input type="text" name="reason" maxlength="100" required></label><button class="btn-ghost btn-sm" type="submit">신고</button>
                         </form>
@@ -116,10 +122,10 @@
             </div>
         <?php endif; ?>
     </section>
-    <section id="review-form" aria-labelledby="review-form-title">
-        <h2 id="review-form-title">후기 남기기</h2>
+    <section id="review-form" class="review-composer" aria-labelledby="review-form-title">
+        <div class="section-heading"><div><p class="section-label">방문하셨나요?</p><h2 id="review-form-title">후기 남기기</h2></div><span class="composer-mark" aria-hidden="true">✎</span></div>
         <p>로그인 없이 작성할 수 있습니다. 다른 사람을 존중하는 후기를 남겨주세요.</p>
-        <form method="post" action="/restaurants/<?= (int) $restaurant['id'] ?>/reviews">
+        <form class="review-form" method="post" action="/restaurants/<?= (int) $restaurant['id'] ?>/reviews">
             <?= csrf_field() ?>
             <label>닉네임 <input type="text" name="nickname" maxlength="50" value="<?= esc((string) old('nickname')) ?>" required></label>
             <label>별점 <select name="rating" required><option value="">선택</option><?php for ($rating = 5; $rating >= 1; $rating--): ?><option value="<?= $rating ?>" <?= (string) old('rating') === (string) $rating ? 'selected' : '' ?>><?= $rating ?>점</option><?php endfor; ?></select></label>
