@@ -81,35 +81,122 @@ database.default.port = 3306
 
 ## 5. Kakao 설정
 
-Kakao Developers에서 앱을 만든 뒤 `.env`에 다음 두 키를 설정한다.
+Kakao Maps 지도, 주소 검색, 운영자용 장소 참고 데이터 검색을 사용하려면 Kakao Developers에서 앱과 키를 준비해야 한다. REST API 키와 JavaScript 키는 서로 다른 키이므로 올바른 항목에 각각 입력한다.
 
-```dotenv
-# 장소·주소 검색용 REST API 키
-kakaolocal.apiKey =
+### 5.1 Kakao Developers에서 앱 만들기
 
-# 브라우저 Kakao Maps SDK용 JavaScript 키
-kakaomaps.jsKey =
+1. [Kakao Developers](https://developers.kakao.com/)에 카카오 계정으로 로그인한다.
+2. `내 애플리케이션`에서 `애플리케이션 추가하기`를 선택하고 앱 이름과 사업자 정보를 입력한다.
+3. 생성한 앱의 `앱 키` 화면에서 다음 값을 확인한다.
+   - `REST API 키`: 주소 검색과 장소 참고 데이터 검색용
+   - `JavaScript 키`: 브라우저 Kakao Maps SDK용
+4. 앱의 플랫폼 설정에서 `Web 플랫폼 등록`을 선택한다.
+5. 현재 서비스의 호스트를 사이트 도메인으로 등록한다.
+   - 로컬: `http://pagus.test`
+   - 운영: `https://서비스의-자기-도메인.example`
+6. `app.baseURL`의 호스트, 웹 서버의 호스트, Kakao Web 플랫폼 도메인이 서로 같은지 확인한다. 운영 도메인을 바꾸면 세 곳을 함께 수정한다.
+
+Kakao Developers의 메뉴명이나 사용 승인 절차가 변경될 수 있으므로, 앱의 Kakao Maps JavaScript SDK와 Local API 사용 가능 상태도 함께 확인한다.
+
+### 5.2 Pagus `.env`에 키 입력하기
+
+`composer.json`과 `spark`가 있는 Pagus 디렉터리의 `.env` 파일을 연다. `.env.example`을 복사해 만들 수 있다.
+
+```bash
+cd /Users/jongwonbyun/claude-works/varius/Pagus
+cp .env.example .env
 ```
 
-두 키는 서로 다른 값이다.
+`.env`의 다음 항목에 발급받은 값을 입력한다.
 
-- `kakaolocal.apiKey`: 운영자 맛집 등록 화면의 주소 검색과 장소 참고 데이터 검색에 사용한다.
-- `kakaomaps.jsKey`: 공개 지도 화면에서 사용한다. Kakao Developers의 Web 플랫폼에 실제 `app.baseURL`의 호스트를 허용 도메인으로 등록한다. 로컬에서는 `http://pagus.test`를 등록한다.
+```dotenv
+# Kakao Developers의 REST API 키
+kakaolocal.apiKey = 발급받은_REST_API_키
 
-키가 없거나 외부 API가 실패해도 운영자는 주소·좌표를 직접 입력할 수 있다. 외부 API 키는 코드·로그·커밋에 넣지 않는다.
+# Kakao Developers의 JavaScript 키
+kakaomaps.jsKey = 발급받은_JavaScript_키
+```
+
+- `kakaolocal.apiKey`는 서버가 Kakao Local API를 호출할 때 사용한다. 운영자 맛집 등록 화면의 주소 검색과 장소 참고 데이터 검색에 사용된다.
+- `kakaomaps.jsKey`는 공개 화면의 브라우저에 전달된다. 따라서 JavaScript 키에는 반드시 Web 플랫폼 도메인 제한을 설정한다.
+- 키가 비어 있거나 외부 API가 실패해도 운영자는 주소·좌표를 직접 입력할 수 있다.
+- 키를 코드, 로그, 스크린샷, 커밋에 넣지 않는다. `.env`는 Git에 추가하지 않는다.
 
 ## 6. 마이그레이션과 운영자 계정
 
-테이블을 생성하고 최초 운영자 계정을 만든다.
+### 6.1 반드시 실행할 디렉터리
+
+마이그레이션과 시딩 명령은 모노레포 상위 디렉터리가 아니라 `composer.json`과 `spark` 파일이 있는 Pagus 애플리케이션 디렉터리에서 실행한다.
 
 ```bash
+cd /Users/jongwonbyun/claude-works/varius/Pagus
+pwd
+```
+
+출력이 `.../varius/Pagus`인지 확인한 뒤 아래 명령을 실행한다. 다른 경로에서 실행하면 `spark` 또는 `.env`를 찾지 못할 수 있다.
+
+### 6.2 데이터베이스 마이그레이션
+
+마이그레이션 파일은 `app/Database/Migrations/`에 있으며, 적용 이력은 데이터베이스의 `migrations` 테이블에 기록된다.
+
+```bash
+# 현재 적용 상태 확인
+php spark migrate:status
+
+# 아직 적용되지 않은 모든 마이그레이션 적용
 php spark migrate
+
+# 적용 후 상태 재확인
+php spark migrate:status
+```
+
+`php spark migrate`는 테이블과 인덱스를 생성·변경하는 명령이고, 운영자 계정이나 맛집 데이터를 생성하는 명령은 아니다. 새 migration이 추가될 때마다 동일한 Pagus 디렉터리에서 이 명령을 실행한다.
+
+### 6.3 운영자 이메일·비밀번호 설정 위치
+
+최초 운영자 계정의 이메일과 비밀번호는 `Pagus/.env`의 다음 두 항목에서 설정한다.
+
+```dotenv
+PAGUS_ADMIN_EMAIL = admin@서비스-도메인.example
+PAGUS_ADMIN_PASSWORD = 12자_이상의_개발용_비밀번호
+```
+
+이 값은 `app/Database/Seeds/RoleAndAdminSeeder.php`가 최초 계정을 만들 때 읽는다.
+
+- `PAGUS_ADMIN_PASSWORD`는 12자 이상이어야 한다.
+- 비밀번호는 평문으로 DB에 저장되지 않고 `password_hash()` 결과로 저장된다.
+- `PAGUS_ADMIN_EMAIL`을 생략하면 기본값 `admin@pagus.test`가 사용된다.
+- 시더는 해당 이메일의 사용자가 없을 때만 계정을 생성한다. 이미 같은 이메일의 계정이 있으면 `.env` 값을 바꿔도 이메일·비밀번호가 변경되지 않는다.
+- 현재 운영자 이메일·비밀번호를 웹 화면에서 변경하거나 재설정하는 기능은 제공하지 않는다. 운영 환경에서는 별도 보안 운영 절차를 마련해야 한다.
+
+로컬에서 아직 계정이 생성되지 않았다면 `.env`를 저장한 뒤 아래처럼 시딩한다.
+
+```bash
+cd /Users/jongwonbyun/claude-works/varius/Pagus
+php spark db:seed DatabaseSeeder
+```
+
+한 번의 명령에만 다른 값을 사용하려면 셸 환경변수로 덮어쓸 수 있다. 이 방식은 `.env` 파일을 수정하지 않는다.
+
+```bash
+cd /Users/jongwonbyun/claude-works/varius/Pagus
 PAGUS_ADMIN_EMAIL='admin@pagus.test' \
 PAGUS_ADMIN_PASSWORD='12자 이상의 개발용 비밀번호' \
 php spark db:seed DatabaseSeeder
 ```
 
-시더는 `admin` 역할과 해당 이메일의 운영자 계정을 처음 생성한다. 기존 동일 이메일 계정의 비밀번호는 갱신하지 않으므로, 계정 정보를 바꿔야 할 때는 별도 운영 절차를 사용한다.
+`DatabaseSeeder`는 `RoleAndAdminSeeder`를 호출해 `admin` 역할과 운영자 계정을 만든다. 마이그레이션을 먼저 실행하지 않으면 `roles`·`users` 테이블이 없어 시딩할 수 없다.
+
+### 6.4 마이그레이션 되돌리기
+
+로컬 테스트 데이터베이스에서만 실행한다.
+
+```bash
+cd /Users/jongwonbyun/claude-works/varius/Pagus
+php spark migrate:rollback
+```
+
+이 명령은 가장 최근 마이그레이션 배치를 되돌린다. 운영 데이터베이스에 실행하지 말고, 데이터가 있는 환경에서는 먼저 백업과 복구 절차를 확인한다.
 
 운영자 로그인 주소는 `/login`이며, 로그인 후 `/admin`에서 맛집·카테고리·사진·후기·문의를 관리한다.
 
@@ -167,16 +254,6 @@ composer test
 2. 맛집 상세에서 사진, 후기, 장소 공유, Kakao 길찾기 링크를 확인한다.
 3. 운영자 로그인 후 맛집·카테고리·사진·후기·문의 관리 화면을 확인한다.
 4. 주소 검색과 장소 참고 데이터 검색이 성공·실패할 때 모두 직접 입력 경로가 유지되는지 확인한다.
-
-## 10. 마이그레이션 되돌리기
-
-로컬 테스트 데이터베이스에서만 실행한다.
-
-```bash
-php spark migrate:rollback
-```
-
-이 명령은 가장 최근 마이그레이션 배치를 되돌린다. 데이터가 필요한 환경에서는 먼저 백업하고, 운영 데이터베이스에는 실행하지 않는다.
 
 ## 문제 해결
 
