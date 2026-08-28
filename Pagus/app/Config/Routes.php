@@ -8,6 +8,8 @@ $routes->get('/', 'Home::index');
 $routes->get('restaurants/(:num)', 'Home::show/$1');
 $routes->get('photos/(:num)', 'PhotoController::show/$1');
 $routes->post('restaurants/(:num)/reviews', 'ReviewController::create/$1');
+$routes->post('restaurants/(:num)/reviews/(:num)', 'ReviewController::update/$1/$2');
+$routes->post('restaurants/(:num)/reviews/(:num)/delete', 'ReviewController::delete/$1/$2');
 $routes->post('reviews/(:num)/reports', 'ReviewController::report/$1');
 $routes->get('login', 'AdminAuthController::login');
 $routes->post('login', 'AdminAuthController::authenticate');
