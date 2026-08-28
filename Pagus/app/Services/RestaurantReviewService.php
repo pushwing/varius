@@ -32,7 +32,7 @@ final class RestaurantReviewService
     }
 
     /** @param array<string, mixed> $data */
-    public function create(int $restaurantId, array $data): int
+    public function create(int $restaurantId, array $data, string $authorReporterHash): int
     {
         self::assertReviewData($data);
         $restaurant = ($this->restaurants ?? model(RestaurantModel::class))->find($restaurantId);
@@ -41,7 +41,10 @@ final class RestaurantReviewService
         }
         self::assertAuthorPassword((string) ($data['author_password'] ?? ''));
         $model = $this->reviews ?? model(RestaurantReviewModel::class);
-        $model->insert(['restaurant_id' => $restaurantId, 'nickname' => trim((string) $data['nickname']), 'rating' => (int) $data['rating'], 'content' => trim((string) $data['content']), 'author_password_hash' => password_hash((string) $data['author_password'], PASSWORD_DEFAULT)]);
+        if (! preg_match('/^[a-f0-9]{64}$/', $authorReporterHash)) {
+            throw new InvalidArgumentException('작성자 식별값이 올바르지 않습니다.');
+        }
+        $model->insert(['restaurant_id' => $restaurantId, 'nickname' => trim((string) $data['nickname']), 'rating' => (int) $data['rating'], 'content' => trim((string) $data['content']), 'author_password_hash' => password_hash((string) $data['author_password'], PASSWORD_DEFAULT), 'author_reporter_hash' => $authorReporterHash]);
         return (int) $model->getInsertID();
     }
 
@@ -80,6 +83,9 @@ final class RestaurantReviewService
         $review = $reviews->find($reviewId);
         if (! is_array($review)) {
             throw new InvalidArgumentException('후기를 찾을 수 없습니다.');
+        }
+        if ((string) ($review['author_reporter_hash'] ?? '') === $reporterHash) {
+            throw new InvalidArgumentException('내가 작성한 후기는 신고할 수 없습니다.');
         }
         $reports = $this->reports ?? model(RestaurantReviewReportModel::class);
         if ($reports->where('review_id', $reviewId)->where('reporter_hash', $reporterHash)->first() !== null) {
