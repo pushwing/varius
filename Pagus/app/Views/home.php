@@ -6,7 +6,11 @@
  * @var array{query: string, category_id: ?int, sort: string, page: int} $filters
  * @var CodeIgniter\Pager\Pager $pager
  */
-$mapData = json_encode($restaurants, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+$mapRestaurants = array_map(static function (array $restaurant): array {
+    $restaurant['share_url'] = site_url('restaurants/' . (int) $restaurant['id']);
+    return $restaurant;
+}, $restaurants);
+$mapData = json_encode($mapRestaurants, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 if ($mapData === false) {
     $mapData = '[]';
 }
@@ -144,7 +148,7 @@ if ($mapData === false) {
             title.textContent = restaurant.name;
             header.append(kicker, title);
             content.append(header);
-            const detailUrl = '<?= site_url('restaurants') ?>/' + Number(restaurant.id);
+            const detailUrl = restaurant.share_url;
             const categoryRow = document.createElement('div');
             categoryRow.className = 'map-popup__category-row';
             if (restaurant.category_names) {

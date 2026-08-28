@@ -26,6 +26,7 @@
     <h1><?= esc((string) $restaurant['name']) ?></h1>
     <p class="category"><?= esc((string) ($restaurant['category_names'] ?? '카테고리 미지정')) ?></p>
     <p><?= esc((string) $restaurant['address']) ?></p>
+    <?php $shareUrl = site_url('restaurants/' . (int) $restaurant['id']); ?>
     <?php
     $directionsUrl = 'https://map.kakao.com/link/to/'
         . rawurlencode((string) $restaurant['name']) . ','
@@ -102,7 +103,7 @@
 </dialog>
 <script>
     const sharePlaceButton = document.querySelector('[data-share-place]');
-    sharePlaceButton?.addEventListener('click', () => window.sharePlace(<?= json_encode((string) $restaurant['name'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>, window.location.href, sharePlaceButton));
+    sharePlaceButton?.addEventListener('click', () => window.sharePlace(<?= json_encode((string) $restaurant['name'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>, <?= json_encode($shareUrl, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>, sharePlaceButton));
 
     const photoDialog = document.getElementById('photo-dialog');
     const photoDialogImage = document.getElementById('photo-dialog-image');
