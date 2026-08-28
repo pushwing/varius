@@ -27,7 +27,6 @@ if ($mapData === false) {
     <h1><img class="brand-mark" src="<?= base_url('assets/img/logo-mark.svg') ?>" alt="">파구스 · 파주 로컬 맛집 지도</h1>
     <nav aria-label="주요 메뉴">
         <a href="<?= site_url('/') ?>">홈</a>
-        <a href="<?= site_url('login') ?>">로그인</a>
         <button type="button" class="nav-button" data-contact-open>문의하기</button>
     </nav>
 </header>
@@ -88,6 +87,7 @@ if ($mapData === false) {
 <footer class="site-footer">
     <p>© <?= date('Y') ?> 파구스. All rights reserved.</p>
     <p><a href="mailto:advisor@aivance.kr">advisor@aivance.kr</a></p>
+    <p><a href="<?= site_url('login') ?>">로그인</a></p>
 </footer>
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=<?= esc(config(\Config\KakaoMaps::class)->jsKey, 'url') ?>"></script>
 <script>
