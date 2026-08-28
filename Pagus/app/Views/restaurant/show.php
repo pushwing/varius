@@ -18,7 +18,7 @@
 </head>
 <body>
 <header class="site-header">
-    <h1><img class="brand-mark" src="<?= base_url('assets/img/logo-mark.svg') ?>" alt="">파구스</h1>
+    <h1><a href="<?= site_url('/') ?>"><img class="brand-mark" src="<?= base_url('assets/img/logo-mark.svg') ?>" alt="">파구스 · 파주 로컬 맛집 지도</a></h1>
     <nav aria-label="주요 메뉴"><a href="<?= site_url('/') ?>">목록으로</a></nav>
 </header>
 <main class="detail-main">
