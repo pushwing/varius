@@ -98,6 +98,14 @@
                         <header><strong><?= esc((string) $review['nickname']) ?></strong> · <span aria-label="별점 <?= (int) $review['rating'] ?>점"><?= str_repeat('★', (int) $review['rating']) . str_repeat('☆', 5 - (int) $review['rating']) ?></span></header>
                         <p><?= nl2br(esc((string) $review['content'])) ?></p>
                         <small><?= esc((string) $review['created_at']) ?></small>
+                        <details><summary>내 후기 수정·삭제</summary>
+                            <form method="post" action="/restaurants/<?= (int) $restaurant['id'] ?>/reviews/<?= (int) $review['id'] ?>">
+                                <?= csrf_field() ?><label>닉네임 <input type="text" name="nickname" maxlength="50" value="<?= esc((string) $review['nickname']) ?>" required></label><label>별점 <select name="rating" required><?php for ($rating = 5; $rating >= 1; $rating--): ?><option value="<?= $rating ?>" <?= (int) $review['rating'] === $rating ? 'selected' : '' ?>><?= $rating ?>점</option><?php endfor; ?></select></label><label>후기 내용 <textarea name="content" maxlength="2000" required><?= esc((string) $review['content']) ?></textarea></label><label>작성 시 비밀번호 <input type="password" name="author_password" minlength="8" maxlength="72" required></label><button class="btn-ghost btn-sm" type="submit">수정</button>
+                            </form>
+                            <form method="post" action="/restaurants/<?= (int) $restaurant['id'] ?>/reviews/<?= (int) $review['id'] ?>/delete" onsubmit="return confirm('후기를 삭제하시겠습니까?');">
+                                <?= csrf_field() ?><label>작성 시 비밀번호 <input type="password" name="author_password" minlength="8" maxlength="72" required></label><button class="btn-danger btn-sm" type="submit">삭제</button>
+                            </form>
+                        </details>
                         <form method="post" action="/reviews/<?= (int) $review['id'] ?>/reports">
                             <?= csrf_field() ?><input type="hidden" name="return_path" value="<?= esc('/restaurants/' . (int) $restaurant['id'], 'attr') ?>">
                             <label>신고 사유 <input type="text" name="reason" maxlength="100" required></label><button class="btn-ghost btn-sm" type="submit">신고</button>
@@ -115,6 +123,7 @@
             <label>닉네임 <input type="text" name="nickname" maxlength="50" value="<?= esc((string) old('nickname')) ?>" required></label>
             <label>별점 <select name="rating" required><option value="">선택</option><?php for ($rating = 5; $rating >= 1; $rating--): ?><option value="<?= $rating ?>" <?= (string) old('rating') === (string) $rating ? 'selected' : '' ?>><?= $rating ?>점</option><?php endfor; ?></select></label>
             <label>후기 내용 <textarea name="content" maxlength="2000" required><?= esc((string) old('content')) ?></textarea></label>
+            <label>수정·삭제 비밀번호 <input type="password" name="author_password" minlength="8" maxlength="72" required></label>
             <button type="submit">후기 등록</button>
         </form>
     </section>
