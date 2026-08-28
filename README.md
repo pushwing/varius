@@ -1,13 +1,18 @@
 # varius
 
 여러 프로젝트를 모아놓은 모노레포입니다. 프로젝트마다 독립된 서브디렉토리를 가지며,
-각 서브디렉토리는 자체 `AGENTS.md`(Codex 작업 규칙)와 `README.md`(프로젝트 개요)를 보유합니다.
+각 서브디렉토리는 작업 도구별 규칙 문서와 `README.md`(프로젝트 개요)를 보유합니다.
 
-프로젝트는 서로 독립적으로 설치·실행·배포합니다. 공통 저장소 규칙은 루트
-[`AGENTS.md`](AGENTS.md)를, 각 프로젝트의 사용 방법은 해당 디렉터리 문서를 참고하세요.
+- Codex로 작업할 때는 루트 [`AGENTS.md`](AGENTS.md)를 먼저 읽고, 작업 대상 프로젝트의 `AGENTS.md`를 참고합니다.
+- Claude Code로 작업할 때는 루트 [`CLAUDE.md`](CLAUDE.md)를 먼저 읽고, 작업 대상 프로젝트의 `CLAUDE.md`를 참고합니다.
+
+두 문서는 같은 저장소의 작업 규칙을 Codex와 Claude Code 환경에 맞게 각각 기록한 것입니다.
+
+프로젝트는 서로 독립적으로 설치·실행·배포합니다. 공통 저장소 규칙은 사용하는 도구에 따라 루트
+`AGENTS.md` 또는 `CLAUDE.md`를, 각 프로젝트의 사용 방법은 해당 디렉터리 문서를 참고하세요.
 
 저장소 전체에 적용되는 컨벤션(브랜치 전략, CI/CD 정책, 디렉토리 구조 규칙 등)은
-[`AGENTS.md`](AGENTS.md)를 참고하세요.
+Codex에서는 [`AGENTS.md`](AGENTS.md), Claude Code에서는 [`CLAUDE.md`](CLAUDE.md)를 참고하세요.
 
 ## 프로젝트 목록
 
@@ -19,9 +24,11 @@
 
 ## 프로젝트 시작하기
 
-각 프로젝트의 의존성과 실행 환경이 다르므로 작업하려는 디렉터리로 이동한 뒤 해당 문서를 확인합니다.
+각 프로젝트의 의존성과 실행 환경이 다르므로 작업하려는 디렉터리로 이동한 뒤 사용하는 도구에 맞는
+규칙 문서와 프로젝트 문서를 확인합니다.
 
-- [`rtic/README.md`](rtic/README.md): WebRTC 인터콤 실행 안내
-- [`Iter/README.md`](Iter/README.md): GPS 동선 시각화 실행 안내
-- [`Pagus/README.md`](Pagus/README.md): 제품 개요와 현재 구현 범위
-- [`Pagus/SETUP.md`](Pagus/SETUP.md): Pagus의 PHP·MySQL·Kakao API 로컬 셋업과 검증 절차
+| 프로젝트 | Codex 작업 규칙 | Claude Code 작업 규칙 | 사용 안내 |
+|---|---|---|---|
+| `rtic/` | [`AGENTS.md`](rtic/AGENTS.md) | [`CLAUDE.md`](rtic/CLAUDE.md) | [`README.md`](rtic/README.md) |
+| `Iter/` | [`AGENTS.md`](Iter/AGENTS.md) | [`CLAUDE.md`](Iter/CLAUDE.md) | [`README.md`](Iter/README.md) |
+| `Pagus/` | [`AGENTS.md`](Pagus/AGENTS.md) | [`CLAUDE.md`](Pagus/CLAUDE.md) | [`README.md`](Pagus/README.md), [`SETUP.md`](Pagus/SETUP.md) |
