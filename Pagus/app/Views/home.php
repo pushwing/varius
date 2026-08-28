@@ -18,6 +18,7 @@ if ($mapData === false) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>파구스 — 파주 로컬 맛집 지도</title>
     <link rel="stylesheet" href="<?= base_url('assets/css/app.css') ?>">
+    <script src="<?= base_url('assets/js/share.js') ?>"></script>
     <link rel="icon" href="<?= base_url('favicon.ico') ?>" sizes="any">
     <link rel="icon" type="image/svg+xml" href="<?= base_url('favicon.svg') ?>">
     <link rel="apple-touch-icon" href="<?= base_url('apple-touch-icon.png') ?>">
@@ -177,7 +178,12 @@ if ($mapData === false) {
             detail.className = 'map-popup__link';
             detail.href = '<?= site_url('restaurants') ?>/' + Number(restaurant.id);
             detail.textContent = '상세 정보 보기';
-            actions.append(detail);
+            const share = document.createElement('button');
+            share.className = 'map-popup__share btn-ghost';
+            share.type = 'button';
+            share.textContent = '이 장소 공유';
+            share.addEventListener('click', () => window.sharePlace(restaurant.name, detail.href, share));
+            actions.append(detail, share);
             content.append(actions);
             const infoWindow = new kakao.maps.InfoWindow({ content, removable: true });
             kakao.maps.event.addListener(marker, 'click', () => openMarker(marker, infoWindow, restaurant.id));

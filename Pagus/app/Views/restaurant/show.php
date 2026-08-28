@@ -12,6 +12,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc((string) $restaurant['name']) ?> · 파구스</title>
     <link rel="stylesheet" href="<?= base_url('assets/css/app.css') ?>">
+    <script src="<?= base_url('assets/js/share.js') ?>"></script>
     <link rel="icon" href="<?= base_url('favicon.ico') ?>" sizes="any">
     <link rel="icon" type="image/svg+xml" href="<?= base_url('favicon.svg') ?>">
     <link rel="apple-touch-icon" href="<?= base_url('apple-touch-icon.png') ?>">
@@ -31,7 +32,10 @@
         . rawurlencode((string) $restaurant['latitude']) . ','
         . rawurlencode((string) $restaurant['longitude']);
 ?>
-    <p><a class="directions-link" href="<?= esc($directionsUrl, 'attr') ?>" rel="noopener noreferrer" target="_blank"><?= esc((string) $restaurant['name']) ?> 길찾기</a></p>
+    <div class="detail-actions">
+        <a class="directions-link" href="<?= esc($directionsUrl, 'attr') ?>" rel="noopener noreferrer" target="_blank"><?= esc((string) $restaurant['name']) ?> 길찾기</a>
+        <button class="btn-ghost share-button" type="button" data-share-place>이 장소 공유</button>
+    </div>
     <?php if ((string) ($restaurant['phone'] ?? '') !== ''): ?><p><?= esc((string) $restaurant['phone']) ?></p><?php endif; ?>
     <?php if ((string) ($restaurant['homepage_url'] ?? '') !== ''): ?><p><a href="<?= esc((string) $restaurant['homepage_url'], 'attr') ?>" rel="noopener noreferrer" target="_blank"><?= esc((string) $restaurant['homepage_url']) ?></a></p><?php endif; ?>
 
@@ -97,6 +101,9 @@
     </div>
 </dialog>
 <script>
+    const sharePlaceButton = document.querySelector('[data-share-place]');
+    sharePlaceButton?.addEventListener('click', () => window.sharePlace(<?= json_encode((string) $restaurant['name'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>, window.location.href, sharePlaceButton));
+
     const photoDialog = document.getElementById('photo-dialog');
     const photoDialogImage = document.getElementById('photo-dialog-image');
     const photoDialogCount = document.getElementById('photo-dialog-count');

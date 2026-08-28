@@ -259,9 +259,10 @@ button:hover, .btn:hover { background: var(--color-pine); border-color: var(--co
 .map-popup__details dt { color: var(--color-taupe); font-weight: 700; }
 .map-popup__details dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
 .map-popup__summary { display: -webkit-box; margin: var(--space-sm) 0 0; overflow: hidden; color: var(--color-taupe); font-size: .9rem; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
-.map-popup__actions { margin-top: var(--space-md); }
+.map-popup__actions { display: grid; gap: var(--space-xs); margin-top: var(--space-md); }
 .map-popup__link { display: flex; align-items: center; justify-content: center; min-height: 2.5rem; padding: .55rem .75rem; border-radius: var(--radius-sm); background: var(--color-fern); color: #fff; font-size: .9rem; font-weight: 700; text-decoration: none; }
 .map-popup__link:hover, .map-popup__link:focus-visible { background: var(--color-pine); }
+.map-popup__share { width: 100%; }
 
 .pagination {
     display: flex;
@@ -293,6 +294,7 @@ button:hover, .btn:hover { background: var(--color-pine); border-color: var(--co
 /* ===== 맛집 상세 ===== */
 .detail-main { max-width: 48rem; margin: 0 auto; padding: var(--space-lg) 5vw; }
 .detail-main .category { color: var(--color-fern); font-weight: 600; }
+.detail-actions { display: flex; flex-wrap: wrap; gap: var(--space-xs); margin: var(--space-md) 0; }
 .directions-link { display: inline-flex; align-items: center; min-height: 2.5rem; padding: .55rem .75rem; border-radius: var(--radius-sm); background: var(--color-fern); color: #fff; font-weight: 700; text-decoration: none; }
 .directions-link:hover, .directions-link:focus-visible { background: var(--color-pine); color: #fff; }
 .detail-main section { margin: var(--space-lg) 0; padding-top: var(--space-lg); border-top: 1px solid var(--color-border); }
