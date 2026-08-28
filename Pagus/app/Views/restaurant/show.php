@@ -3,6 +3,7 @@
 /**
  * @var array<string, mixed> $restaurant
  * @var list<array<string, mixed>> $photos
+ * @var list<array<string, mixed>> $reviews
  */
 ?>
 <!doctype html>
@@ -85,6 +86,38 @@
             </div>
         </section>
     <?php endif; ?>
+
+    <section id="reviews" aria-labelledby="reviews-title">
+        <h2 id="reviews-title">방문 후기 (<?= count($reviews) ?>)</h2>
+        <?php if (session('message')): ?><p role="status"><?= esc(session('message')) ?></p><?php endif; ?>
+        <?php if (session('error')): ?><p role="alert"><?= esc(session('error')) ?></p><?php endif; ?>
+        <?php if ($reviews === []): ?><p class="empty-state">아직 등록된 후기가 없습니다.</p><?php else: ?>
+            <div class="review-list">
+                <?php foreach ($reviews as $review): ?>
+                    <article class="review-item">
+                        <header><strong><?= esc((string) $review['nickname']) ?></strong> · <span aria-label="별점 <?= (int) $review['rating'] ?>점"><?= str_repeat('★', (int) $review['rating']) . str_repeat('☆', 5 - (int) $review['rating']) ?></span></header>
+                        <p><?= nl2br(esc((string) $review['content'])) ?></p>
+                        <small><?= esc((string) $review['created_at']) ?></small>
+                        <form method="post" action="/reviews/<?= (int) $review['id'] ?>/reports">
+                            <?= csrf_field() ?><input type="hidden" name="return_path" value="<?= esc('/restaurants/' . (int) $restaurant['id'], 'attr') ?>">
+                            <label>신고 사유 <input type="text" name="reason" maxlength="100" required></label><button class="btn-ghost btn-sm" type="submit">신고</button>
+                        </form>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    </section>
+    <section id="review-form" aria-labelledby="review-form-title">
+        <h2 id="review-form-title">후기 남기기</h2>
+        <p>로그인 없이 작성할 수 있습니다. 다른 사람을 존중하는 후기를 남겨주세요.</p>
+        <form method="post" action="/restaurants/<?= (int) $restaurant['id'] ?>/reviews">
+            <?= csrf_field() ?>
+            <label>닉네임 <input type="text" name="nickname" maxlength="50" value="<?= esc((string) old('nickname')) ?>" required></label>
+            <label>별점 <select name="rating" required><option value="">선택</option><?php for ($rating = 5; $rating >= 1; $rating--): ?><option value="<?= $rating ?>" <?= (string) old('rating') === (string) $rating ? 'selected' : '' ?>><?= $rating ?>점</option><?php endfor; ?></select></label>
+            <label>후기 내용 <textarea name="content" maxlength="2000" required><?= esc((string) old('content')) ?></textarea></label>
+            <button type="submit">후기 등록</button>
+        </form>
+    </section>
 </main>
 <footer class="site-footer">
     <p>© <?= date('Y') ?> 파구스. All rights reserved.</p>
