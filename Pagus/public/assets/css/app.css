@@ -247,6 +247,8 @@ button:hover, .btn:hover { background: var(--color-pine); border-color: var(--co
 .map-popup {
     width: min(18rem, calc(100vw - 4rem));
     padding: var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
     background: var(--color-paper);
     color: var(--color-charcoal);
     font: inherit;
