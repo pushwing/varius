@@ -20,7 +20,7 @@ Codex에서는 [`AGENTS.md`](AGENTS.md), Claude Code에서는 [`CLAUDE.md`](CLAU
 |---|---|
 | [`rtic/`](rtic/) | Realtime Intercom — 외부 공중 인터넷 클라이언트와 자택 리눅스 서버 간 음성을 실시간으로 주고받는 WebRTC 기반 **양방향** 인터콤 시스템(클라이언트 → 자택 스피커, 자택 마이크 → 클라이언트) |
 | [`Iter/`](Iter/) | Google Photos GPS 동선 시각화 — Google Takeout 사진 zip·기기 위치기록(Timeline.json)에서 GPS를 추출해 지도에 날짜별 이동 동선으로 시각화하고, 시간표·여행 단위 통계·공유 기능을 제공 |
-| [`Pagus/`](Pagus/) | 파주 로컬 맛집 지도 — Kakao 지도·검색으로 공개 맛집을 찾고, 맛집 상세·사진·방문 후기·문의와 운영자 관리 기능을 제공 |
+| [`Pagus/`](Pagus/) | 파주 로컬 맛집 지도 — Kakao 지도·검색으로 공개 맛집을 찾고, 맛집 상세·사진·방문 후기·문의와 운영자 관리 기능을 제공. [실제 운영 서비스](https://pagus.aivance.kr) |
 
 ## 프로젝트 시작하기
 
