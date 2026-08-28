@@ -24,8 +24,8 @@
 ### 가상서버(VPS) 환경
 
 - Ubuntu 등 Linux 서버
-- Nginx 또는 Apache
-- PHP-FPM 8.2 이상 및 MySQL 8.0 이상
+- Apache 2.4 + PHP Apache module(mod_php) 또는 Nginx + PHP-FPM
+- PHP 8.2 이상 및 MySQL 8.0 이상
 - 도메인 DNS를 서버 IP로 연결할 권한
 - HTTPS 인증서 발급 환경
 
@@ -370,14 +370,16 @@ mkdir -p writable/session writable/uploads/restaurants
 
 ## 10. 가상서버(VPS)에 배포하기
 
-아래는 Linux VPS에서 Nginx와 PHP-FPM을 사용하는 예시다. 실제 운영 계정·경로·도메인으로 교체한다.
+Linux VPS에서는 Apache(mod_php) 또는 Nginx(PHP-FPM) 중 사용하는 웹 서버에 맞춰 설정한다. 아래의 계정·경로·도메인·PHP 버전은 실제 서버 값으로 교체한다. 두 방식 모두 웹 서버의 document root는 반드시 `Pagus/public/`으로 지정한다.
 
 ### 10.1 서버 준비
 
 1. DNS의 A/AAAA 레코드를 서버 IP로 연결한다.
-2. Nginx, PHP 8.2 이상, PHP-FPM, 필요한 PHP 확장, MySQL, Composer를 설치한다.
+2. 다음 두 구성 중 하나를 선택해 설치한다.
+   - Apache 2.4, PHP 8.2 이상, 배포판의 PHP Apache module(mod_php), 필요한 PHP 확장, MySQL, Composer
+   - Nginx, PHP 8.2 이상, PHP-FPM, 필요한 PHP 확장, MySQL, Composer
 3. 배포 전용 사용자와 애플리케이션 디렉터리를 만든다.
-4. 방화벽에서 HTTP(80)와 HTTPS(443)만 외부에 연다. MySQL(3306)과 PHP-FPM 포트는 외부에 공개하지 않는다.
+4. 방화벽에서 HTTP(80)와 HTTPS(443)만 외부에 연다. MySQL(3306)은 외부에 공개하지 않으며, Nginx + PHP-FPM 구성이라면 PHP-FPM 소켓·포트도 외부에 공개하지 않는다.
 
 ### 10.2 소스 배포와 환경 설정
 
@@ -394,7 +396,7 @@ cp .env.example .env
 php spark key:generate
 ```
 
-`.env`에는 운영 도메인, 운영 DB 접속 정보, Kakao 키, 운영자 계정 값을 입력한다. `.env`는 Git 저장소와 Nginx document root에 두지 않는다.
+`.env`에는 운영 도메인, 운영 DB 접속 정보, Kakao 키, 운영자 계정 값을 입력한다. `.env`는 Git 저장소와 웹 서버 document root에 두지 않는다.
 
 ```dotenv
 CI_ENVIRONMENT = production
@@ -411,9 +413,47 @@ kakaolocal.apiKey = 운영_REST_API_키
 kakaomaps.jsKey = 운영_JavaScript_키
 ```
 
-### 10.3 Nginx 설정 예시
+### 10.3 Apache(mod_php) 설정 예시
 
-`/etc/nginx/sites-available/pagus`에 다음과 같이 `Pagus/public/`을 root로 지정한다.
+Apache를 사용하는 경우 PHP-FPM이나 `fastcgi_pass`를 설정하지 않는다. Apache가 PHP를 처리할 수 있도록 서버 배포판에 맞는 PHP Apache module을 설치·활성화한다. Ubuntu/Debian 계열의 예시는 다음과 같다(실제 PHP 버전에 맞춰 패키지명을 바꾼다).
+
+```bash
+sudo apt install apache2 libapache2-mod-php8.2 php8.2-mysql php8.2-curl php8.2-mbstring php8.2-xml php8.2-intl php8.2-zip
+sudo a2enmod rewrite
+sudo systemctl enable --now apache2
+```
+
+`/etc/apache2/sites-available/varius-pagus.conf`에 VirtualHost를 만든다.
+
+```apache
+<VirtualHost *:80>
+    ServerName your-domain.example
+    DocumentRoot /var/www/varius/Pagus/public
+
+    <Directory /var/www/varius/Pagus/public>
+        AllowOverride All
+        Require all granted
+        Options FollowSymLinks
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/varius-pagus-error.log
+    CustomLog ${APACHE_LOG_DIR}/varius-pagus-access.log combined
+</VirtualHost>
+```
+
+`AllowOverride All`은 `public/.htaccess`의 CodeIgniter rewrite 규칙을 사용하기 위한 설정이다. Apache가 `public/` 밖의 `app/`, `system/`, `writable/`, `vendor/`, `.env`를 웹으로 제공하지 않도록 `DocumentRoot`를 `/var/www/varius/Pagus` 전체로 지정하지 않는다.
+
+```bash
+sudo a2ensite varius-pagus.conf
+sudo apachectl configtest
+sudo systemctl reload apache2
+```
+
+배포판에서 PHP가 Apache module이 아닌 다른 방식으로 제공되면 해당 배포판의 Apache-PHP 연동 절차를 따른다. 중요한 조건은 Apache에서 `.php` 파일이 PHP로 처리되고, `public/.htaccess` rewrite가 동작하는 것이다.
+
+### 10.4 Nginx + PHP-FPM 설정 예시
+
+`/etc/nginx/sites-available/pagus`에 다음과 같이 `Pagus/public/`을 root로 지정한다. Nginx를 선택한 경우에만 PHP-FPM 소켓을 설정한다.
 
 ```nginx
 server {
@@ -447,7 +487,7 @@ sudo systemctl reload nginx
 
 그 다음 인증서를 발급하고 HTTP에서 HTTPS로 리다이렉트한다. 인증서 발급 도구와 운영 방식은 서버 배포 환경에 맞춘다.
 
-### 10.4 권한과 초기화
+### 10.5 권한과 초기화
 
 소스 전체를 웹 서버 쓰기 권한으로 만들지 말고, 애플리케이션 실행에 필요한 디렉터리만 허용한다.
 
@@ -464,10 +504,12 @@ php spark db:seed DatabaseSeeder
 
 초기화 명령은 운영 DB 백업과 접속 정보를 확인한 뒤 한 번 실행한다. 배포 자동화에서는 migration을 동시에 여러 번 실행하지 않도록 잠금·단일 배포 작업을 사용한다.
 
-### 10.5 VPS 배포 후 확인
+### 10.6 VPS 배포 후 확인
 
 - `curl -I https://your-domain.example/`가 정상 HTTP 응답을 반환하는지 확인한다.
-- Nginx·PHP-FPM·애플리케이션 로그에 오류가 없는지 확인한다.
+- 선택한 웹 서버와 PHP 실행 방식의 로그에 오류가 없는지 확인한다.
+  - Apache(mod_php): `sudo journalctl -u apache2 -n 100 --no-pager` 및 Apache error log
+  - Nginx + PHP-FPM: `sudo journalctl -u nginx -n 100 --no-pager`, `sudo journalctl -u php8.2-fpm -n 100 --no-pager`
 - 공개 지도, Kakao 키, 운영자 로그인, 사진 업로드, 후기와 문의를 확인한다.
 - `.env`, `app/`, `writable/`, `vendor/`가 HTTP로 직접 다운로드되지 않는지 확인한다.
 - 운영자 계정의 초기 비밀번호를 안전하게 관리하고 재사용하지 않는다.
