@@ -65,20 +65,20 @@ PAGUS_ADMIN_PASSWORD='12자 이상인 초기 비밀번호' php spark db:seed Dat
 php spark serve
 ```
 
-기본 접속 주소는 `http://pagus.test/`다. Caddy를 사용하지 않는 경우에만 `php spark serve`가 출력하는 개발 주소를 사용한다.
+실행 주소는 설치 환경의 자기 도메인 또는 테스트 서버 주소를 사용한다. 설치·웹호스팅·VPS 배포 절차는 [`SETUP.md`](SETUP.md)를 참고한다.
 
 `.env`에는 최소한 다음 값을 로컬 MySQL 환경에 맞게 설정한다. 실제 비밀번호와 API 키는 커밋하지 않는다.
 
 ```dotenv
 CI_ENVIRONMENT = development
-app.baseURL = 'http://pagus.test/'
+app.baseURL = 'https://your-domain.example/'
 database.default.hostname = localhost
 database.default.database = pagus
 database.default.username = pagus
 database.default.password =
 database.default.DBDriver = MySQLi
 database.default.port = 3306
-PAGUS_ADMIN_EMAIL = admin@pagus.test
+PAGUS_ADMIN_EMAIL = admin@your-domain.example
 PAGUS_ADMIN_PASSWORD = change-this-password
 ```
 
@@ -96,7 +96,7 @@ composer check
 
 외부 연동과 화면은 별도로 확인한다.
 
-- 카카오 지도 SDK가 정상 로드되는지와 공개 맛집 마커·상세 링크를 실제 `http://pagus.test/`에서 확인한다.
+- 카카오 지도 SDK가 정상 로드되는지와 공개 맛집 마커·상세 링크를 실제 서비스 도메인에서 확인한다.
 - 운영자 주소 검색·참고 데이터 검색은 Kakao API 키가 설정된 환경에서 실제 호출한다.
 - API 키가 없거나 외부 서비스가 실패하면 주소·좌표 직접 입력으로 이어지는 오류 처리를 사용한다.
 

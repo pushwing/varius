@@ -109,4 +109,4 @@ composer test
 - `composer analyse`: PHPStan 정적 분석을 실행한다.
 - `composer test`: PHPUnit Unit Test를 실행한다.
 
-명령이 아직 정의되지 않은 초기 상태라면 `composer.json`의 실제 스크립트를 먼저 확인하고, 가능한 범위에서 `vendor/bin/phpunit`, migration 적용·rollback 점검, PHP 문법 검사를 수행한다. UI 변경은 실제 `http://pagus.test/` 화면에서 확인하고, 지도·검색·권한·공개 상태 필터의 성공·실패·권한 경계를 함께 검증한다. 외부 지도·지오코딩 API는 실제 호출 또는 명시적인 미검증 사유를 결과에 남긴다.
+명령이 아직 정의되지 않은 초기 상태라면 `composer.json`의 실제 스크립트를 먼저 확인하고, 가능한 범위에서 `vendor/bin/phpunit`, migration 적용·rollback 점검, PHP 문법 검사를 수행한다. UI 변경은 현재 설정한 테스트 또는 서비스 도메인에서 확인하고, 지도·검색·권한·공개 상태 필터의 성공·실패·권한 경계를 함께 검증한다. 외부 지도·지오코딩 API는 실제 호출 또는 명시적인 미검증 사유를 결과에 남긴다.
