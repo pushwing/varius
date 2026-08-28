@@ -23,7 +23,7 @@
         const title = `${name} · 파구스`;
         if (navigator.share) {
             try {
-                await navigator.share({ title, text: `${name} 정보를 확인해보세요.`, url });
+                await navigator.share({ title, text: `\n${name} 정보를 확인해보세요.`, url });
                 return;
             } catch (error) {
                 if (error?.name === 'AbortError') {
