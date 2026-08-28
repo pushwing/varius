@@ -294,20 +294,20 @@ button:hover, .btn:hover { background: var(--color-pine); border-color: var(--co
 
 /* ===== 맛집 상세 ===== */
 .detail-main { flex: 1 1 auto; width: min(100%, 56rem); margin: 0 auto; padding: var(--space-xl) 5vw; }
-.detail-hero { padding: var(--space-lg); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-paper); }
-.detail-kicker, .section-label { margin: 0 0 var(--space-xs); color: var(--color-fern); font-size: .9rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.detail-main > section { margin: var(--space-xl) 0; }
+.restaurant-info { overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-paper); }
+.detail-hero { padding: var(--space-lg); }
 .detail-hero h1 { margin-bottom: var(--space-xs); font-size: 1.5rem; }
 .detail-address { margin-top: var(--space-md); color: var(--color-taupe); }
-.detail-facts { display: grid; gap: var(--space-sm); margin-top: var(--space-md); padding: var(--space-md) var(--space-lg); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-linen); }
+.detail-facts { display: grid; gap: var(--space-sm); padding: var(--space-md) var(--space-lg); border-top: 1px solid var(--color-border); background: var(--color-linen); }
 .detail-facts p { display: grid; grid-template-columns: 5rem 1fr; gap: var(--space-md); margin: 0; }
 .detail-facts span { color: var(--color-taupe); font-size: .9rem; }
 .detail-main .category { color: var(--color-fern); font-weight: 600; }
 .detail-actions { display: flex; flex-wrap: wrap; gap: var(--space-xs); margin: var(--space-md) 0; }
 .directions-link { display: inline-flex; align-items: center; min-height: 2.5rem; padding: .55rem .75rem; border-radius: var(--radius-sm); background: var(--color-fern); color: #fff; font-weight: 700; text-decoration: none; }
 .directions-link:hover, .directions-link:focus-visible { background: var(--color-pine); color: #fff; }
-.detail-main section { margin: var(--space-xl) 0; }
-.detail-main .detail-section { padding: var(--space-lg); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-paper); }
-.detail-main .detail-section h2 { margin-bottom: var(--space-sm); }
+.restaurant-info > .detail-section { margin: 0; padding: var(--space-lg); border-top: 1px solid var(--color-border); }
+.restaurant-info > .detail-section h2 { margin-bottom: var(--space-sm); }
 
 .photo-grid { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin: var(--space-md) 0; }
 .photo-trigger { display: block; padding: 0; border: 0; background: transparent; }
@@ -460,7 +460,7 @@ a.tag-chip:hover { border-color: var(--color-fern); color: var(--color-fern); }
 
 @media (max-width: 480px) {
     .detail-main { padding-right: 4vw; padding-left: 4vw; }
-    .detail-hero, .detail-main .detail-section, .review-section, .review-composer { padding: var(--space-md); }
+    .detail-hero, .restaurant-info > .detail-section, .review-section, .review-composer { padding: var(--space-md); }
     .detail-facts { padding: var(--space-md); }
     .detail-facts p { grid-template-columns: 4.5rem 1fr; gap: var(--space-sm); }
     .review-item header { align-items: flex-start; flex-direction: column; gap: var(--space-xs); }

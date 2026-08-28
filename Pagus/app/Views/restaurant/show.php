@@ -24,32 +24,33 @@
     <nav aria-label="주요 메뉴"><a href="<?= site_url('/') ?>">목록으로</a></nav>
 </header>
 <main class="detail-main">
-    <section class="detail-hero" aria-labelledby="restaurant-title">
-        <p class="detail-kicker">파주 맛집</p>
-        <h1 id="restaurant-title"><?= esc((string) $restaurant['name']) ?></h1>
-        <p class="category"><?= esc((string) ($restaurant['category_names'] ?? '카테고리 미지정')) ?></p>
-        <p class="detail-address"><?= esc((string) $restaurant['address']) ?></p>
-    <?php $shareUrl = site_url('restaurants/' . (int) $restaurant['id']); ?>
-    <?php
-    $directionsUrl = 'https://map.kakao.com/link/to/'
-        . rawurlencode((string) $restaurant['name']) . ','
-        . rawurlencode((string) $restaurant['latitude']) . ','
-        . rawurlencode((string) $restaurant['longitude']);
+    <section class="restaurant-info" aria-labelledby="restaurant-title">
+        <div class="detail-hero">
+            <h1 id="restaurant-title"><?= esc((string) $restaurant['name']) ?></h1>
+            <p class="category"><?= esc((string) ($restaurant['category_names'] ?? '카테고리 미지정')) ?></p>
+            <p class="detail-address"><?= esc((string) $restaurant['address']) ?></p>
+            <?php $shareUrl = site_url('restaurants/' . (int) $restaurant['id']); ?>
+            <?php
+            $directionsUrl = 'https://map.kakao.com/link/to/'
+                . rawurlencode((string) $restaurant['name']) . ','
+                . rawurlencode((string) $restaurant['latitude']) . ','
+                . rawurlencode((string) $restaurant['longitude']);
 ?>
-    <div class="detail-actions">
-        <a class="directions-link" href="<?= esc($directionsUrl, 'attr') ?>" rel="noopener noreferrer" target="_blank"><?= esc((string) $restaurant['name']) ?> 길찾기</a>
-        <button class="btn-ghost share-button" type="button" data-share-place>이 장소 공유</button>
-    </div>
-    </section>
+            <div class="detail-actions">
+                <a class="directions-link" href="<?= esc($directionsUrl, 'attr') ?>" rel="noopener noreferrer" target="_blank"><?= esc((string) $restaurant['name']) ?> 길찾기</a>
+                <button class="btn-ghost share-button" type="button" data-share-place>이 장소 공유</button>
+            </div>
+        </div>
     <?php if ((string) ($restaurant['phone'] ?? '') !== '' || (string) ($restaurant['homepage_url'] ?? '') !== ''): ?>
-        <section class="detail-facts" aria-label="연락처와 홈페이지">
+        <div class="detail-facts" aria-label="연락처와 홈페이지">
             <?php if ((string) ($restaurant['phone'] ?? '') !== ''): ?><p><span>전화</span><a href="tel:<?= esc((string) $restaurant['phone'], 'attr') ?>"><?= esc((string) $restaurant['phone']) ?></a></p><?php endif; ?>
             <?php if ((string) ($restaurant['homepage_url'] ?? '') !== ''): ?><p><span>홈페이지</span><a href="<?= esc((string) $restaurant['homepage_url'], 'attr') ?>" rel="noopener noreferrer" target="_blank"><?= esc((string) $restaurant['homepage_url']) ?></a></p><?php endif; ?>
-        </section>
+        </div>
     <?php endif; ?>
 
     <?php if ($photos !== []): ?>
-        <section class="detail-section" aria-label="사진">
+        <section class="detail-section" aria-labelledby="photos-title">
+            <h2 id="photos-title">사진</h2>
             <div class="photo-grid">
                 <?php foreach ($photos as $photoIndex => $photo): ?>
                     <?php $photoAlt = (string) $restaurant['name'] . ' 사진'; ?>
@@ -93,6 +94,7 @@
             </div>
         </section>
     <?php endif; ?>
+    </section>
 
     <section id="reviews" class="review-section" aria-labelledby="reviews-title">
         <div class="section-heading"><div><p class="section-label">다녀온 사람들의 기록</p><h2 id="reviews-title">방문 후기</h2></div><span class="section-count"><?= count($reviews) ?>개</span></div>
