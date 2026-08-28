@@ -26,6 +26,7 @@
 - Database: MySQL 8.0+
 - View: CodeIgniter 4 server-rendered PHP view
 - Map·주소 검색: Kakao Maps JavaScript SDK, Kakao Local API
+- AI 카테고리 추천: Groq API(관리자 맛집 등록·수정 화면)
 - 운영: 웹 서버가 `public/`만 document root로 제공
 
 ## 주요 경로
@@ -78,6 +79,9 @@ database.default.username = pagus
 database.default.password =
 database.default.DBDriver = MySQLi
 database.default.port = 3306
+kakaolocal.apiKey = 발급받은_Kakao_REST_API_키
+kakaomaps.jsKey = 발급받은_Kakao_JavaScript_키
+groq.apiKey = 발급받은_Groq_API_키
 PAGUS_ADMIN_EMAIL = admin@example.com
 PAGUS_ADMIN_PASSWORD = change-this-password
 ```
@@ -98,6 +102,7 @@ composer check
 
 - 카카오 지도 SDK가 정상 로드되는지와 공개 맛집 마커·상세 링크를 실제 서비스 도메인에서 확인한다.
 - 운영자 주소 검색·참고 데이터 검색은 Kakao API 키가 설정된 환경에서 실제 호출한다.
+- 운영자 상호 입력 후 AI 카테고리 추천은 Groq API 키가 설정된 환경에서 실제 호출한다. 실패하면 카테고리를 직접 선택한다.
 - API 키가 없거나 외부 서비스가 실패하면 주소·좌표 직접 입력으로 이어지는 오류 처리를 사용한다.
 
 ## 개발 원칙

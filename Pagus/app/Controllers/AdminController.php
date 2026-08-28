@@ -13,6 +13,7 @@ use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 use App\Services\GeocodingService;
 use App\Services\KakaoLocalReferenceService;
+use App\Services\GroqCategoryRecommendationService;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -22,6 +23,7 @@ final class AdminController extends Controller
     private RestaurantPhotoService $photos;
     private GeocodingService $geocoding;
     private KakaoLocalReferenceService $reference;
+    private GroqCategoryRecommendationService $categoryRecommendation;
     private InquiryService $inquiries;
     private RestaurantReviewService $reviews;
 
@@ -32,6 +34,7 @@ final class AdminController extends Controller
         $this->photos = new RestaurantPhotoService();
         $this->geocoding = new GeocodingService();
         $this->reference = new KakaoLocalReferenceService();
+        $this->categoryRecommendation = new GroqCategoryRecommendationService();
         $this->inquiries = new InquiryService();
         $this->reviews = new RestaurantReviewService();
     }
@@ -181,6 +184,23 @@ final class AdminController extends Controller
             return $this->response->setStatusCode(503)->setJSON(['error' => '참고 데이터 조회를 사용할 수 없습니다. 상호·주소·좌표를 직접 입력하세요.']);
         }
         return $this->response->setJSON(['results' => $results]);
+    }
+
+    public function recommendCategory(): ResponseInterface
+    {
+        $query = trim((string) $this->request->getGet('name'));
+        if ($query === '' || mb_strlen($query) > 150) {
+            return $this->response->setStatusCode(400)->setJSON(['error' => '상호는 1자 이상 150자 이하로 입력하세요.']);
+        }
+        $categories = array_values(array_filter(
+            $this->management->categories(),
+            static fn (array $category): bool => (int) ($category['is_active'] ?? 0) === 1,
+        ));
+        $recommended = $this->categoryRecommendation->recommend($query, $categories);
+        if ($recommended === null) {
+            return $this->response->setStatusCode(503)->setJSON(['error' => 'AI 카테고리 추천을 사용할 수 없습니다. 카테고리를 직접 선택하세요.']);
+        }
+        return $this->response->setJSON(['category_ids' => $recommended]);
     }
 
     public function inquiries(): string
