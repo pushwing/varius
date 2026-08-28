@@ -196,16 +196,19 @@ php spark migrate:status
 
 최초 운영자 계정의 이메일과 비밀번호는 Pagus 디렉터리의 `.env`에서 수정한다.
 
+아래 이메일은 예시일 뿐이다. 실제로 사용할 이메일 주소로 직접 바꿔 입력한다.
+
 ```dotenv
-PAGUS_ADMIN_EMAIL = admin@your-domain.example
-PAGUS_ADMIN_PASSWORD = 12자_이상의_강한_비밀번호
+PAGUS_ADMIN_EMAIL = 내가_사용할_운영자_이메일@example.com
+PAGUS_ADMIN_PASSWORD = 내가_사용할_12자_이상의_강한_비밀번호
 ```
 
 이 값은 `app/Database/Seeds/RoleAndAdminSeeder.php`가 시딩할 때 읽는다.
 
 - `PAGUS_ADMIN_PASSWORD`는 12자 이상이어야 한다.
 - 비밀번호는 `password_hash()`로 해시되어 저장된다.
-- `PAGUS_ADMIN_EMAIL`을 생략하면 코드의 기본 이메일이 사용되므로 운영 환경에서는 직접 설정한다.
+- `PAGUS_ADMIN_EMAIL`은 로그인에 사용할 원하는 이메일 주소로 설정한다. 문서의 예시 주소를 그대로 사용할 필요가 없다.
+- `PAGUS_ADMIN_EMAIL`을 생략하면 코드의 기본 이메일이 사용되므로 운영 환경에서는 반드시 직접 설정한다.
 - 기존에 같은 이메일의 사용자가 있으면 시더는 계정을 새로 만들지 않는다. `.env`만 수정하고 다시 시딩해도 기존 이메일·비밀번호는 바뀌지 않는다.
 - 현재 웹 화면에는 운영자 이메일·비밀번호 변경 및 재설정 기능이 없다. 운영 계정 변경은 별도의 보안된 운영 절차를 마련한 뒤 수행한다.
 
@@ -222,8 +225,8 @@ php spark db:seed DatabaseSeeder
 
 ```bash
 cd ~/projects/varius/Pagus
-PAGUS_ADMIN_EMAIL='admin@your-domain.example' \
-PAGUS_ADMIN_PASSWORD='12자 이상의 강한 비밀번호' \
+PAGUS_ADMIN_EMAIL='내가_사용할_운영자_이메일@example.com' \
+PAGUS_ADMIN_PASSWORD='내가_사용할_12자_이상의_강한_비밀번호' \
 php spark db:seed DatabaseSeeder
 ```
 
@@ -378,6 +381,8 @@ mkdir -p writable/session writable/uploads/restaurants
 
 ### 10.2 소스 배포와 환경 설정
 
+이 프로젝트의 GitHub 저장소 주소는 `https://github.com/pushwing/varius.git`이다. VPS에서는 저장소 전체를 clone한 뒤 `Pagus/` 디렉터리로 이동한다.
+
 ```bash
 sudo mkdir -p /var/www/varius
 sudo chown -R deploy:www-data /var/www/varius
@@ -400,8 +405,8 @@ database.default.username = pagus
 database.default.password = 운영_DB_비밀번호
 database.default.DBDriver = MySQLi
 database.default.port = 3306
-PAGUS_ADMIN_EMAIL = admin@your-domain.example
-PAGUS_ADMIN_PASSWORD = 운영자_초기_비밀번호_12자_이상
+PAGUS_ADMIN_EMAIL = 내가_사용할_운영자_이메일@example.com
+PAGUS_ADMIN_PASSWORD = 내가_사용할_운영자_초기_비밀번호_12자_이상
 kakaolocal.apiKey = 운영_REST_API_키
 kakaomaps.jsKey = 운영_JavaScript_키
 ```
