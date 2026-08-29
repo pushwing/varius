@@ -28,63 +28,75 @@
             <form class="form-grid" method="post" action="/admin/restaurants/save">
                 <?= csrf_field() ?>
                 <input type="hidden" name="id" value="<?= $editingRestaurant === null ? '' : (int) $editingRestaurant['id'] ?>">
-                <div class="location-search" id="category-recommendation-form">
-                    <label for="restaurant-name">상호</label>
-                    <div class="category-recommend-controls">
-                        <input id="restaurant-name" name="name" required maxlength="150" value="<?= esc($editingRestaurant['name'] ?? old('name')) ?>">
-                        <button id="category-recommend-submit" type="button" class="btn-ghost">AI 카테고리 추천</button>
+                <fieldset class="form-section">
+                    <legend>기본 정보</legend>
+                    <div class="location-search" id="category-recommendation-form">
+                        <label for="restaurant-name">상호</label>
+                        <div class="category-recommend-controls">
+                            <input id="restaurant-name" name="name" required maxlength="150" value="<?= esc($editingRestaurant['name'] ?? old('name')) ?>">
+                            <button id="category-recommend-submit" type="button" class="btn-ghost">AI 카테고리 추천</button>
+                        </div>
+                        <p id="category-recommend-message" class="location-search-message" role="status">상호를 입력하고 추천을 요청하면 카테고리를 자동으로 선택합니다.</p>
                     </div>
-                    <p id="category-recommend-message" class="location-search-message" role="status">상호를 입력하고 추천을 요청하면 카테고리를 자동으로 선택합니다.</p>
-                </div>
-
-                <div>
-                    <label>카테고리</label>
-                    <div class="checkbox-group">
-                        <?php
-                            $selected = $editingRestaurant['category_ids'] ?? (array) old('category_ids');
+                    <div>
+                        <label>카테고리</label>
+                        <div class="checkbox-group">
+                            <?php
+                                $selected = $editingRestaurant['category_ids'] ?? (array) old('category_ids');
 foreach ($categories as $category): ?>
-                            <label class="checkbox-label"><input type="checkbox" name="category_ids[]" value="<?= (int) $category['id'] ?>" <?= in_array((int) $category['id'], array_map('intval', $selected), true) ? 'checked' : '' ?>><?= esc($category['name']) ?></label>
-                        <?php endforeach; ?>
+                                <label class="checkbox-label"><input type="checkbox" name="category_ids[]" value="<?= (int) $category['id'] ?>" <?= in_array((int) $category['id'], array_map('intval', $selected), true) ? 'checked' : '' ?>><?= esc($category['name']) ?></label>
+                            <?php endforeach; ?>
+                        </div>
                     </div>
-                </div>
+                </fieldset>
 
-                <div class="location-search" id="reference-search-form" role="search">
-                    <label for="reference-search-query">외부 참고 데이터 검색 (카카오)</label>
-                    <input id="reference-search-query" minlength="2" maxlength="100" autocomplete="off" placeholder="상호명으로 검색">
-                    <button id="reference-search-submit" type="button" class="btn-ghost">검색</button>
-                    <p id="reference-search-message" class="location-search-message" role="status">결과는 참고용입니다. 공개 여부·권한은 운영자가 직접 확인 후 결정하세요. 조회가 안 되면 아래 항목을 직접 입력할 수 있습니다.</p>
-                    <div id="reference-search-results"></div>
-                    <p class="reference-attribution">검색 결과 제공: 카카오</p>
-                </div>
-                <div class="location-search" id="address-search-form" role="search">
-                    <label for="restaurant-address">주소 (2자 이상 입력 후 검색하면 도로명 주소와 좌표를 채웁니다)</label>
-                    <input id="restaurant-address" name="address" required maxlength="255" autocomplete="street-address" value="<?= esc($editingRestaurant['address'] ?? old('address')) ?>">
-                    <button id="address-search-submit" type="button" class="btn-ghost">검색</button>
-                    <p id="address-search-message" class="location-search-message" role="status">검색 실패 시 주소와 좌표를 직접 입력할 수 있습니다.</p>
-                    <div id="address-search-results"></div>
-                </div>
-                <div id="restaurant-map" aria-label="맛집 위치 선택 지도"></div>
+                <fieldset class="form-section">
+                    <legend>위치 정보</legend>
+                    <div class="location-search" id="reference-search-form" role="search">
+                        <label for="reference-search-query">외부 참고 데이터 검색 (카카오)</label>
+                        <input id="reference-search-query" minlength="2" maxlength="100" autocomplete="off" placeholder="상호명으로 검색">
+                        <button id="reference-search-submit" type="button" class="btn-ghost">검색</button>
+                        <p id="reference-search-message" class="location-search-message" role="status">결과는 참고용입니다. 공개 여부·권한은 운영자가 직접 확인 후 결정하세요. 조회가 안 되면 아래 항목을 직접 입력할 수 있습니다.</p>
+                        <div id="reference-search-results"></div>
+                        <p class="reference-attribution">검색 결과 제공: 카카오</p>
+                    </div>
+                    <div class="location-search" id="address-search-form" role="search">
+                        <label for="restaurant-address">주소 (2자 이상 입력 후 검색하면 도로명 주소와 좌표를 채웁니다)</label>
+                        <input id="restaurant-address" name="address" required maxlength="255" autocomplete="street-address" value="<?= esc($editingRestaurant['address'] ?? old('address')) ?>">
+                        <button id="address-search-submit" type="button" class="btn-ghost">검색</button>
+                        <p id="address-search-message" class="location-search-message" role="status">검색 실패 시 주소와 좌표를 직접 입력할 수 있습니다.</p>
+                        <div id="address-search-results"></div>
+                    </div>
+                    <div id="restaurant-map" aria-label="맛집 위치 선택 지도"></div>
+                    <div class="form-row">
+                        <label>위도 <input id="restaurant-latitude" name="latitude" required type="number" step="any" min="-90" max="90" value="<?= esc($editingRestaurant['latitude'] ?? old('latitude')) ?>"></label>
+                        <label>경도 <input id="restaurant-longitude" name="longitude" required type="number" step="any" min="-180" max="180" value="<?= esc($editingRestaurant['longitude'] ?? old('longitude')) ?>"></label>
+                    </div>
+                </fieldset>
 
-                <div class="form-row">
-                    <label>위도 <input id="restaurant-latitude" name="latitude" required type="number" step="any" min="-90" max="90" value="<?= esc($editingRestaurant['latitude'] ?? old('latitude')) ?>"></label>
-                    <label>경도 <input id="restaurant-longitude" name="longitude" required type="number" step="any" min="-180" max="180" value="<?= esc($editingRestaurant['longitude'] ?? old('longitude')) ?>"></label>
-                </div>
-                <div class="form-row">
-                    <label>연락처 <input id="restaurant-phone" name="phone" maxlength="30" value="<?= esc($editingRestaurant['phone'] ?? old('phone')) ?>"></label>
-                    <label>홈페이지 <input name="homepage_url" type="url" maxlength="2048" value="<?= esc($editingRestaurant['homepage_url'] ?? old('homepage_url')) ?>"></label>
-                </div>
+                <fieldset class="form-section">
+                    <legend>연락처 및 공개 설정</legend>
+                    <div class="form-row">
+                        <label>연락처 <input id="restaurant-phone" name="phone" maxlength="30" value="<?= esc($editingRestaurant['phone'] ?? old('phone')) ?>"></label>
+                        <label>홈페이지 <input name="homepage_url" type="url" maxlength="2048" value="<?= esc($editingRestaurant['homepage_url'] ?? old('homepage_url')) ?>"></label>
+                    </div>
+                    <label class="checkbox-label"><input type="checkbox" name="is_published" value="1" <?= (int) ($editingRestaurant['is_published'] ?? old('is_published') ?? 0) === 1 ? 'checked' : '' ?>> 공개</label>
+                </fieldset>
 
-                <label class="checkbox-label"><input type="checkbox" name="is_published" value="1" <?= (int) ($editingRestaurant['is_published'] ?? old('is_published') ?? 0) === 1 ? 'checked' : '' ?>> 공개</label>
+                <fieldset class="form-section">
+                    <legend>상세 정보</legend>
+                    <label>설명 <textarea name="description" rows="3"><?= esc($editingRestaurant['description'] ?? old('description')) ?></textarea></label>
+                    <label>메뉴 <textarea name="menu" rows="3"><?= esc($editingRestaurant['menu'] ?? old('menu')) ?></textarea></label>
+                    <label>영업 정보 <textarea name="business_hours" rows="3"><?= esc($editingRestaurant['business_hours'] ?? old('business_hours')) ?></textarea></label>
+                </fieldset>
 
-                <label>설명 <textarea name="description" rows="3"><?= esc($editingRestaurant['description'] ?? old('description')) ?></textarea></label>
-                <label>메뉴 <textarea name="menu" rows="3"><?= esc($editingRestaurant['menu'] ?? old('menu')) ?></textarea></label>
-                <label>영업 정보 <textarea name="business_hours" rows="3"><?= esc($editingRestaurant['business_hours'] ?? old('business_hours')) ?></textarea></label>
-                <div>
+                <fieldset class="form-section">
+                    <legend>태그</legend>
                     <label for="tag-input">태그 (입력 후 쉼표나 Enter로 추가)</label>
                     <div id="tag-chips" class="tag-chip-list"></div>
                     <input id="tag-input" maxlength="100" autocomplete="off">
                     <input type="hidden" name="tags" id="restaurant-tags" maxlength="500" value="<?= esc($editingRestaurant['tags'] ?? old('tags')) ?>">
-                </div>
+                </fieldset>
 
                 <span class="inline-actions">
                     <button type="submit">저장</button>
