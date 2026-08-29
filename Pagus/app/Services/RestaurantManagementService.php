@@ -30,14 +30,16 @@ final class RestaurantManagementService
         return is_array($category) ? $category : null;
     }
 
-    /** @return list<array<string, mixed>> */
-    public function restaurants(string $query = ''): array
+    /**
+     * @return array{restaurants: list<array<string, mixed>>, pager: Pager}
+     */
+    public function restaurants(string $query = '', int $page = 1): array
     {
         $model = ($this->restaurants ?? model(RestaurantModel::class))->select('restaurants.*, GROUP_CONCAT(categories.name ORDER BY categories.name SEPARATOR ", ") AS category_names')->join('restaurant_categories', 'restaurant_categories.restaurant_id = restaurants.id', 'left')->join('categories', 'categories.id = restaurant_categories.category_id', 'left')->groupBy('restaurants.id')->orderBy('restaurants.name', 'ASC');
         if ($query !== '') {
             $model->groupStart()->like('restaurants.name', $query)->orLike('restaurants.address', $query)->orLike('restaurants.tags', $query)->groupEnd();
         }
-        return $model->findAll();
+        return ['restaurants' => $model->paginate(15, 'admin_restaurants', $page), 'pager' => $model->pager];
     }
 
     /**

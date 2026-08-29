@@ -41,7 +41,10 @@ final class AdminController extends Controller
 
     public function index(): string
     {
-        return view('admin/restaurants', ['restaurants' => $this->management->restaurants((string) $this->request->getGet('q'))]);
+        $page = filter_var($this->request->getGet('page_admin_restaurants'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: 1;
+        $result = $this->management->restaurants((string) $this->request->getGet('q'), $page);
+
+        return view('admin/restaurants', ['restaurants' => $result['restaurants'], 'pager' => $result['pager']]);
     }
 
     public function newRestaurant(): string

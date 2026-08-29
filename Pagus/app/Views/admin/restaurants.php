@@ -2,6 +2,7 @@
 
 /**
  * @var list<array<string, mixed>> $restaurants
+ * @var CodeIgniter\Pager\Pager $pager
  */
 ?>
 <!doctype html>
@@ -51,6 +52,7 @@
                 <?php endforeach; ?>
                 </tbody>
             </table>
+            <?= $pager->links('admin_restaurants') ?>
         </section>
     </main>
     <footer class="site-footer">
