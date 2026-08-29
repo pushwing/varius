@@ -429,7 +429,11 @@ button:hover, .btn:hover { background: var(--color-pine); border-color: var(--co
     border: 1px solid var(--color-border);
     color: var(--color-charcoal);
 }
-.address-result:hover { border-color: var(--color-fern); }
+.address-result:hover, .address-result:focus-visible {
+    background: var(--color-paper);
+    border-color: var(--color-fern);
+    color: var(--color-charcoal);
+}
 .reference-attribution { color: var(--color-taupe); font-size: .9rem; }
 .tag-chip-list { display: flex; flex-wrap: wrap; gap: var(--space-xs); margin: var(--space-xs) 0; }
 .tag-chip {
