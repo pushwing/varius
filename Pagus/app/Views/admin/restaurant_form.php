@@ -28,7 +28,7 @@
             <form class="form-grid" method="post" action="/admin/restaurants/save">
                 <?= csrf_field() ?>
                 <input type="hidden" name="id" value="<?= $editingRestaurant === null ? '' : (int) $editingRestaurant['id'] ?>">
-                <div>
+                <div class="location-search" id="category-recommendation-form">
                     <label for="restaurant-name">상호</label>
                     <input id="restaurant-name" name="name" required maxlength="150" value="<?= esc($editingRestaurant['name'] ?? old('name')) ?>">
                     <button id="category-recommend-submit" type="button" class="btn-ghost">AI 카테고리 추천</button>
