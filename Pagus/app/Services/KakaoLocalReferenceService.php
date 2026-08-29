@@ -9,6 +9,8 @@ use Config\KakaoLocal;
 
 final class KakaoLocalReferenceService
 {
+    private const PAJU_SEARCH_RECT = '126.65,37.64,126.98,37.98';
+
     public function __construct(private readonly ?CURLRequest $client = null, private readonly ?KakaoLocal $config = null)
     {
     }
@@ -33,7 +35,11 @@ final class KakaoLocalReferenceService
                 'http_errors' => false,
             ]))->get($config->endpoint, [
                 'headers' => ['Authorization' => 'KakaoAK ' . $config->apiKey, 'Accept' => 'application/json'],
-                'query' => ['query' => $query, 'size' => $config->resultLimit],
+                'query' => [
+                    'query' => $query,
+                    'rect' => self::PAJU_SEARCH_RECT,
+                    'size' => $config->resultLimit,
+                ],
                 'timeout' => $config->timeout,
                 'connect_timeout' => $config->connectTimeout,
             ]);
@@ -63,7 +69,7 @@ final class KakaoLocalReferenceService
             $name = $document['place_name'] ?? null;
             $roadAddress = $document['road_address_name'] ?? '';
             $address = is_string($roadAddress) && $roadAddress !== '' ? $roadAddress : ($document['address_name'] ?? null);
-            if (! is_string($name) || $name === '' || ! is_string($address) || $address === '' || ! is_numeric($document['y'] ?? null) || ! is_numeric($document['x'] ?? null)) {
+            if (! is_string($name) || $name === '' || ! is_string($address) || $address === '' || ! str_contains($address, '파주시') || ! is_numeric($document['y'] ?? null) || ! is_numeric($document['x'] ?? null)) {
                 continue;
             }
             $latitude = (float) $document['y'];

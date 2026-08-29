@@ -35,15 +35,15 @@ final class KakaoLocalReferenceServiceTest extends TestCase
     public function testFallsBackToAddressNameWhenRoadAddressMissing(): void
     {
         $results = KakaoLocalReferenceService::normalizeResults([
-            ['place_name' => '상호', 'address_name' => '지번 주소', 'road_address_name' => '', 'y' => '37.7', 'x' => '126.7'],
+            ['place_name' => '상호', 'address_name' => '파주시 지번 주소', 'road_address_name' => '', 'y' => '37.7', 'x' => '126.7'],
         ]);
-        self::assertSame('지번 주소', $results[0]['address']);
+        self::assertSame('파주시 지번 주소', $results[0]['address']);
     }
 
     public function testMissingPhoneAndCategoryDefaultToEmptyString(): void
     {
         $results = KakaoLocalReferenceService::normalizeResults([
-            ['place_name' => '상호', 'address_name' => '주소', 'y' => '37.7', 'x' => '126.7'],
+            ['place_name' => '상호', 'address_name' => '파주시 주소', 'y' => '37.7', 'x' => '126.7'],
         ]);
         self::assertSame('', $results[0]['phone']);
         self::assertSame('', $results[0]['category']);
@@ -54,11 +54,36 @@ final class KakaoLocalReferenceServiceTest extends TestCase
         self::assertSame([], KakaoLocalReferenceService::normalizeResults([
             ['place_name' => '', 'address_name' => '주소', 'y' => '37', 'x' => '126'],
             ['place_name' => '상호만', 'address_name' => '', 'y' => '37', 'x' => '126'],
-            ['place_name' => '위도 초과', 'address_name' => '주소', 'y' => '90.1', 'x' => '126'],
-            ['place_name' => '경도 초과', 'address_name' => '주소', 'y' => '37', 'x' => '-180.1'],
-            ['place_name' => '좌표 아님', 'address_name' => '주소', 'y' => '서울', 'x' => '126'],
-            ['place_name' => '필드 누락', 'address_name' => '주소'],
+            ['place_name' => '위도 초과', 'address_name' => '파주시 주소', 'y' => '90.1', 'x' => '126'],
+            ['place_name' => '경도 초과', 'address_name' => '파주시 주소', 'y' => '37', 'x' => '-180.1'],
+            ['place_name' => '좌표 아님', 'address_name' => '파주시 주소', 'y' => '서울', 'x' => '126'],
+            ['place_name' => '필드 누락', 'address_name' => '파주시 주소'],
         ]));
+    }
+
+    public function testSearchRequestsPajuAreaAndExcludesOtherAddresses(): void
+    {
+        $config = self::config();
+        $config->apiKey = 'test-api-key';
+
+        $response = $this->createMock(ResponseInterface::class);
+        $response->method('getStatusCode')->willReturn(200);
+        $response->method('getBody')->willReturn(json_encode([
+            'documents' => [
+                ['place_name' => '파주 식당', 'address_name' => '파주시 금촌동 1', 'y' => '37.7', 'x' => '126.7'],
+                ['place_name' => '서울 식당', 'address_name' => '서울특별시 종로구 1', 'y' => '37.5', 'x' => '126.9'],
+            ],
+        ]));
+
+        $client = $this->createMock(CURLRequest::class);
+        $client->expects(self::once())->method('get')->with(
+            $config->endpoint,
+            self::callback(static function (array $options): bool {
+                return ($options['query']['rect'] ?? null) === '126.65,37.64,126.98,37.98';
+            }),
+        )->willReturn($response);
+
+        self::assertCount(1, (new KakaoLocalReferenceService($client, $config))->search('식당'));
     }
 
     public function testSearchReturnsNullWhenApiKeyNotConfigured(): void

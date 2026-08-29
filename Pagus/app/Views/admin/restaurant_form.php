@@ -35,6 +35,17 @@
                     <p id="category-recommend-message" class="location-search-message" role="status">상호를 입력하고 추천을 요청하면 카테고리를 자동으로 선택합니다.</p>
                 </div>
 
+                <div>
+                    <label>카테고리</label>
+                    <div class="checkbox-group">
+                        <?php
+                            $selected = $editingRestaurant['category_ids'] ?? (array) old('category_ids');
+foreach ($categories as $category): ?>
+                            <label class="checkbox-label"><input type="checkbox" name="category_ids[]" value="<?= (int) $category['id'] ?>" <?= in_array((int) $category['id'], array_map('intval', $selected), true) ? 'checked' : '' ?>><?= esc($category['name']) ?></label>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
                 <div class="location-search" id="reference-search-form" role="search">
                     <label for="reference-search-query">외부 참고 데이터 검색 (카카오)</label>
                     <input id="reference-search-query" minlength="2" maxlength="100" autocomplete="off" placeholder="상호명으로 검색">
@@ -62,17 +73,6 @@
                 </div>
 
                 <label class="checkbox-label"><input type="checkbox" name="is_published" value="1" <?= (int) ($editingRestaurant['is_published'] ?? old('is_published') ?? 0) === 1 ? 'checked' : '' ?>> 공개</label>
-
-                <div>
-                    <label>카테고리</label>
-                    <div class="checkbox-group">
-                        <?php
-                            $selected = $editingRestaurant['category_ids'] ?? (array) old('category_ids');
-foreach ($categories as $category): ?>
-                            <label class="checkbox-label"><input type="checkbox" name="category_ids[]" value="<?= (int) $category['id'] ?>" <?= in_array((int) $category['id'], array_map('intval', $selected), true) ? 'checked' : '' ?>><?= esc($category['name']) ?></label>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
 
                 <label>설명 <textarea name="description" rows="3"><?= esc($editingRestaurant['description'] ?? old('description')) ?></textarea></label>
                 <label>메뉴 <textarea name="menu" rows="3"><?= esc($editingRestaurant['menu'] ?? old('menu')) ?></textarea></label>
