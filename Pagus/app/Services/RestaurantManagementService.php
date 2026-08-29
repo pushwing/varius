@@ -88,7 +88,7 @@ final class RestaurantManagementService
             $model->orderBy('restaurants.name', 'ASC');
         }
 
-        return ['restaurants' => $model->paginate(12, 'restaurants', $page), 'pager' => $model->pager];
+        return ['restaurants' => $model->paginate(8, 'restaurants', $page), 'pager' => $model->pager];
     }
 
     /** @return array<string, mixed>|null 공개된 맛집만 조회한다 */
