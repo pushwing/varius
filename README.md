@@ -14,6 +14,8 @@
 저장소 전체에 적용되는 컨벤션(브랜치 전략, CI/CD 정책, 디렉토리 구조 규칙 등)은
 Codex에서는 [`AGENTS.md`](AGENTS.md), Claude Code에서는 [`CLAUDE.md`](CLAUDE.md)를 참고하세요.
 
+저장소 전체 구조를 한눈에 보려면 [아키텍처 다이어그램](docs/architecture.html)을 참고하세요.
+
 ## 프로젝트 목록
 
 | 디렉토리 | 설명 |

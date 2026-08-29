@@ -17,6 +17,7 @@
 
 상세 아키텍처와 개발 순서는 [`ARCHITECTURE.md`](ARCHITECTURE.md)를,
 Codex 작업 규칙은 [`AGENTS.md`](AGENTS.md)를 참고하세요.
+구성 요소 간 관계를 그림으로 보려면 [아키텍처 다이어그램](docs/architecture.html)을 참고하세요.
 
 ## 개발 상태
 
