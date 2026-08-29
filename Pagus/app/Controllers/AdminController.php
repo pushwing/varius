@@ -196,9 +196,15 @@ final class AdminController extends Controller
             $this->management->categories(),
             static fn (array $category): bool => (int) ($category['is_active'] ?? 0) === 1,
         ));
+        if ($categories === []) {
+            return $this->response->setJSON([
+                'category_ids' => [],
+                'message' => '활성화된 카테고리가 없습니다. 카테고리를 먼저 등록하거나 활성화하세요.',
+            ]);
+        }
         $recommended = $this->categoryRecommendation->recommend($query, $categories);
         if ($recommended === null) {
-            return $this->response->setStatusCode(503)->setJSON(['error' => 'AI 카테고리 추천을 사용할 수 없습니다. 카테고리를 직접 선택하세요.']);
+            return $this->response->setStatusCode(503)->setJSON(['error' => 'Groq API 호출에 실패했습니다. API 키 설정이나 네트워크 상태를 확인하고 카테고리를 직접 선택하세요.']);
         }
         return $this->response->setJSON(['category_ids' => $recommended]);
     }
