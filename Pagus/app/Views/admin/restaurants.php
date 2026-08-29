@@ -32,6 +32,7 @@
                     <a class="btn btn-ghost" href="/admin/restaurants/new">맛집 등록</a>
                 </span>
             </form>
+            <p class="result-summary">총 <?= $pager->getTotal('admin_restaurants') ?>곳의 맛집</p>
             <table class="admin-table">
                 <thead><tr><th>상호</th><th>주소</th><th>카테고리</th><th>공개</th><th>관리</th></tr></thead>
                 <tbody>
