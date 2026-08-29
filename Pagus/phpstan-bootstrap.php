@@ -12,3 +12,4 @@ define('CI_DEBUG', true);
 
 require APPPATH . 'Config/Constants.php';
 require SYSTEMPATH . 'Common.php';
+require SYSTEMPATH . 'Helpers/url_helper.php';

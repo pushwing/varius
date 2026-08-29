@@ -91,6 +91,20 @@ final class RestaurantManagementService
         return ['restaurants' => $model->paginate(8, 'restaurants', $page), 'pager' => $model->pager];
     }
 
+    /**
+     * sitemap.xml·llms.txt용 최소 컬럼 목록. 공개된 맛집 전체를 반환한다(페이지네이션 없음).
+     *
+     * @return list<array{id: int, name: string, updated_at: ?string}>
+     */
+    public function publishedForSitemap(): array
+    {
+        return ($this->restaurants ?? model(RestaurantModel::class))
+            ->select('id, name, updated_at')
+            ->where('is_published', 1)
+            ->orderBy('id', 'ASC')
+            ->findAll();
+    }
+
     /** @return array<string, mixed>|null 공개된 맛집만 조회한다 */
     public function publicRestaurant(int $id): ?array
     {

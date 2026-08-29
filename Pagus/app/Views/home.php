@@ -14,13 +14,17 @@ $mapData = json_encode($mapRestaurants, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_A
 if ($mapData === false) {
     $mapData = '[]';
 }
+$seoConfig = config(\Config\Seo::class);
+$seo = new \App\Libraries\SeoHelper($seoConfig, base_url());
+$jsonLd = new \App\Libraries\Seo\JsonLdBuilder($seoConfig, rtrim(base_url(), '/'));
 ?>
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>파구스 — 파주 로컬 맛집 지도</title>
+    <?= $seo->head(['title' => '파구스 — 파주 로컬 맛집 지도', 'description' => $seoConfig->siteDescription, 'path' => '']) ?>
+    <?= $jsonLd->toScriptTag($jsonLd->graph([$jsonLd->website(), $jsonLd->organization(), $jsonLd->itemList($mapRestaurants)])) ?>
     <link rel="stylesheet" href="<?= base_url('assets/css/app.css') ?>">
     <script src="<?= base_url('assets/js/share.js') ?>"></script>
     <link rel="icon" href="<?= base_url('favicon.ico') ?>" sizes="any">

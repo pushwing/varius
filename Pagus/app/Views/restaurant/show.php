@@ -5,13 +5,38 @@
  * @var list<array<string, mixed>> $photos
  * @var list<array<string, mixed>> $reviews
  */
+$seoConfig = config(\Config\Seo::class);
+$baseUrl = rtrim(base_url(), '/');
+$seo = new \App\Libraries\SeoHelper($seoConfig, base_url());
+$jsonLd = new \App\Libraries\Seo\JsonLdBuilder($seoConfig, $baseUrl);
+$restaurantImage = $photos !== [] ? $baseUrl . '/photos/' . (int) $photos[0]['id'] : null;
+$restaurantDescription = trim((string) ($restaurant['description'] ?? '')) !== ''
+    ? (string) $restaurant['description']
+    : (string) $restaurant['name'] . ' — ' . (string) $restaurant['address'];
+if (mb_strlen($restaurantDescription) > 160) {
+    $restaurantDescription = mb_substr($restaurantDescription, 0, 159) . '…';
+}
 ?>
 <!doctype html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= esc((string) $restaurant['name']) ?> · 파구스</title>
+    <?= $seo->head([
+        'title' => (string) $restaurant['name'] . ' · 파구스',
+        'description' => $restaurantDescription,
+        'path' => 'restaurants/' . (int) $restaurant['id'],
+        'image' => $restaurantImage,
+    ]) ?>
+    <?= $jsonLd->toScriptTag($jsonLd->graph([
+        $jsonLd->website(),
+        $jsonLd->organization(),
+        $jsonLd->restaurant($restaurant, $reviews),
+        $jsonLd->breadcrumb([
+            ['name' => '홈', 'url' => $baseUrl . '/'],
+            ['name' => (string) $restaurant['name'], 'url' => $baseUrl . '/restaurants/' . (int) $restaurant['id']],
+        ]),
+    ])) ?>
     <link rel="stylesheet" href="<?= base_url('assets/css/app.css') ?>">
     <script src="<?= base_url('assets/js/share.js') ?>"></script>
     <link rel="icon" href="<?= base_url('favicon.ico') ?>" sizes="any">
