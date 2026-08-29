@@ -190,6 +190,30 @@ groq.apiKey = 발급받은_Groq_API_키
 
 설정 후 관리자 계정으로 로그인해 `/admin/restaurants/new`에서 상호를 입력하고 추천 결과가 활성 카테고리 체크박스에 반영되는지 확인한다. Groq 키를 임시로 비활성화했을 때도 오류 메시지와 함께 수동 카테고리 선택이 가능한지 확인한다.
 
+### 5.4 SEO·GEO 설정(선택)
+
+`app/Config/Seo.php`의 값은 다른 설정과 같은 방식으로 `.env`에서 덮어쓴다. 값을 넣지 않으면 검증 메타 태그가 생략되고 AI 크롤러는 기본 허용된다.
+
+```dotenv
+# Google Search Console `HTML 태그` 방식 소유 확인 코드(content 속성 값만)
+seo.googleVerify = 발급받은_Google_인증코드
+
+# Bing Webmaster Tools 소유 확인 코드(content 속성 값만)
+seo.bingVerify = 발급받은_Bing_인증코드
+
+# GPTBot·PerplexityBot 등 AI 검색/학습 크롤러 허용 여부(기본 true)
+# false로 두면 robots.txt에서 AI 크롤러 섹션이 빠지고 AI 검색 인용(GEO) 노출 기회도 줄어든다
+seo.aiCrawlersAllow = true
+```
+
+`app.baseURL`(§3)이 실제 서비스 도메인으로 정확히 설정되어 있어야 canonical·OG·JSON-LD·sitemap.xml·robots.txt·llms.txt의 절대 URL이 올바르게 생성된다. `.env`를 바꾼 뒤에는 `/`, `/restaurants/{id}`를 열어 페이지 소스에서 `<link rel="canonical">`과 JSON-LD `<script type="application/ld+json">` 값이 실제 도메인을 가리키는지 확인한다.
+
+배포 후에는 다음을 등록한다.
+
+1. [Google Search Console](https://search.google.com/search-console)에 속성을 등록하고 `https://your-domain.example/sitemap.xml`을 제출한다.
+2. [Bing Webmaster Tools](https://www.bing.com/webmasters)에 사이트를 등록하고 동일하게 sitemap을 제출한다(ChatGPT Search는 Bing 색인에 의존하므로 등록을 권장한다).
+3. [Google Rich Results Test](https://search.google.com/test/rich-results)로 맛집 상세 페이지의 JSON-LD(FoodEstablishment) 오류 여부를 확인한다.
+
 ## 6. 마이그레이션과 운영자 계정
 
 ### 6.1 실행 위치
@@ -391,6 +415,7 @@ mkdir -p writable/session writable/uploads/restaurants
 - HTTPS에서 `app.baseURL`과 Kakao Web 플랫폼 도메인이 일치하는지 확인한다.
 - `/`, `/restaurants/{id}`, `/login`, `/admin`을 실제 도메인에서 확인한다.
 - 비공개 맛집이 공개 화면에 노출되지 않는지 확인한다.
+- `/sitemap.xml`, `/robots.txt`, `/llms.txt`가 실제 도메인에서 200으로 응답하고 절대 URL이 정확한지 확인한다(§5.4).
 
 ## 10. 가상서버(VPS)에 배포하기
 
@@ -537,6 +562,7 @@ php spark db:seed DatabaseSeeder
 - 공개 지도, Kakao 키, 운영자 로그인, 사진 업로드, 후기와 문의를 확인한다.
 - `.env`, `app/`, `writable/`, `vendor/`가 HTTP로 직접 다운로드되지 않는지 확인한다.
 - 운영자 계정의 초기 비밀번호를 안전하게 관리하고 재사용하지 않는다.
+- `/sitemap.xml`, `/robots.txt`, `/llms.txt`가 실제 도메인에서 200으로 응답하는지 확인한다(§5.4).
 
 ## 11. 운영 중 업데이트
 
