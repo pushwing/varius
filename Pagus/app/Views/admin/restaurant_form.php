@@ -30,8 +30,10 @@
                 <input type="hidden" name="id" value="<?= $editingRestaurant === null ? '' : (int) $editingRestaurant['id'] ?>">
                 <div class="location-search" id="category-recommendation-form">
                     <label for="restaurant-name">상호</label>
-                    <input id="restaurant-name" name="name" required maxlength="150" value="<?= esc($editingRestaurant['name'] ?? old('name')) ?>">
-                    <button id="category-recommend-submit" type="button" class="btn-ghost">AI 카테고리 추천</button>
+                    <div class="category-recommend-controls">
+                        <input id="restaurant-name" name="name" required maxlength="150" value="<?= esc($editingRestaurant['name'] ?? old('name')) ?>">
+                        <button id="category-recommend-submit" type="button" class="btn-ghost">AI 카테고리 추천</button>
+                    </div>
                     <p id="category-recommend-message" class="location-search-message" role="status">상호를 입력하고 추천을 요청하면 카테고리를 자동으로 선택합니다.</p>
                 </div>
 
