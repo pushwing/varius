@@ -17,6 +17,7 @@
 - 공개 화면의 문의 다이얼로그에서 문의를 접수하고 운영자 화면에서 문의 상태를 관리한다.
 - 운영자는 맛집·카테고리 등록/수정, 공개 상태 전환, 사진 업로드·숨김·삭제, 후기 공개 상태 관리가 가능하다.
 - 운영자 맛집 입력 시 카카오 주소 검색과 참고 데이터 검색으로 주소·좌표 등의 입력을 보조한다.
+- 공개 페이지(홈·맛집 상세)에 canonical·OG/Twitter 메타와 schema.org JSON-LD(WebSite/Organization/FoodEstablishment/BreadcrumbList)를 적용하고, `/sitemap.xml`·`/robots.txt`·`/llms.txt`로 검색엔진·AI 크롤러 진입점을 제공한다.
 
 추천 점수, 광고 상품, 예약·주문 연동, 일반 회원가입은 현재 범위에 포함하지 않는다.
 
@@ -41,6 +42,18 @@
 | `/admin/restaurants/{id}/photos` | 사진 업로드·공개/숨김·삭제 | 운영자 |
 | `/admin/reviews` | 후기 공개/숨김 관리 | 운영자 |
 | `/admin/inquiries` | 문의 조회 및 처리 상태 관리 | 운영자 |
+| `/sitemap.xml` | 공개 맛집 URL 목록(검색엔진 색인용) | 공개 |
+| `/robots.txt` | 크롤러 허용 규칙과 sitemap 위치 | 공개 |
+| `/llms.txt` | 사이트·맛집 요약(AI 검색 인용용, GEO) | 공개 |
+
+## SEO·GEO
+
+전통 검색엔진 노출(SEO)과 AI 검색 인용(GEO, Generative Engine Optimization)을 함께 지원한다.
+
+- `app/Libraries/SeoHelper.php`가 페이지별 title·description·canonical·robots(index/noindex)·OG/Twitter Card를 렌더링한다.
+- `app/Libraries/Seo/JsonLdBuilder.php`가 schema.org JSON-LD(WebSite·Organization·ItemList·FoodEstablishment·BreadcrumbList)를 조립한다. 맛집 상세는 공개 후기 평점으로 `aggregateRating`을 계산한다.
+- `app/Config/Seo.php`에서 사이트명·설명·기본 OG 이미지·Google/Bing 소유 확인 코드·AI 크롤러 허용 여부를 설정한다(값은 `.env`로 주입, 아래 [셋업 가이드](SETUP.md) 참고).
+- `/robots.txt`는 GPTBot·OAI-SearchBot·PerplexityBot·Google-Extended·ClaudeBot·Bingbot 등 AI 크롤러를 기본 허용하며 `seo.aiCrawlersAllow = false`로 끌 수 있다.
 
 ## 핵심 데이터
 
@@ -84,6 +97,10 @@ kakaomaps.jsKey = 발급받은_Kakao_JavaScript_키
 groq.apiKey = 발급받은_Groq_API_키
 PAGUS_ADMIN_EMAIL = admin@example.com
 PAGUS_ADMIN_PASSWORD = change-this-password
+# 선택: Google Search Console·Bing Webmaster Tools 소유 확인, AI 크롤러 허용 여부(기본 true)
+# seo.googleVerify = 발급받은_Google_Search_Console_인증코드
+# seo.bingVerify = 발급받은_Bing_Webmaster_인증코드
+# seo.aiCrawlersAllow = true
 ```
 
 일반 회원가입은 제공하지 않는다. `PAGUS_ADMIN_PASSWORD`를 환경변수로 전달한 뒤 seed를 실행해 운영자 계정을 최초 생성한다. 운영자 비밀번호와 후기 작성 비밀번호는 `password_hash()`로 저장하며, seed는 기존 운영자 계정을 갱신하지 않는다. 운영자 경로는 세션 기반 `AdminFilter`로 보호한다.

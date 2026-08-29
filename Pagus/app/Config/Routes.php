@@ -5,6 +5,9 @@ namespace Config;
 $routes = Services::routes();
 
 $routes->get('/', 'Home::index');
+$routes->get('sitemap.xml', 'SitemapController::index');
+$routes->get('robots.txt', 'RobotsController::index');
+$routes->get('llms.txt', 'LlmsController::index');
 $routes->get('restaurants/(:num)', 'Home::show/$1');
 $routes->get('photos/(:num)', 'PhotoController::show/$1');
 $routes->post('restaurants/(:num)/reviews', 'ReviewController::create/$1');

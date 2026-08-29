@@ -418,6 +418,9 @@ button:hover, .btn:hover { background: var(--color-pine); border-color: var(--co
 
 .location-search { margin: var(--space-sm) 0; }
 .location-search input { max-width: 24rem; }
+.category-recommend-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); }
+.category-recommend-controls input { flex: 1 1 16rem; }
+.category-recommend-controls button { flex: 0 0 auto; }
 .location-search-message { color: var(--color-taupe); font-size: .9rem; }
 .address-result {
     display: block;
