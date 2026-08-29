@@ -72,7 +72,7 @@ if ($mapData === false) {
             </label>
             <button type="submit">검색</button>
         </form>
-        <div class="result-summary"><?= count($restaurants) ?>곳의 공개 맛집</div>
+        <div class="result-summary"><?= $pager->getTotal('restaurants') ?>곳의 공개 맛집</div>
         <?php if ($restaurants === []): ?>
             <p class="empty-state">조건에 맞는 공개 맛집이 없습니다. 검색어나 카테고리를 바꿔보세요.</p>
         <?php else: ?>
