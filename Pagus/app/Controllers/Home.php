@@ -30,7 +30,7 @@ final class Home extends BaseController
             'query' => $this->request->getGet('q'),
             'category_id' => $this->request->getGet('category'),
             'sort' => $this->request->getGet('sort'),
-            'page' => $this->request->getGet('page'),
+            'page' => $this->request->getGet('page_restaurants'),
         ]);
         $result = $this->management->publicRestaurants($filters['query'], $filters['category_id'], $filters['sort'], $filters['page']);
         $categories = array_values(array_filter($this->management->categories(), static fn (array $category): bool => (int) ($category['is_active'] ?? 0) === 1));
