@@ -126,6 +126,10 @@ button:hover, .btn:hover { background: var(--color-pine); border-color: var(--co
 .inline-actions { display: flex; flex-wrap: wrap; gap: var(--space-xs); align-items: center; }
 
 .form-grid { display: grid; gap: var(--space-sm); }
+.form-section { display: grid; gap: var(--space-sm); background: var(--color-paper); border-color: var(--color-border); padding: var(--space-lg); margin: 0; }
+.form-section legend { color: var(--color-pine); font-size: 1.05rem; font-weight: 600; padding: 0 var(--space-sm); }
+.form-section > .location-search { margin: 0; }
+.form-section > .form-row { margin-top: var(--space-xs); }
 .form-row { display: flex; flex-wrap: wrap; gap: var(--space-md); }
 .form-row > * { flex: 1 1 12rem; }
 .admin-search-form { align-items: flex-end; }
